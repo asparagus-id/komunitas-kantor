@@ -117,7 +117,7 @@
   },
   "calendarReminderMinutes": 30,
   "calendarRemindedIds": [],
-  "calendarTopicKey": null,
+  "calendarTopicKey": "pengumuman",
   "reminders": [],
   "liburReminder": {
     "enabled": false,
