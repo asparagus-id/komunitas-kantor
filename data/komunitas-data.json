@@ -138,9 +138,9 @@
     "time": "06:00",
     "jamAcara": "08:00",
     "lokasi": "Mushollah",
-    "catatan": "Tidak wajib bawa konsumsi. Kabari petugas jika berhalangan."
+    "catatan": "tidak wajib bawa konsumsi"
   },
-  "calendarReminderMinutes": null,
+  "calendarReminderMinutes": 30,
   "calendarRemindedIds": [],
   "reminders": [],
   "puasaLog": {},
