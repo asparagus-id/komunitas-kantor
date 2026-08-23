@@ -252,10 +252,21 @@
     z-index:-1;
   }
   html:not(.is-widget) .widget-frame{ display:none; }
+  html.is-widget #widgetCloseBtn{
+    display:flex !important;
+    position:fixed; top:8px; right:8px; z-index:10;
+    width:22px; height:22px; align-items:center; justify-content:center;
+    border-radius:50%; border:1px solid rgba(201,162,39,.35);
+    background:rgba(8,22,25,.6); color:var(--muted, #9db3b6);
+    font-size:15px; line-height:1; cursor:pointer;
+    -webkit-app-region: no-drag; /* biar tombolnya tetap bisa diklik, area drag ada di sekitarnya */
+  }
+  html.is-widget #widgetCloseBtn:hover{ background:rgba(201,162,39,.25); color:#fff; }
 </style>
 </head>
 <body>
 <div class="widget-frame"></div>
+<button id="widgetCloseBtn" style="display:none;" title="Sembunyikan widget">&times;</button>
 <script>
   // Deteksi mode widget SEBELUM apa pun lain dirender, supaya tidak sempat
   // "kelap-kelip" tampilan penuh lalu baru mengecil.
@@ -271,20 +282,22 @@
   try {
     if (window.__TAURI__ && window.__TAURI__.window) {
       var jendelaSaatIni = window.__TAURI__.window.getCurrent();
-      if (jendelaSaatIni && jendelaSaatIni.label === "widget") aktifkanModeWidget();
-
-      // KHUSUS jendela "main": kalau di-minimize (klik tombol _ bawaan
-      // Windows), sembunyikan total ke system tray (bukan minimize biasa
-      // yang masih nongkrong di taskbar bawah) -- Tauri v1 tidak punya
-      // event "minimized" langsung di sisi Rust, jadi dicek dari sini
-      // tiap kali ukuran jendela berubah.
-      if (jendelaSaatIni && jendelaSaatIni.label === "main") {
-        jendelaSaatIni.listen("tauri://resize", function () {
-          jendelaSaatIni.isMinimized().then(function (min) {
-            if (min) jendelaSaatIni.hide();
-          });
+      if (jendelaSaatIni && jendelaSaatIni.label === "widget") {
+        aktifkanModeWidget();
+        // Tombol X kecil di widget -> sembunyikan widget ini. Karena
+        // widget tidak punya bingkai/tombol OS sama sekali (biar ringkas),
+        // ini satu-satunya cara menutupnya selain lewat menu system tray.
+        // Setelah disembunyikan, panggil lagi lewat klik kanan ikon tray
+        // (pojok kanan bawah Windows) > "Tampilkan Widget".
+        document.getElementById("widgetCloseBtn").addEventListener("click", function(){
+          jendelaSaatIni.hide();
         });
       }
+      // CATATAN: minimize (_) jendela "main" SENGAJA dibiarkan perilaku
+      // NORMAL bawaan Windows (masuk ke taskbar bawah spt app pada
+      // umumnya) -- sempat dicoba dibuat "sembunyi ke tray" tapi malah
+      // bikin bingung krn kelihatan kayak app hilang. Yang sembunyi ke
+      // tray cukup tombol X (close) saja, itu di sisi Rust (main.rs).
     }
   } catch (e) { /* bukan di dalam Tauri (mis. dibuka di browser biasa) -- abaikan */ }
 </script>
@@ -433,7 +446,7 @@
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.5.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
+const APP_VERSION = "1.5.1"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -900,8 +913,20 @@ document.addEventListener("visibilitychange", ()=>{
   if(document.visibilityState === "visible") requestWakeLock();
 });
 
-/* ---------------- Fullscreen ---------------- */
-document.getElementById("fsBtn").addEventListener("click", ()=>{
+/* ---------------- Fullscreen ----------------
+   Dulu cuma pakai browser Fullscreen API (document.requestFullscreen),
+   yang ternyata sering tidak berefek di dalam webview Tauri. Sekarang
+   dicoba pakai API NATIVE Tauri dulu (appWindow.setFullscreen) kalau lagi
+   jalan di app desktop -- baru fallback ke browser API kalau di web/PWA. */
+document.getElementById("fsBtn").addEventListener("click", async ()=>{
+  try {
+    if (window.__TAURI__ && window.__TAURI__.window) {
+      const w = window.__TAURI__.window.getCurrent();
+      const sedangFullscreen = await w.isFullscreen();
+      await w.setFullscreen(!sedangFullscreen);
+      return;
+    }
+  } catch (e) { console.log("Fullscreen native gagal, coba fallback browser API:", e); }
   if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
   else document.exitFullscreen();
 });
