@@ -34,12 +34,12 @@
       }
     },
     "updater": {
-      "active": false,
+      "active": true,
       "endpoints": [
         "https://github.com/asparagus-id/komunitas-kantor/releases/latest/download/latest.json"
       ],
       "dialog": true,
-      "pubkey": "GANTI_DENGAN_PUBLIC_KEY_HASIL_LANGKAH_1_SOP"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IGpbmlzaWduIHB1YmxpYyBrZXk6IDc2MEFDQ0JFOEUyMjE1RjAKU1dUd0ZTS092c3dLZGt3STE2czJsSU9OM01kZUFndC94NjVTRGJFZm1hZ31xcFBDam9uQ1RGWGUK"
     },
     "systemTray": {
       "iconPath": "icons/32x32.png",
