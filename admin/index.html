@@ -67,12 +67,8 @@
   <!-- ---------- GATE: isi URL worker + token sekali, disimpan lokal ---------- -->
   <div class="gate" id="gate">
     <h1>Admin Bot Komunitas</h1>
-    <div class="sub">Hubungkan ke Worker Cloudflare Anda dulu.</div>
+    <div class="sub">Masukkan APP_TOKEN Worker Anda dulu.</div>
     <div class="card" style="text-align:left;">
-      <div class="field" style="margin-bottom:10px;">
-        <label>URL Worker</label>
-        <input type="text" id="gateUrl" placeholder="https://bot-komunitas.username.workers.dev">
-      </div>
       <div class="field" style="margin-bottom:14px;">
         <label>APP_TOKEN</label>
         <input type="password" id="gateToken" placeholder="token yang Anda isi di wrangler secret / dashboard">
@@ -210,7 +206,11 @@
 
 <script>
 const HARI = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
-let WORKER_URL = localStorage.getItem("admkom_url") || "";
+// WORKER_URL ditanam permanen di sini -- panel ini dikonfigurasi khusus
+// untuk Worker "gus-asisten" milik Anda, jadi pengguna cuma perlu isi
+// APP_TOKEN. Kalau nanti Worker-nya pindah alamat, ganti nilai di baris
+// ini saja.
+const WORKER_URL = "https://gus-asisten.rempahecho.workers.dev";
 let APP_TOKEN = localStorage.getItem("admkom_token") || "";
 let data = null, sha = null;
 
@@ -568,17 +568,15 @@ document.getElementById("addRemBtn").addEventListener("click", async ()=>{
 
 /* ---------- Gate / koneksi ---------- */
 document.getElementById("gateConnect").addEventListener("click", async ()=>{
-  WORKER_URL = document.getElementById("gateUrl").value.trim();
   APP_TOKEN = document.getElementById("gateToken").value.trim();
-  if(!WORKER_URL || !APP_TOKEN){ toast("Isi URL Worker dan token dulu.", true); return; }
-  localStorage.setItem("admkom_url", WORKER_URL);
+  if(!APP_TOKEN){ toast("Isi APP_TOKEN dulu.", true); return; }
   localStorage.setItem("admkom_token", APP_TOKEN);
   await boot();
 });
 document.getElementById("reloadBtn").addEventListener("click", loadData);
 document.getElementById("disconnectBtn").addEventListener("click", ()=>{
-  localStorage.removeItem("admkom_url"); localStorage.removeItem("admkom_token");
-  WORKER_URL = ""; APP_TOKEN = "";
+  localStorage.removeItem("admkom_token");
+  APP_TOKEN = "";
   document.getElementById("app").classList.add("hidden");
   document.getElementById("gate").classList.remove("hidden");
 });
@@ -604,8 +602,7 @@ async function loadAiQuota(){
   }catch(e){ el.textContent = ""; }
 }
 
-if(WORKER_URL && APP_TOKEN){
-  document.getElementById("gateUrl").value = WORKER_URL;
+if(APP_TOKEN){
   boot();
 }
 </script>
