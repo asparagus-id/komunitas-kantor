@@ -10,6 +10,10 @@
     "puasa": {
       "threadId": 9028,
       "label": "PUASA"
+    },
+    "pengumuman": {
+      "threadId": 9025,
+      "label": "PENGUMUMAN"
     }
   },
   "puasaPoll": {
