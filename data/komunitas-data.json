@@ -16,7 +16,56 @@
       "MBOTHEN"
     ]
   },
-  "kajian": [],
+  "kajian": [
+    {
+      "id": 1787504664944,
+      "tanggal": "2026-06-19",
+      "pengisi": "Tangguh",
+      "tema": "Kajian Hadist Arbain Nawawi",
+      "remindersSent": [],
+      "googleEventId": "2thdcp16va8dtaf0da06l9acp0"
+    },
+    {
+      "id": 1787504665603,
+      "tanggal": "2026-07-24",
+      "pengisi": "Mila",
+      "tema": "Kajian Hadist Arbain Nawawi",
+      "remindersSent": [],
+      "googleEventId": "vu5airaboaa3fnaunrsgcldd1k"
+    },
+    {
+      "id": 1787504666164,
+      "tanggal": "2026-08-20",
+      "pengisi": "Edwin",
+      "tema": "Kajian Hadist Arbain Nawawi",
+      "remindersSent": [],
+      "googleEventId": "9b2u9i6mc1gohsai1qq54u4l7c"
+    },
+    {
+      "id": 1787504666743,
+      "tanggal": "2026-09-24",
+      "pengisi": "Heri",
+      "tema": "Kajian Hadist Arbain Nawawi",
+      "remindersSent": [],
+      "googleEventId": "o086aikbov31argpg6ng3kmhq8"
+    },
+    {
+      "id": 1787504667277,
+      "tanggal": "2026-10-29",
+      "pengisi": "Ulva",
+      "tema": "Kajian Hadist Arbain Nawawi",
+      "remindersSent": [],
+      "googleEventId": "navcpnfnbpjqtcq6f3ahap3368"
+    },
+    {
+      "id": 1787504667876,
+      "tanggal": "2026-11-26",
+      "pengisi": "Toyyib",
+      "tema": "Kajian Hadist Arbain Nawawi",
+      "remindersSent": [],
+      "googleEventId": "jbjhn2anvajvumrd4qhefcngvk"
+    }
+  ],
   "kajianSettings": {
     "offsetsDays": [
       7,
