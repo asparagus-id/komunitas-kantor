@@ -1,0 +1,25 @@
+{
+  "adminUserIds": [],
+  "topics": {},
+  "puasaPoll": {
+    "enabled": false,
+    "days": [],
+    "time": null,
+    "question": null,
+    "options": []
+  },
+  "kajian": [],
+  "kajianSettings": {
+    "offsetsDays": [],
+    "time": null,
+    "jamAcara": null,
+    "lokasi": "",
+    "catatan": ""
+  },
+  "calendarReminderMinutes": null,
+  "calendarRemindedIds": [],
+  "reminders": [],
+  "puasaLog": {},
+  "lastPuasaPollSentDate": null,
+  "lastKajianCheckDate": "2026-08-23"
+}
