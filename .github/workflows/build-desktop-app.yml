@@ -1,25 +1,45 @@
-name: Build Pengingat Sholat Desktop
+name: Build & Rilis Pengingat Sholat Desktop
 
 # PENTING kalau file ini digabung ke repo yang SUDAH ADA (mis. repo yang
 # sama dgn worker-komunitas.js & data/komunitas-data.json):
 # - Project Tauri ini HARUS ditaruh di subfolder "desktop-app/" (bukan di
 #   root repo), supaya tidak bentrok dgn file lain yg sudah ada di repo.
-# - Workflow ini SENGAJA cuma jalan kalau ada perubahan di folder
-#   "desktop-app/**" (lihat "paths" di bawah) -- jadi update bot Telegram,
-#   data komunitas, dll di repo yang sama TIDAK ikut men-trigger build ini.
+#
+# CARA RILIS VERSI BARU (supaya app yang SUDAH TERINSTALL di PC kantor
+# otomatis update sendiri, TANPA install ulang manual):
+#   1. Naikkan nomor versi di 3 file: desktop-app/package.json,
+#      desktop-app/src-tauri/Cargo.toml, desktop-app/src-tauri/tauri.conf.json
+#      (harus SAMA PERSIS di ke-3 file, mis. semua jadi "1.6.0").
+#   2. Push perubahan itu ke branch main SEPERTI BIASA (upload/commit).
+#   3. Buat & push TAG git dengan format persis: desktop-app-v<versi>
+#      Lewat GitHub web: repo > klik "1 Branch"/"0 Tags" > "Tags" > "Create
+#      a new release" > isi "Choose a tag" dgn desktop-app-v1.6.0 > pilih
+#      target branch main > Publish release (biarkan judul/deskripsi apa
+#      adanya, yang penting TAG-nya benar -- workflow ini jalan otomatis
+#      begitu tag itu dipush, lalu MENIMPA release draft itu dgn hasil
+#      build yang sudah ditandatangani).
+#   4. Tunggu workflow ini selesai (tab Actions) -- begitu selesai, semua
+#      app yang sudah terinstall & lagi dibuka akan otomatis mendeteksi
+#      update ini & menawarkan install sendiri (dialog bawaan Tauri).
+#
+# WAJIB diisi dulu (1x saja, lihat SOP lengkap dari asisten AI):
+#   Settings > Secrets and variables > Actions > New repository secret:
+#   - TAURI_PRIVATE_KEY   (isi file .tauri/pengingat-sholat.key hasil generate)
+#   - TAURI_KEY_PASSWORD  (password yang dipakai saat generate key)
 on:
   push:
-    branches: [main]
-    paths:
-      - "desktop-app/**"
+    tags:
+      - "desktop-app-v*"
   workflow_dispatch:
 
+permissions:
+  contents: write # wajib, supaya workflow boleh bikin/isi GitHub Release
+
 jobs:
-  build-windows:
+  build-and-release:
     runs-on: windows-latest
     defaults:
       run:
-        # semua command di bawah otomatis dijalankan DI DALAM folder ini
         working-directory: desktop-app
     steps:
       - name: Checkout kode
@@ -36,14 +56,24 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build installer (.msi & .exe)
-        run: npx tauri build
+      - name: Build, tanda tangani, & terbitkan rilis
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        with:
+          projectPath: desktop-app
+          tagName: desktop-app-v__VERSION__
+          releaseName: "Pengingat Sholat Desktop v__VERSION__"
+          releaseBody: "Update otomatis Pengingat Sholat Desktop."
+          releaseDraft: false
+          prerelease: false
 
-      - name: Upload hasil build
+      - name: Upload juga sbg Artifacts (cadangan, opsional)
         uses: actions/upload-artifact@v4
         with:
           name: pengingat-sholat-windows
           path: |
             desktop-app/src-tauri/target/release/bundle/msi/*.msi
             desktop-app/src-tauri/target/release/bundle/nsis/*.exe
-
