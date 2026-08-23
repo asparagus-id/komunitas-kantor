@@ -5,10 +5,16 @@
   "topics": {},
   "puasaPoll": {
     "enabled": false,
-    "days": [],
-    "time": null,
-    "question": null,
-    "options": []
+    "days": [
+      1,
+      4
+    ],
+    "time": "08:30",
+    "question": "NJENENGAN PUASA MBOTEN?",
+    "options": [
+      "INGGIH",
+      "MBOTHEN"
+    ]
   },
   "kajian": [],
   "kajianSettings": {
