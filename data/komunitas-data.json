@@ -1,5 +1,7 @@
 {
-  "adminUserIds": [],
+  "adminUserIds": [
+    216663781
+  ],
   "topics": {},
   "puasaPoll": {
     "enabled": false,
