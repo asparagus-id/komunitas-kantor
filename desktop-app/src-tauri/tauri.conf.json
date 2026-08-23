@@ -1,0 +1,57 @@
+{
+  "build": {
+    "distDir": "../public",
+    "devPath": "../public",
+    "beforeBuildCommand": "",
+    "beforeDevCommand": ""
+  },
+  "package": {
+    "productName": "Pengingat Sholat",
+    "version": "1.4.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "http": {
+        "all": true,
+        "scope": ["https://api.aladhan.com/*", "https://nominatim.openstreetmap.org/*"]
+      },
+      "notification": {
+        "all": true
+      },
+      "window": {
+        "all": false,
+        "close": true,
+        "minimize": true,
+        "maximize": true,
+        "setFullscreen": true,
+        "startDragging": true
+      }
+    },
+    "bundle": {
+      "active": true,
+      "targets": ["msi", "nsis"],
+      "identifier": "com.rempahecho.pengingatsholat",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ]
+    },
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "title": "Pengingat Sholat - Kantor",
+        "width": 1280,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false,
+        "fileDropEnabled": false
+      }
+    ]
+  }
+}
