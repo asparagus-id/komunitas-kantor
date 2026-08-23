@@ -121,8 +121,8 @@
   "reminders": [],
   "liburReminder": {
     "enabled": false,
-    "time": null,
-    "topicKey": null,
+    "time": "09:00",
+    "topicKey": "pengumuman",
     "lastSentDate": null
   },
   "puasaLog": {},
