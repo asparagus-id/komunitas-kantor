@@ -1,0 +1,36 @@
+name: (Sekali Pakai) Generate Kunci Auto-Update
+
+# WORKFLOW SEKALI PAKAI -- jalankan manual SATU KALI SAJA di awal setup
+# auto-update, lewat tab Actions > pilih workflow ini > "Run workflow".
+# Setelah kuncinya sudah diambil & disimpan sbg Secret (lihat SOP), file
+# workflow ini boleh dihapus dari repo -- tidak dibutuhkan lagi setelahnya.
+on:
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate keypair (tanpa password, --ci)
+        run: npx --yes @tauri-apps/cli@1 signer generate --ci -w ./pengingat-sholat.key
+
+      - name: Tampilkan PUBLIC key (aman dilihat, BUKAN rahasia)
+        run: |
+          echo "===================================================="
+          echo "COPY teks di bawah ini (termasuk baris paling atas &"
+          echo "paling bawah) ke tauri.conf.json, gantikan placeholder"
+          echo "GANTI_DENGAN_PUBLIC_KEY_HASIL_LANGKAH_1_SOP :"
+          echo "===================================================="
+          cat ./pengingat-sholat.key.pub
+          echo "===================================================="
+
+      - name: Simpan PRIVATE key sbg artifact (RAHASIA -- jangan disebar)
+        uses: actions/upload-artifact@v4
+        with:
+          name: pengingat-sholat-PRIVATE-KEY-RAHASIA
+          path: ./pengingat-sholat.key
