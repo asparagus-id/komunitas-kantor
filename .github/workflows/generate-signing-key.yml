@@ -16,8 +16,8 @@ jobs:
         with:
           node-version: 20
 
-      - name: Generate keypair (tanpa password, --ci)
-        run: npx --yes @tauri-apps/cli@1 signer generate --ci -w ./pengingat-sholat.key
+      - name: Generate keypair (PAKAI password, hindari bug kunci tanpa password)
+        run: npx --yes @tauri-apps/cli@1 signer generate -w ./pengingat-sholat.key --password "PengingatSholatKantor2026!"
 
       - name: Tampilkan PUBLIC key (aman dilihat, BUKAN rahasia)
         run: |
@@ -31,6 +31,12 @@ jobs:
           cat ./pengingat-sholat.key.pub
           echo ""
           echo "PUBKEY_SELESAI"
+          echo "=================================================="
+          echo "PENTING: kunci ini PAKAI PASSWORD (beda dari sebelumnya)."
+          echo "Selain simpan TAURI_PRIVATE_KEY dari Artifacts, WAJIB juga"
+          echo "buat 1 Secret lagi:"
+          echo "  Name : TAURI_KEY_PASSWORD"
+          echo "  Value: PengingatSholatKantor2026!"
           echo "=================================================="
 
       - name: Simpan PRIVATE key sbg artifact (RAHASIA -- jangan disebar)
