@@ -6,6 +6,10 @@
     "kopi_pagi": {
       "threadId": 9270,
       "label": "Kopi Pagi"
+    },
+    "puasa": {
+      "threadId": 9028,
+      "label": "PUASA"
     }
   },
   "puasaPoll": {
