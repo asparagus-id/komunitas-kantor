@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Bot Komunitas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Inter+Tight:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#081619; --panel:#0e2a2f; --panel-2:#12363d; --line:#1e4a52;
+    --gold:#c9a227; --gold-soft:#e0c368; --text:#f5f1e6; --muted:#7fa5a3;
+    --muted-dim:#4c6c6a; --ok:#6fbf8b; --ember:#e0723c;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; min-height:100vh; background:radial-gradient(ellipse 120% 80% at 50% -10%, #0f2b30, var(--bg) 60%); color:var(--text); font-family:'Inter',system-ui,sans-serif;}
+  .wrap{max-width:880px; margin:0 auto; padding:32px 20px 60px;}
+  h1{font-family:'Inter Tight',sans-serif; font-size:22px; margin:0 0 4px;}
+  .sub{color:var(--muted); font-size:13px; margin-bottom:24px;}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:20px 22px; margin-bottom:18px;}
+  .card h2{font-family:'Inter Tight',sans-serif; font-size:15px; margin:0 0 4px; display:flex; align-items:center; gap:8px;}
+  .card .desc{font-size:12.5px; color:var(--muted); margin-bottom:16px;}
+  .row{display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap;}
+  .field{flex:1; min-width:120px; display:flex; flex-direction:column; gap:5px;}
+  .field label{font-size:11.5px; color:var(--muted);}
+  input, select{
+    background:#08181b; border:1px solid var(--line); color:var(--text);
+    border-radius:9px; padding:9px 11px; font-size:13.5px; font-family:inherit; width:100%;
+  }
+  input:focus, select:focus{outline:none; border-color:var(--gold);}
+  .btn{border:1px solid var(--line); background:var(--panel-2); color:var(--text); border-radius:9px; padding:9px 16px; font-size:13px; cursor:pointer; font-family:inherit;}
+  .btn:hover{border-color:var(--gold);}
+  .btn.primary{background:var(--gold); color:#0e2a2f; border-color:var(--gold); font-weight:700;}
+  .btn.primary:hover{background:var(--gold-soft);}
+  .btn.danger{color:var(--ember); border-color:rgba(224,114,60,.4); background:transparent;}
+  .btn.small{padding:6px 11px; font-size:12px;}
+  .chip-days{display:flex; gap:6px; flex-wrap:wrap;}
+  .chip-days label{
+    display:flex; align-items:center; gap:5px; padding:6px 11px; border-radius:999px;
+    border:1px solid var(--line); background:#08181b; font-size:12px; color:var(--muted); cursor:pointer;
+  }
+  .chip-days input{width:auto; accent-color:var(--gold);}
+  .chip-days label:has(input:checked){border-color:var(--gold); color:var(--gold-soft); background:rgba(201,162,39,.1);}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{text-align:left; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; padding:6px 8px; border-bottom:1px solid var(--line);}
+  td{padding:9px 8px; border-bottom:1px solid rgba(30,74,82,.5); vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  .empty{color:var(--muted-dim); font-size:12.5px; padding:10px 0;}
+  .status-bar{display:flex; align-items:center; gap:10px; font-size:12px; color:var(--muted); margin-bottom:18px;}
+  .dot{width:7px;height:7px;border-radius:50%; background:var(--muted-dim);}
+  .dot.on{background:var(--ok); box-shadow:0 0 6px var(--ok);}
+  .dot.err{background:var(--ember); box-shadow:0 0 6px var(--ember);}
+  .toast{position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--panel-2); border:1px solid var(--gold); color:var(--text); padding:10px 18px; border-radius:10px; font-size:13px; opacity:0; pointer-events:none; transition:.25s; z-index:50;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(-6px);}
+  .toast.error{border-color:var(--ember);}
+  .gate{max-width:420px; margin:15vh auto; text-align:center;}
+  .gate input{margin-bottom:10px;}
+  .hidden{display:none !important;}
+  .hint{font-size:11px; color:var(--muted-dim); margin-top:4px; line-height:1.5;}
+  .badge{display:inline-block; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:600;}
+  .badge.on{background:rgba(111,191,139,.15); color:var(--ok);}
+  .badge.off{background:rgba(76,108,106,.25); color:var(--muted);}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <!-- ---------- GATE: isi URL worker + token sekali, disimpan lokal ---------- -->
+  <div class="gate" id="gate">
+    <h1>Admin Bot Komunitas</h1>
+    <div class="sub">Hubungkan ke Worker Cloudflare Anda dulu.</div>
+    <div class="card" style="text-align:left;">
+      <div class="field" style="margin-bottom:10px;">
+        <label>URL Worker</label>
+        <input type="text" id="gateUrl" placeholder="https://bot-komunitas.username.workers.dev">
+      </div>
+      <div class="field" style="margin-bottom:14px;">
+        <label>APP_TOKEN</label>
+        <input type="password" id="gateToken" placeholder="token yang Anda isi di wrangler secret / dashboard">
+      </div>
+      <button class="btn primary" id="gateConnect" style="width:100%;">Hubungkan</button>
+      <div class="hint">Tersimpan cuma di browser ini (localStorage), tidak dikirim ke mana pun selain Worker Anda sendiri.</div>
+    </div>
+  </div>
+
+  <!-- ---------- ISI ADMIN (muncul setelah terhubung) ---------- -->
+  <div id="app" class="hidden">
+    <h1>Admin Bot Komunitas</h1>
+    <div class="sub">Perubahan di sini &amp; command Telegram sama-sama berlaku — tersinkron dua arah lewat data yang sama.</div>
+    <div class="status-bar">
+      <span class="dot" id="connDot"></span><span id="connLabel">memeriksa…</span>
+      <span style="flex:1"></span>
+      <span id="aiQuotaLabel" style="color:var(--muted-dim)"></span>
+      <button class="btn small" id="reloadBtn">Muat ulang</button>
+      <button class="btn small" id="disconnectBtn">Putuskan</button>
+    </div>
+
+    <!-- ADMIN BOT -->
+    <div class="card">
+      <h2>👮 Admin bot</h2>
+      <div class="desc">ID Telegram yang boleh pakai perintah pengaturan (topik/jadwal/kajian/pengingat). Kosongkan daftar ini kalau mau semua anggota grup bebas pakai semua perintah — begitu ada 1 ID di sini, pembatasan otomatis aktif. Anggota bisa lihat ID mereka sendiri lewat <code>/id</code> di Telegram.</div>
+      <table id="adminsTable"><thead><tr><th>User ID</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="row" style="margin-top:12px;">
+        <div class="field"><label>User ID Telegram</label><input type="number" id="newAdminId" placeholder="123456789"></div>
+      </div>
+      <button class="btn" id="addAdminBtn">+ Tambah admin</button>
+    </div>
+
+    <!-- TOPIK -->
+    <div class="card">
+      <h2>🗂️ Topik grup</h2>
+      <div class="desc">Cocok dengan hasil <code>/topik_set</code> di Telegram. thread_id didapat otomatis kalau didaftarkan lewat command; di sini Anda bisa lihat, ubah nama, atau tambah manual kalau sudah tahu thread_id-nya.</div>
+      <table id="topicsTable"><thead><tr><th>Nama pendek</th><th>Label</th><th>Thread ID</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="row" style="margin-top:12px;">
+        <div class="field"><label>Nama pendek</label><input type="text" id="newTopicKey" placeholder="puasa"></div>
+        <div class="field"><label>Label</label><input type="text" id="newTopicLabel" placeholder="Puasa"></div>
+        <div class="field"><label>Thread ID</label><input type="number" id="newTopicThread" placeholder="123"></div>
+      </div>
+      <button class="btn" id="addTopicBtn">+ Tambah topik</button>
+    </div>
+
+    <!-- POLLING PUASA -->
+    <div class="card">
+      <h2>🌙 Absensi puasa <span class="badge" id="puasaBadge"></span></h2>
+      <div class="desc">Sama dengan <code>/puasa_jadwal</code>. Poll dikirim otomatis ke topik "puasa" pada hari &amp; jam yang dipilih.</div>
+      <div class="row">
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
+          <input type="checkbox" id="puasaEnabled" style="width:auto;"> Aktifkan polling otomatis
+        </label>
+      </div>
+      <div class="field" style="margin-bottom:10px;">
+        <label>Hari</label>
+        <div class="chip-days" id="puasaDays"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Jam (WIB)</label><input type="time" id="puasaTime"></div>
+        <div class="field" style="flex:2"><label>Pertanyaan poll</label><input type="text" id="puasaQuestion"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Opsi 1</label><input type="text" id="puasaOpt1"></div>
+        <div class="field"><label>Opsi 2</label><input type="text" id="puasaOpt2"></div>
+      </div>
+      <button class="btn primary" id="savePuasaBtn">Simpan pengaturan puasa</button>
+      <hr style="border:none; border-top:1px solid var(--line); margin:18px 0;">
+      <div class="desc" style="margin-bottom:8px;">Rekap jawaban hari ini:</div>
+      <div id="puasaRekap" class="empty">Memuat…</div>
+    </div>
+
+    <!-- KAJIAN -->
+    <div class="card">
+      <h2>📚 Jadwal kajian</h2>
+      <div class="desc">Sama dengan <code>/kajian_tambah</code>. Diingatkan otomatis ke topik "kajian" H- sekian hari sebelum tanggalnya.</div>
+      <div class="row" style="align-items:flex-end;">
+        <div class="field"><label>Diingatkan H- (pisah koma, 0 = hari-H)</label><input type="text" id="kajianOffsets" placeholder="7,0"></div>
+        <div class="field"><label>Jam pengingat dikirim (WIB)</label><input type="time" id="kajianTime"></div>
+      </div>
+      <div class="row" style="align-items:flex-end;">
+        <div class="field"><label>Jam mulai acara</label><input type="time" id="kajianJamAcara"></div>
+        <div class="field"><label>Lokasi</label><input type="text" id="kajianLokasi" placeholder="Mushollah"></div>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:2"><label>Catatan tambahan (muncul di tiap reminder)</label><input type="text" id="kajianCatatan" placeholder="Tidak wajib bawa konsumsi. Kabari petugas selanjutnya jika berhalangan."></div>
+      </div>
+      <button class="btn small" id="saveKajianSettingsBtn">Simpan pengaturan kajian</button>
+      <table id="kajianTable"><thead><tr><th>Tanggal</th><th>Pengisi</th><th>Tema</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="row" style="margin-top:14px;">
+        <div class="field"><label>Tanggal</label><input type="date" id="newKajianDate"></div>
+        <div class="field"><label>Pengisi</label><input type="text" id="newKajianPengisi" placeholder="Ust. Fulan"></div>
+        <div class="field" style="flex:2"><label>Tema</label><input type="text" id="newKajianTema" placeholder="Fiqih Puasa Sunnah"></div>
+      </div>
+      <button class="btn primary" id="addKajianBtn">+ Tambah kajian</button>
+    </div>
+    <!-- PENGINGAT UMUM -->
+    <div class="card">
+      <h2>🔔 Pengingat umum</h2>
+      <div class="desc">Sama dengan <code>/ingat_tambah</code>. Bebas judul &amp; pesan, ke topik mana saja, sekali/harian/mingguan/bulanan. Otomatis tersinkron ke Google Calendar kalau sudah dikonfigurasi (termasuk sebagai recurring event asli untuk yang berulang).</div>
+      <table id="remindersTable"><thead><tr><th>Judul</th><th>Jadwal</th><th>Topik</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+      <div class="row" style="margin-top:14px;">
+        <div class="field"><label>Judul</label><input type="text" id="newRemTitle" placeholder="Rapat Bulanan"></div>
+        <div class="field"><label>Topik</label><select id="newRemTopic"></select></div>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:2"><label>Pesan</label><input type="text" id="newRemMessage" placeholder="Jangan lupa rapat evaluasi"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Tipe jadwal</label>
+          <select id="newRemType">
+            <option value="once">Sekali</option>
+            <option value="daily">Harian</option>
+            <option value="weekly">Mingguan</option>
+            <option value="monthly">Bulanan</option>
+          </select>
+        </div>
+        <div class="field"><label>Jam</label><input type="time" id="newRemTime" value="08:00"></div>
+      </div>
+      <div class="row" id="remFieldOnce">
+        <div class="field"><label>Tanggal</label><input type="date" id="newRemDate"></div>
+      </div>
+      <div class="row" id="remFieldWeekly" style="display:none;">
+        <div class="field"><label>Hari</label><div class="chip-days" id="newRemDays"></div></div>
+      </div>
+      <div class="row" id="remFieldMonthly" style="display:none;">
+        <div class="field" style="max-width:140px;"><label>Tanggal tiap bulan</label><input type="number" id="newRemDom" min="1" max="31" value="1"></div>
+      </div>
+      <button class="btn primary" id="addRemBtn">+ Tambah pengingat</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const HARI = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
+let WORKER_URL = localStorage.getItem("admkom_url") || "";
+let APP_TOKEN = localStorage.getItem("admkom_token") || "";
+let data = null, sha = null;
+
+function toast(msg, isError){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (isError ? " error" : "");
+  setTimeout(()=> t.className = "toast", 2600);
+}
+function setConn(state){ // "ok" | "err" | "checking"
+  const dot = document.getElementById("connDot");
+  const label = document.getElementById("connLabel");
+  dot.className = "dot" + (state==="ok"?" on":state==="err"?" err":"");
+  label.textContent = state==="ok" ? "Terhubung • " + new Date().toLocaleTimeString("id-ID") : state==="err" ? "Gagal terhubung" : "memeriksa…";
+}
+
+async function api(method, body){
+  const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/data", {
+    method,
+    headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + APP_TOKEN },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if(res.status === 401) throw new Error("Token salah / tidak diotorisasi.");
+  if(res.status === 409) throw new Error("CONFLICT");
+  if(!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+
+async function loadData(){
+  setConn("checking");
+  try{
+    const res = await api("GET");
+    data = res.data; sha = res.sha;
+    setConn("ok");
+    renderAll();
+  }catch(e){
+    setConn("err");
+    toast("Gagal memuat data: " + e.message, true);
+  }
+}
+async function saveData(){
+  try{
+    const res = await api("POST", {sha, data});
+    sha = res.sha;
+    setConn("ok");
+    toast("Tersimpan ✓");
+    return true;
+  }catch(e){
+    if(e.message === "CONFLICT"){
+      toast("Data berubah dari sumber lain (mis. command Telegram) — dimuat ulang, silakan ulangi perubahan.", true);
+      await loadData();
+    } else {
+      toast("Gagal menyimpan: " + e.message, true);
+    }
+    return false;
+  }
+}
+
+function renderAll(){
+  renderAdmins();
+  renderTopics();
+  renderPuasa();
+  renderKajian();
+  renderRekap();
+  renderReminders();
+  toggleRemFields();
+}
+
+/* ---------- ADMIN BOT ---------- */
+function renderAdmins(){
+  data.adminUserIds = data.adminUserIds || [];
+  const tbody = document.querySelector("#adminsTable tbody");
+  tbody.innerHTML = data.adminUserIds.length ? "" : `<tr><td colspan="2" class="empty">Belum ada admin terdaftar — semua anggota grup masih bisa pakai semua perintah.</td></tr>`;
+  data.adminUserIds.forEach(id=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td><code>${id}</code></td><td><button class="btn small danger" data-del-admin="${id}">Hapus</button></td>`;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll("[data-del-admin]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = Number(btn.dataset.delAdmin);
+      data.adminUserIds = data.adminUserIds.filter(x=>x!==id);
+      if(await saveData()) renderAdmins();
+    });
+  });
+}
+document.getElementById("addAdminBtn").addEventListener("click", async ()=>{
+  const id = parseInt(document.getElementById("newAdminId").value, 10);
+  if(!id){ toast("Isi User ID yang valid dulu (angka dari command /id di Telegram).", true); return; }
+  data.adminUserIds = data.adminUserIds || [];
+  if(data.adminUserIds.includes(id)){ toast("ID itu sudah jadi admin.", true); return; }
+  data.adminUserIds.push(id);
+  if(await saveData()){
+    renderAdmins();
+    document.getElementById("newAdminId").value = "";
+  }
+});
+
+/* ---------- TOPIK ---------- */
+function renderTopics(){
+  const tbody = document.querySelector("#topicsTable tbody");
+  const keys = Object.keys(data.topics || {});
+  tbody.innerHTML = keys.length ? "" : `<tr><td colspan="4" class="empty">Belum ada topik terdaftar. Tambah lewat form di bawah, atau kirim /topik_set &lt;nama&gt; di Telegram.</td></tr>`;
+  keys.forEach(k=>{
+    const t = data.topics[k];
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><code>${k}</code></td>
+      <td>${t.label || "-"}</td>
+      <td>${t.threadId}</td>
+      <td><button class="btn small danger" data-del-topic="${k}">Hapus</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll("[data-del-topic]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      delete data.topics[btn.dataset.delTopic];
+      if(await saveData()) renderTopics();
+    });
+  });
+}
+document.getElementById("addTopicBtn").addEventListener("click", async ()=>{
+  const key = document.getElementById("newTopicKey").value.trim().toLowerCase();
+  const label = document.getElementById("newTopicLabel").value.trim();
+  const threadId = parseInt(document.getElementById("newTopicThread").value, 10);
+  if(!key || !threadId){ toast("Isi nama pendek & thread ID dulu.", true); return; }
+  data.topics[key] = { threadId, label: label || key };
+  if(await saveData()){
+    renderTopics();
+    document.getElementById("newTopicKey").value = "";
+    document.getElementById("newTopicLabel").value = "";
+    document.getElementById("newTopicThread").value = "";
+  }
+});
+
+/* ---------- PUASA ---------- */
+function renderPuasa(){
+  const p = data.puasaPoll;
+  document.getElementById("puasaEnabled").checked = !!p.enabled;
+  document.getElementById("puasaTime").value = p.time || "";
+  document.getElementById("puasaQuestion").value = p.question || "";
+  document.getElementById("puasaOpt1").value = (p.options && p.options[0]) || "";
+  document.getElementById("puasaOpt2").value = (p.options && p.options[1]) || "";
+  const badge = document.getElementById("puasaBadge");
+  badge.textContent = p.enabled ? "Aktif" : "Nonaktif";
+  badge.className = "badge " + (p.enabled ? "on" : "off");
+
+  const box = document.getElementById("puasaDays");
+  box.innerHTML = "";
+  HARI.forEach((label, idx)=>{
+    const el = document.createElement("label");
+    el.innerHTML = `<input type="checkbox" value="${idx}" ${p.days && p.days.includes(idx) ? "checked":""}> ${label}`;
+    box.appendChild(el);
+  });
+}
+document.getElementById("savePuasaBtn").addEventListener("click", async ()=>{
+  const days = Array.from(document.querySelectorAll("#puasaDays input:checked")).map(el=>parseInt(el.value,10));
+  const time = document.getElementById("puasaTime").value.trim();
+  const question = document.getElementById("puasaQuestion").value.trim();
+  const opt1 = document.getElementById("puasaOpt1").value.trim();
+  const opt2 = document.getElementById("puasaOpt2").value.trim();
+  data.puasaPoll = {
+    enabled: document.getElementById("puasaEnabled").checked,
+    days,
+    time: time || null,
+    question: question || null,
+    options: (opt1 && opt2) ? [opt1, opt2] : [],
+  };
+  if(await saveData()) renderPuasa();
+});
+
+function renderRekap(){
+  const key = new Date().toLocaleDateString("sv-SE"); // format YYYY-MM-DD, sesuai jakartaDateStr worker (perkiraan wall-clock lokal)
+  const log = (data.puasaLog || {})[key];
+  const box = document.getElementById("puasaRekap");
+  if(!log || Object.keys(log.answers||{}).length === 0){
+    box.className = "empty"; box.textContent = "Belum ada jawaban untuk hari ini.";
+    return;
+  }
+  const puasa = Object.values(log.answers).filter(a=>a.choice===0);
+  const tidak = Object.values(log.answers).filter(a=>a.choice===1);
+  box.className = "";
+  box.innerHTML = `
+    <div style="display:flex; gap:24px; flex-wrap:wrap;">
+      <div><b style="color:var(--ok)">Puasa (${puasa.length})</b><br>${puasa.map(a=>a.name).join("<br>") || "-"}</div>
+      <div><b style="color:var(--muted)">Tidak puasa (${tidak.length})</b><br>${tidak.map(a=>a.name).join("<br>") || "-"}</div>
+    </div>
+  `;
+}
+
+/* ---------- KAJIAN ---------- */
+function renderKajian(){
+  data.kajianSettings = data.kajianSettings || {offsetsDays:[], time:null, jamAcara:null, lokasi:"", catatan:""};
+  const ks = data.kajianSettings;
+  document.getElementById("kajianOffsets").value = (ks.offsetsDays||[]).join(",");
+  document.getElementById("kajianTime").value = ks.time || "";
+  document.getElementById("kajianJamAcara").value = ks.jamAcara || "";
+  document.getElementById("kajianLokasi").value = ks.lokasi || "";
+  document.getElementById("kajianCatatan").value = ks.catatan || "";
+  const tbody = document.querySelector("#kajianTable tbody");
+  const today = new Date().toLocaleDateString("sv-SE");
+  const list = (data.kajian || []).filter(k=>k.tanggal >= today).sort((a,b)=>a.tanggal.localeCompare(b.tanggal));
+  tbody.innerHTML = list.length ? "" : `<tr><td colspan="4" class="empty">Belum ada jadwal kajian mendatang.</td></tr>`;
+  list.forEach(k=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${fmtTanggalID(k.tanggal)}</td>
+      <td>${k.pengisi}</td>
+      <td>${k.tema}</td>
+      <td><button class="btn small danger" data-del-kajian="${k.id}">Hapus</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll("[data-del-kajian]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = Number(btn.dataset.delKajian);
+      data.kajian = data.kajian.filter(k=>k.id !== id);
+      if(await saveData()) renderKajian();
+    });
+  });
+}
+function fmtTanggalID(iso){
+  const [y,m,d] = iso.split("-").map(Number);
+  const bulan = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  return `${d} ${bulan[m-1]} ${y}`;
+}
+document.getElementById("saveKajianSettingsBtn").addEventListener("click", async ()=>{
+  const offsetsRaw = document.getElementById("kajianOffsets").value.trim();
+  const offsets = offsetsRaw ? offsetsRaw.split(",").map(s=>parseInt(s.trim(),10)).filter(n=>!isNaN(n) && n>=0) : [];
+  data.kajianSettings = {
+    offsetsDays: [...new Set(offsets)].sort((a,b)=>b-a),
+    time: document.getElementById("kajianTime").value || null,
+    jamAcara: document.getElementById("kajianJamAcara").value || null,
+    lokasi: document.getElementById("kajianLokasi").value.trim(),
+    catatan: document.getElementById("kajianCatatan").value.trim(),
+  };
+  if(await saveData()) renderKajian();
+});
+document.getElementById("addKajianBtn").addEventListener("click", async ()=>{
+  const tanggal = document.getElementById("newKajianDate").value;
+  const pengisi = document.getElementById("newKajianPengisi").value.trim();
+  const tema = document.getElementById("newKajianTema").value.trim();
+  if(!tanggal || !pengisi || !tema){ toast("Isi tanggal, pengisi, dan tema dulu.", true); return; }
+  data.kajian = data.kajian || [];
+  data.kajian.push({ id: Date.now(), tanggal, pengisi, tema, remindersSent: [] });
+  if(await saveData()){
+    renderKajian();
+    document.getElementById("newKajianDate").value = "";
+    document.getElementById("newKajianPengisi").value = "";
+    document.getElementById("newKajianTema").value = "";
+  }
+});
+
+/* ---------- PENGINGAT UMUM ---------- */
+function populateTopicSelect(){
+  const sel = document.getElementById("newRemTopic");
+  const keys = Object.keys(data.topics || {});
+  sel.innerHTML = keys.length ? keys.map(k=>`<option value="${k}">${k}</option>`).join("") : `<option value="">(belum ada topik)</option>`;
+}
+function toggleRemFields(){
+  const type = document.getElementById("newRemType").value;
+  document.getElementById("remFieldOnce").style.display = type==="once" ? "flex" : "none";
+  document.getElementById("remFieldWeekly").style.display = type==="weekly" ? "flex" : "none";
+  document.getElementById("remFieldMonthly").style.display = type==="monthly" ? "flex" : "none";
+}
+document.getElementById("newRemType").addEventListener("change", toggleRemFields);
+(function initRemDaysChips(){
+  const box = document.getElementById("newRemDays");
+  HARI.forEach((label, idx)=>{
+    const el = document.createElement("label");
+    el.innerHTML = `<input type="checkbox" value="${idx}"> ${label}`;
+    box.appendChild(el);
+  });
+})();
+
+function renderReminders(){
+  populateTopicSelect();
+  const tbody = document.querySelector("#remindersTable tbody");
+  const list = data.reminders || [];
+  tbody.innerHTML = list.length ? "" : `<tr><td colspan="5" class="empty">Belum ada pengingat umum.</td></tr>`;
+  list.forEach(r=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.title}${r.googleEventId ? ' <span title="Tersinkron Google Calendar">🗓️</span>':''}</td>
+      <td>${formatJadwalUmum(r.schedule)}</td>
+      <td><code>${r.topicKey}</code></td>
+      <td><span class="badge ${r.enabled?"on":"off"}">${r.enabled?"Aktif":"Nonaktif"}</span></td>
+      <td style="white-space:nowrap;">
+        <button class="btn small" data-toggle-rem="${r.id}">${r.enabled?"Matikan":"Aktifkan"}</button>
+        <button class="btn small danger" data-del-rem="${r.id}">Hapus</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll("[data-toggle-rem]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = Number(btn.dataset.toggleRem);
+      const r = data.reminders.find(x=>x.id===id);
+      r.enabled = !r.enabled;
+      if(await saveData()) renderReminders();
+    });
+  });
+  tbody.querySelectorAll("[data-del-rem]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = Number(btn.dataset.delRem);
+      data.reminders = data.reminders.filter(r=>r.id!==id);
+      if(await saveData()) renderReminders();
+      // catatan: event Google Calendar utk pengingat yg dihapus lewat panel
+      // ini TIDAK otomatis terhapus dari Calendar (beda dgn lewat command
+      // Telegram) -- hapus manual di Google Calendar kalau perlu.
+    });
+  });
+}
+function formatJadwalUmum(s){
+  if(s.type==="once"){ const [y,m,d]=s.date.split("-"); return `Sekali, ${d}-${m}-${y} jam ${s.time}`; }
+  if(s.type==="daily") return `Harian jam ${s.time}`;
+  if(s.type==="weekly") return `Tiap ${(s.daysOfWeek||[]).map(d=>HARI[d]).join(", ")} jam ${s.time}`;
+  if(s.type==="monthly") return `Tanggal ${s.dayOfMonth} tiap bulan jam ${s.time}`;
+  return "-";
+}
+document.getElementById("addRemBtn").addEventListener("click", async ()=>{
+  const title = document.getElementById("newRemTitle").value.trim();
+  const message = document.getElementById("newRemMessage").value.trim();
+  const topicKey = document.getElementById("newRemTopic").value;
+  const type = document.getElementById("newRemType").value;
+  const time = document.getElementById("newRemTime").value || "08:00";
+  if(!title || !message || !topicKey){ toast("Isi judul, pesan, dan topik dulu.", true); return; }
+  let schedule;
+  if(type==="once"){
+    const date = document.getElementById("newRemDate").value;
+    if(!date){ toast("Isi tanggal dulu.", true); return; }
+    schedule = { type:"once", date, time };
+  } else if(type==="daily"){
+    schedule = { type:"daily", time };
+  } else if(type==="weekly"){
+    const days = Array.from(document.querySelectorAll("#newRemDays input:checked")).map(el=>parseInt(el.value,10));
+    if(!days.length){ toast("Pilih minimal satu hari.", true); return; }
+    schedule = { type:"weekly", time, daysOfWeek: days };
+  } else {
+    const dom = parseInt(document.getElementById("newRemDom").value,10) || 1;
+    schedule = { type:"monthly", time, dayOfMonth: dom };
+  }
+  data.reminders = data.reminders || [];
+  data.reminders.push({ id: Date.now(), title, message, topicKey, schedule, enabled: true, lastSentDate: null });
+  // catatan: sinkron Google Calendar utk pengingat baru lewat panel ini
+  // TIDAK dibuatkan otomatis (beda dgn lewat command Telegram, yg jalan
+  // langsung di Worker & bisa panggil Google API). Kalau butuh sinkron,
+  // tambahkan lewat /ingat_tambah di Telegram.
+  if(await saveData()){
+    renderReminders();
+    document.getElementById("newRemTitle").value = "";
+    document.getElementById("newRemMessage").value = "";
+  }
+});
+
+/* ---------- Gate / koneksi ---------- */
+document.getElementById("gateConnect").addEventListener("click", async ()=>{
+  WORKER_URL = document.getElementById("gateUrl").value.trim();
+  APP_TOKEN = document.getElementById("gateToken").value.trim();
+  if(!WORKER_URL || !APP_TOKEN){ toast("Isi URL Worker dan token dulu.", true); return; }
+  localStorage.setItem("admkom_url", WORKER_URL);
+  localStorage.setItem("admkom_token", APP_TOKEN);
+  await boot();
+});
+document.getElementById("reloadBtn").addEventListener("click", loadData);
+document.getElementById("disconnectBtn").addEventListener("click", ()=>{
+  localStorage.removeItem("admkom_url"); localStorage.removeItem("admkom_token");
+  WORKER_URL = ""; APP_TOKEN = "";
+  document.getElementById("app").classList.add("hidden");
+  document.getElementById("gate").classList.remove("hidden");
+});
+
+async function boot(){
+  document.getElementById("gate").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  await loadData();
+  loadAiQuota();
+  // refresh rekap tiap 60 detik biar terasa hidup
+  setInterval(async ()=>{
+    try{ const res = await api("GET"); data = res.data; sha = res.sha; renderRekap(); setConn("ok"); }
+    catch(e){ /* diam, jangan ganggu kalau kebetulan gagal sesaat */ }
+  }, 60000);
+}
+async function loadAiQuota(){
+  const el = document.getElementById("aiQuotaLabel");
+  try{
+    const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/ai-quota", { headers:{ "Authorization":"Bearer " + APP_TOKEN } });
+    const q = await res.json();
+    if(!q.aiConfigured){ el.textContent = "AI: belum dikonfigurasi"; return; }
+    el.textContent = `AI: Groq ${q.groq.percent ?? "-"}% • Workers AI ${q.workersAi.percent}%`;
+  }catch(e){ el.textContent = ""; }
+}
+
+if(WORKER_URL && APP_TOKEN){
+  document.getElementById("gateUrl").value = WORKER_URL;
+  boot();
+}
+</script>
+</body>
+</html>
