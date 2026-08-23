@@ -104,7 +104,7 @@
     <!-- TOPIK -->
     <div class="card">
       <h2>🗂️ Topik grup</h2>
-      <div class="desc">Cocok dengan hasil <code>/topik_set</code> di Telegram. thread_id didapat otomatis kalau didaftarkan lewat command; di sini Anda bisa lihat, ubah nama, atau tambah manual kalau sudah tahu thread_id-nya.</div>
+      <div class="desc">Cocok dengan hasil <code>/topik_set</code> di Telegram. thread_id didapat otomatis kalau didaftarkan lewat command; di sini Anda bisa lihat, ubah nama, atau tambah manual kalau sudah tahu thread_id-nya. <b>Baru:</b> topik juga otomatis kedeteksi diam-diam dari aktivitas chat biasa di grup (lihat <code>autoRegisterTopicFromMessage</code> di Worker) — topik yang namanya masih <code>topik_&lt;angka&gt;</code> di bawah ini artinya hasil deteksi otomatis, belum di-rename manual.</div>
       <table id="topicsTable"><thead><tr><th>Nama pendek</th><th>Label</th><th>Thread ID</th><th></th></tr></thead><tbody></tbody></table>
       <div class="row" style="margin-top:12px;">
         <div class="field"><label>Nama pendek</label><input type="text" id="newTopicKey" placeholder="puasa"></div>
@@ -135,6 +135,9 @@
         <div class="field"><label>Opsi 1</label><input type="text" id="puasaOpt1"></div>
         <div class="field"><label>Opsi 2</label><input type="text" id="puasaOpt2"></div>
       </div>
+      <div class="row">
+        <div class="field"><label>Kirim ke topik</label><select id="puasaTopic"><option value="">(topik bernama "puasa", kalau ada)</option></select></div>
+      </div>
       <button class="btn primary" id="savePuasaBtn">Simpan pengaturan puasa</button>
       <hr style="border:none; border-top:1px solid var(--line); margin:18px 0;">
       <div class="desc" style="margin-bottom:8px;">Rekap jawaban hari ini:</div>
@@ -155,6 +158,7 @@
       </div>
       <div class="row">
         <div class="field" style="flex:2"><label>Catatan tambahan (muncul di tiap reminder)</label><input type="text" id="kajianCatatan" placeholder="Tidak wajib bawa konsumsi. Kabari petugas selanjutnya jika berhalangan."></div>
+        <div class="field"><label>Kirim ke topik</label><select id="kajianTopic"><option value="">(topik bernama "kajian", kalau ada)</option></select></div>
       </div>
       <button class="btn small" id="saveKajianSettingsBtn">Simpan pengaturan kajian</button>
       <table id="kajianTable"><thead><tr><th>Tanggal</th><th>Pengisi</th><th>Tema</th><th></th></tr></thead><tbody></tbody></table>
@@ -165,6 +169,34 @@
       </div>
       <button class="btn primary" id="addKajianBtn">+ Tambah kajian</button>
     </div>
+
+    <!-- GOOGLE CALENDAR: PENGINGAT EVENT -->
+    <div class="card">
+      <h2>🗓️ Pengingat event Google Calendar <span class="badge" id="calReminderBadge"></span></h2>
+      <div class="desc">Sama dengan <code>/kalender_reminder</code>. Berlaku untuk SEMUA event di Google Calendar yang dipantau (bukan cuma kajian/pengingat umum yang dibuat dari bot ini) — dikirim sekian menit sebelum event mulai. Fitur ini butuh ENV Google (service account) sudah diisi di Worker; kosongkan kolom untuk mematikan. Cek status koneksi lewat <code>/kalender_cek</code> di Telegram.</div>
+      <div class="row">
+        <div class="field"><label>Ingatkan berapa menit sebelum event mulai</label><input type="number" id="calReminderMinutes" min="0" placeholder="mis. 15"></div>
+        <div class="field"><label>Kirim ke topik</label><select id="calReminderTopic"><option value="">(topik bernama "kalender", kalau ada)</option></select></div>
+      </div>
+      <button class="btn small" id="saveCalReminderBtn">Simpan pengaturan kalender</button>
+    </div>
+
+    <!-- LIBUR NASIONAL -->
+    <div class="card">
+      <h2>🕋 Pengingat H-1 libur nasional</h2>
+      <div class="desc">Sama dengan <code>/libur_reminder</code>. Dicek otomatis dari kalender publik Google tiap hari jam yang dipilih -- kalau BESOK libur nasional, pesan dikirim; kalau bukan, diam saja.</div>
+      <div class="row">
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
+          <input type="checkbox" id="liburEnabled" style="width:auto;"> Aktifkan pengingat H-1
+        </label>
+      </div>
+      <div class="row">
+        <div class="field"><label>Jam cek &amp; kirim (WIB)</label><input type="time" id="liburTime"></div>
+        <div class="field"><label>Kirim ke topik</label><select id="liburTopic"><option value="">(percakapan umum grup)</option></select></div>
+      </div>
+      <button class="btn small" id="saveLiburBtn">Simpan pengaturan libur nasional</button>
+    </div>
+
     <!-- PENGINGAT UMUM -->
     <div class="card">
       <h2>🔔 Pengingat umum</h2>
@@ -238,6 +270,20 @@ async function api(method, body){
   if(!res.ok) throw new Error("HTTP " + res.status);
   return res.json();
 }
+// Endpoint khusus (bukan /data) -- dipakai utk aksi yang butuh Worker ikut
+// panggil Google Calendar (tambah/hapus pengingat umum & kajian), supaya
+// sinkron kalender jalan sama persis kayak lewat command Telegram, bukan
+// cuma tulis data mentah lewat POST /data.
+async function apiAction(path, body){
+  const res = await fetch(WORKER_URL.replace(/\/$/,"") + path, {
+    method: "POST",
+    headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + APP_TOKEN },
+    body: JSON.stringify(body),
+  });
+  if(res.status === 401) throw new Error("Token salah / tidak diotorisasi.");
+  if(!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
 
 async function loadData(){
   setConn("checking");
@@ -272,10 +318,13 @@ async function saveData(){
 function renderAll(){
   renderAdmins();
   renderTopics();
+  populateTopicSelect(); // isi semua dropdown topik dulu, supaya field topicKey di tiap card (puasa/kajian/kalender/libur/pengingat umum) bisa langsung ke-set nilainya
   renderPuasa();
   renderKajian();
   renderRekap();
   renderReminders();
+  renderCalReminder();
+  renderLibur();
   toggleRemFields();
 }
 
@@ -313,15 +362,19 @@ document.getElementById("addAdminBtn").addEventListener("click", async ()=>{
 function renderTopics(){
   const tbody = document.querySelector("#topicsTable tbody");
   const keys = Object.keys(data.topics || {});
-  tbody.innerHTML = keys.length ? "" : `<tr><td colspan="4" class="empty">Belum ada topik terdaftar. Tambah lewat form di bawah, atau kirim /topik_set &lt;nama&gt; di Telegram.</td></tr>`;
+  tbody.innerHTML = keys.length ? "" : `<tr><td colspan="4" class="empty">Belum ada topik terdaftar. Tambah lewat form di bawah, kirim /topik_set &lt;nama&gt; di Telegram, atau tunggu auto-deteksi dari aktivitas chat biasa.</td></tr>`;
   keys.forEach(k=>{
     const t = data.topics[k];
+    const isAuto = /^topik_\d+$/.test(k); // pola placeholder dari autoRegisterTopicFromMessage() di Worker
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td><code>${k}</code></td>
+      <td><code>${k}</code>${isAuto ? ' <span class="badge off" title="Terdeteksi otomatis dari chat biasa, belum di-rename">Auto</span>' : ''}</td>
       <td>${t.label || "-"}</td>
       <td>${t.threadId}</td>
-      <td><button class="btn small danger" data-del-topic="${k}">Hapus</button></td>
+      <td style="white-space:nowrap;">
+        ${isAuto ? `<button class="btn small" data-rename-topic="${k}">Ganti nama</button>` : ''}
+        <button class="btn small danger" data-del-topic="${k}">Hapus</button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
@@ -331,6 +384,22 @@ function renderTopics(){
       if(await saveData()) renderTopics();
     });
   });
+  tbody.querySelectorAll("[data-rename-topic]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const oldKey = btn.dataset.renameTopic;
+      const newKeyRaw = prompt(`Nama pendek baru untuk topik ini (thread_id ${data.topics[oldKey].threadId}):`, "");
+      const newKey = (newKeyRaw || "").trim().toLowerCase();
+      if(!newKey) return;
+      if(data.topics[newKey]){ toast(`Nama "${newKey}" sudah dipakai topik lain.`, true); return; }
+      data.topics[newKey] = { threadId: data.topics[oldKey].threadId, label: newKey };
+      delete data.topics[oldKey];
+      if(await saveData()) renderTopics();
+    });
+  });
+  // refresh semua dropdown pilih-topik (puasa/kajian/kalender/libur/pengingat
+  // umum) supaya langsung tersinkron begitu topik ditambah/dihapus di sini,
+  // tanpa perlu klik "Muat ulang".
+  populateTopicSelect();
 }
 document.getElementById("addTopicBtn").addEventListener("click", async ()=>{
   const key = document.getElementById("newTopicKey").value.trim().toLowerCase();
@@ -354,6 +423,7 @@ function renderPuasa(){
   document.getElementById("puasaQuestion").value = p.question || "";
   document.getElementById("puasaOpt1").value = (p.options && p.options[0]) || "";
   document.getElementById("puasaOpt2").value = (p.options && p.options[1]) || "";
+  document.getElementById("puasaTopic").value = p.topicKey || "";
   const badge = document.getElementById("puasaBadge");
   badge.textContent = p.enabled ? "Aktif" : "Nonaktif";
   badge.className = "badge " + (p.enabled ? "on" : "off");
@@ -372,12 +442,14 @@ document.getElementById("savePuasaBtn").addEventListener("click", async ()=>{
   const question = document.getElementById("puasaQuestion").value.trim();
   const opt1 = document.getElementById("puasaOpt1").value.trim();
   const opt2 = document.getElementById("puasaOpt2").value.trim();
+  const topicKey = document.getElementById("puasaTopic").value || null;
   data.puasaPoll = {
     enabled: document.getElementById("puasaEnabled").checked,
     days,
     time: time || null,
     question: question || null,
     options: (opt1 && opt2) ? [opt1, opt2] : [],
+    topicKey,
   };
   if(await saveData()) renderPuasa();
 });
@@ -403,13 +475,14 @@ function renderRekap(){
 
 /* ---------- KAJIAN ---------- */
 function renderKajian(){
-  data.kajianSettings = data.kajianSettings || {offsetsDays:[], time:null, jamAcara:null, lokasi:"", catatan:""};
+  data.kajianSettings = data.kajianSettings || {offsetsDays:[], time:null, jamAcara:null, lokasi:"", catatan:"", topicKey:null};
   const ks = data.kajianSettings;
   document.getElementById("kajianOffsets").value = (ks.offsetsDays||[]).join(",");
   document.getElementById("kajianTime").value = ks.time || "";
   document.getElementById("kajianJamAcara").value = ks.jamAcara || "";
   document.getElementById("kajianLokasi").value = ks.lokasi || "";
   document.getElementById("kajianCatatan").value = ks.catatan || "";
+  document.getElementById("kajianTopic").value = ks.topicKey || "";
   const tbody = document.querySelector("#kajianTable tbody");
   const today = new Date().toLocaleDateString("sv-SE");
   const list = (data.kajian || []).filter(k=>k.tanggal >= today).sort((a,b)=>a.tanggal.localeCompare(b.tanggal));
@@ -427,8 +500,11 @@ function renderKajian(){
   tbody.querySelectorAll("[data-del-kajian]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const id = Number(btn.dataset.delKajian);
-      data.kajian = data.kajian.filter(k=>k.id !== id);
-      if(await saveData()) renderKajian();
+      try{
+        await apiAction("/kajian-hapus", { id });
+        toast("Kajian dihapus ✓ (event Google Calendar ikut terhapus kalau ada).");
+        await loadData();
+      }catch(e){ toast("Gagal hapus: " + e.message, true); }
     });
   });
 }
@@ -446,6 +522,7 @@ document.getElementById("saveKajianSettingsBtn").addEventListener("click", async
     jamAcara: document.getElementById("kajianJamAcara").value || null,
     lokasi: document.getElementById("kajianLokasi").value.trim(),
     catatan: document.getElementById("kajianCatatan").value.trim(),
+    topicKey: document.getElementById("kajianTopic").value || null,
   };
   if(await saveData()) renderKajian();
 });
@@ -454,14 +531,36 @@ document.getElementById("addKajianBtn").addEventListener("click", async ()=>{
   const pengisi = document.getElementById("newKajianPengisi").value.trim();
   const tema = document.getElementById("newKajianTema").value.trim();
   if(!tanggal || !pengisi || !tema){ toast("Isi tanggal, pengisi, dan tema dulu.", true); return; }
-  data.kajian = data.kajian || [];
-  data.kajian.push({ id: Date.now(), tanggal, pengisi, tema, remindersSent: [] });
-  if(await saveData()){
-    renderKajian();
+  try{
+    const res = await apiAction("/kajian-tambah", { tanggal, pengisi, tema });
+    toast(res.kajian && res.kajian.googleEventId ? "Tersimpan ✓ 🗓️ tersinkron ke Google Calendar." : "Tersimpan ✓");
+    await loadData();
     document.getElementById("newKajianDate").value = "";
     document.getElementById("newKajianPengisi").value = "";
     document.getElementById("newKajianTema").value = "";
+  }catch(e){ toast("Gagal simpan: " + e.message, true); }
+});
+
+/* ---------- GOOGLE CALENDAR: PENGINGAT EVENT ---------- */
+function renderCalReminder(){
+  const menit = data.calendarReminderMinutes;
+  document.getElementById("calReminderMinutes").value = (menit != null) ? menit : "";
+  document.getElementById("calReminderTopic").value = data.calendarTopicKey || "";
+  const badge = document.getElementById("calReminderBadge");
+  badge.textContent = (menit != null) ? "Aktif" : "Nonaktif";
+  badge.className = "badge " + ((menit != null) ? "on" : "off");
+}
+document.getElementById("saveCalReminderBtn").addEventListener("click", async ()=>{
+  const raw = document.getElementById("calReminderMinutes").value.trim();
+  if(raw === ""){
+    data.calendarReminderMinutes = null;
+  } else {
+    const menit = parseInt(raw, 10);
+    if(isNaN(menit) || menit < 0){ toast("Isi angka menit yang valid (0 atau lebih), atau kosongkan untuk mematikan.", true); return; }
+    data.calendarReminderMinutes = menit;
   }
+  data.calendarTopicKey = document.getElementById("calReminderTopic").value || null;
+  if(await saveData()) renderCalReminder();
 });
 
 /* ---------- PENGINGAT UMUM ---------- */
@@ -469,7 +568,43 @@ function populateTopicSelect(){
   const sel = document.getElementById("newRemTopic");
   const keys = Object.keys(data.topics || {});
   sel.innerHTML = keys.length ? keys.map(k=>`<option value="${k}">${k}</option>`).join("") : `<option value="">(belum ada topik)</option>`;
+  const liburSel = document.getElementById("liburTopic");
+  if(liburSel){
+    const current = liburSel.value;
+    liburSel.innerHTML = `<option value="">(percakapan umum grup)</option>` + keys.map(k=>`<option value="${k}">${k}</option>`).join("");
+    liburSel.value = current;
+  }
+  // dropdown yang defaultnya fallback ke nama topik lama ("puasa"/"kajian"/
+  // "kalender") kalau dikosongkan -- placeholder optionnya beda per card
+  // (sudah ditulis di HTML), jadi cukup TAMBAHKAN opsi topik terdaftar di
+  // bawah placeholder, tanpa menimpa opsi pertama.
+  [["puasaTopic", '(topik bernama "puasa", kalau ada)'],
+   ["kajianTopic", '(topik bernama "kajian", kalau ada)'],
+   ["calReminderTopic", '(topik bernama "kalender", kalau ada)']
+  ].forEach(([id, placeholderLabel])=>{
+    const s = document.getElementById(id);
+    if(!s) return;
+    const current = s.value;
+    s.innerHTML = `<option value="">${placeholderLabel}</option>` + keys.map(k=>`<option value="${k}">${k}</option>`).join("");
+    s.value = current;
+  });
 }
+function renderLibur(){
+  populateTopicSelect();
+  data.liburReminder = data.liburReminder || {enabled:false, time:null, topicKey:null, lastSentDate:null};
+  const l = data.liburReminder;
+  document.getElementById("liburEnabled").checked = !!l.enabled;
+  document.getElementById("liburTime").value = l.time || "";
+  document.getElementById("liburTopic").value = l.topicKey || "";
+}
+document.getElementById("saveLiburBtn").addEventListener("click", async ()=>{
+  const enabled = document.getElementById("liburEnabled").checked;
+  const time = document.getElementById("liburTime").value || null;
+  const topicKey = document.getElementById("liburTopic").value || null;
+  if(enabled && !time){ toast("Isi jam cek dulu.", true); return; }
+  data.liburReminder = { enabled, time, topicKey, lastSentDate: null };
+  if(await saveData()) renderLibur();
+});
 function toggleRemFields(){
   const type = document.getElementById("newRemType").value;
   document.getElementById("remFieldOnce").style.display = type==="once" ? "flex" : "none";
@@ -516,11 +651,11 @@ function renderReminders(){
   tbody.querySelectorAll("[data-del-rem]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const id = Number(btn.dataset.delRem);
-      data.reminders = data.reminders.filter(r=>r.id!==id);
-      if(await saveData()) renderReminders();
-      // catatan: event Google Calendar utk pengingat yg dihapus lewat panel
-      // ini TIDAK otomatis terhapus dari Calendar (beda dgn lewat command
-      // Telegram) -- hapus manual di Google Calendar kalau perlu.
+      try{
+        await apiAction("/reminder-hapus", { id });
+        toast("Pengingat dihapus ✓ (event Google Calendar ikut terhapus kalau ada).");
+        await loadData();
+      }catch(e){ toast("Gagal hapus: " + e.message, true); }
     });
   });
 }
@@ -553,17 +688,13 @@ document.getElementById("addRemBtn").addEventListener("click", async ()=>{
     const dom = parseInt(document.getElementById("newRemDom").value,10) || 1;
     schedule = { type:"monthly", time, dayOfMonth: dom };
   }
-  data.reminders = data.reminders || [];
-  data.reminders.push({ id: Date.now(), title, message, topicKey, schedule, enabled: true, lastSentDate: null });
-  // catatan: sinkron Google Calendar utk pengingat baru lewat panel ini
-  // TIDAK dibuatkan otomatis (beda dgn lewat command Telegram, yg jalan
-  // langsung di Worker & bisa panggil Google API). Kalau butuh sinkron,
-  // tambahkan lewat /ingat_tambah di Telegram.
-  if(await saveData()){
-    renderReminders();
+  try{
+    const res = await apiAction("/reminder-tambah", { title, message, topicKey, schedule });
+    toast(res.reminder && res.reminder.googleEventId ? "Tersimpan ✓ 🗓️ tersinkron ke Google Calendar." : "Tersimpan ✓");
+    await loadData();
     document.getElementById("newRemTitle").value = "";
     document.getElementById("newRemMessage").value = "";
-  }
+  }catch(e){ toast("Gagal simpan: " + e.message, true); }
 });
 
 /* ---------- Gate / koneksi ---------- */
