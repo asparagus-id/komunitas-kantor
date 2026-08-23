@@ -3,7 +3,8 @@
     "distDir": "../public",
     "devPath": "../public",
     "beforeBuildCommand": "",
-    "beforeDevCommand": ""
+    "beforeDevCommand": "",
+    "withGlobalTauri": true
   },
   "package": {
     "productName": "Pengingat Sholat",
@@ -19,6 +20,9 @@
       "notification": {
         "all": true
       },
+      "updater": {
+        "all": true
+      },
       "window": {
         "all": false,
         "close": true,
@@ -31,6 +35,14 @@
         "unminimize": true,
         "setFocus": true
       }
+    },
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://github.com/asparagus-id/komunitas-kantor/releases/latest/download/latest.json"
+      ],
+      "dialog": true,
+      "pubkey": "GANTI_DENGAN_PUBLIC_KEY_HASIL_LANGKAH_1_SOP"
     },
     "systemTray": {
       "iconPath": "icons/32x32.png",
@@ -60,14 +72,14 @@
         "resizable": true,
         "fullscreen": false,
         "fileDropEnabled": false,
-        "visible": false,
+        "visible": true,
         "url": "index.html"
       },
       {
         "label": "widget",
         "title": "Pengingat Sholat",
         "width": 300,
-        "height": 160,
+        "height": 190,
         "x": 1600,
         "y": 40,
         "resizable": false,
@@ -76,7 +88,7 @@
         "skipTaskbar": true,
         "transparent": true,
         "fileDropEnabled": false,
-        "visible": true,
+        "visible": false,
         "url": "index.html?widget=1"
       }
     ]
