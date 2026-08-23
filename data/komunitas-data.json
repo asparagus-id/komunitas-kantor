@@ -42,12 +42,28 @@
       "googleEventId": "sonu0ils0k5563cou5m7atvvv4"
     },
     {
+      "id": 1787500807471,
+      "tanggal": "2024-06-19",
+      "pengisi": "Tangguh",
+      "tema": "Kajian Hadist Arbain Nawawi - Jumat pekan ke 3",
+      "remindersSent": [],
+      "googleEventId": "ohje9pnogapnt4jn6uj1mvjlqs"
+    },
+    {
       "id": 1787500732082,
       "tanggal": "2024-07-24",
       "pengisi": "Mila",
       "tema": "Kajian Hadist Arbain Nawawi",
       "remindersSent": [],
       "googleEventId": "i3ikhjougkttboaaj423670s3s"
+    },
+    {
+      "id": 1787500808105,
+      "tanggal": "2024-07-24",
+      "pengisi": "Mila",
+      "tema": "Kajian Hadist Arbain Nawawi - Jumat pekan ke 3",
+      "remindersSent": [],
+      "googleEventId": "3s0rphft4njkco4epcqna5blko"
     },
     {
       "id": 1787500732702,
@@ -58,12 +74,28 @@
       "googleEventId": "gs9cck07n4ilv5q6rskt4031h8"
     },
     {
+      "id": 1787500808906,
+      "tanggal": "2024-08-20",
+      "pengisi": "Edwin",
+      "tema": "Kajian Hadist Arbain Nawawi - Jumat pekan ke 3",
+      "remindersSent": [],
+      "googleEventId": "d5ssd3aqnqogm3eumg8b7rmepc"
+    },
+    {
       "id": 1787500733364,
       "tanggal": "2024-09-24",
       "pengisi": "Heri",
       "tema": "Kajian Hadist Arbain Nawawi",
       "remindersSent": [],
       "googleEventId": "sm662s6jsp8otdouf0qb1789cs"
+    },
+    {
+      "id": 1787500809459,
+      "tanggal": "2024-09-24",
+      "pengisi": "Heri",
+      "tema": "Kajian Hadist Arbain Nawawi - Jumat pekan ke 3",
+      "remindersSent": [],
+      "googleEventId": "ck9mf395u9vr6q3groe1r26qo0"
     },
     {
       "id": 1787500733928,
@@ -74,12 +106,28 @@
       "googleEventId": "68jf2eb5r3sssl2qhju69ojp04"
     },
     {
+      "id": 1787500810113,
+      "tanggal": "2024-10-29",
+      "pengisi": "Ulva",
+      "tema": "Kajian Hadist Arbain Nawawi - Jumat pekan ke 3",
+      "remindersSent": [],
+      "googleEventId": "9tsn77eo73lalllhmgfklijhek"
+    },
+    {
       "id": 1787500734470,
       "tanggal": "2024-11-26",
       "pengisi": "Toyyib",
       "tema": "Kajian Hadist Arbain Nawawi",
       "remindersSent": [],
       "googleEventId": "3lggeblq71hph8d58h06jkm2to"
+    },
+    {
+      "id": 1787500810671,
+      "tanggal": "2024-11-26",
+      "pengisi": "Toyyib",
+      "tema": "Kajian Hadist Arbain Nawawi - Jumat pekan ke 3",
+      "remindersSent": [],
+      "googleEventId": "cu0qlch6r00e88o1ctm7idiuo0"
     }
   ],
   "kajianSettings": {
@@ -89,8 +137,8 @@
     ],
     "time": "06:00",
     "jamAcara": "08:00",
-    "lokasi": "Mushola",
-    "catatan": "Tidak wajib bawa konsumsi. Kabari petugas selanjutnya jika berhalangan."
+    "lokasi": "Mushollah",
+    "catatan": "Tidak wajib bawa konsumsi. Kabari petugas jika berhalangan."
   },
   "calendarReminderMinutes": null,
   "calendarRemindedIds": [],
