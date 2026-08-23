@@ -7,17 +7,18 @@ name: Build & Rilis Pengingat Sholat Desktop
 #
 # CARA RILIS VERSI BARU (supaya app yang SUDAH TERINSTALL di PC kantor
 # otomatis update sendiri, TANPA install ulang manual):
-#   1. Naikkan nomor versi di 3 file: desktop-app/package.json,
-#      desktop-app/src-tauri/Cargo.toml, desktop-app/src-tauri/tauri.conf.json
-#      (harus SAMA PERSIS di ke-3 file, mis. semua jadi "1.6.0").
+#   1. Naikkan nomor versi di 5 file: desktop-app/package.json,
+#      desktop-app/src-tauri/Cargo.toml, desktop-app/src-tauri/tauri.conf.json,
+#      desktop-app/public/index.html (const APP_VERSION), desktop-app/public/sw.js
+#      (harus SAMA PERSIS di semuanya, mis. semua jadi "1.6.0").
 #   2. Push perubahan itu ke branch main SEPERTI BIASA (upload/commit).
 #   3. Buat & push TAG git dengan format persis: desktop-app-v<versi>
-#      Lewat GitHub web: repo > klik "1 Branch"/"0 Tags" > "Tags" > "Create
-#      a new release" > isi "Choose a tag" dgn desktop-app-v1.6.0 > pilih
-#      target branch main > Publish release (biarkan judul/deskripsi apa
-#      adanya, yang penting TAG-nya benar -- workflow ini jalan otomatis
-#      begitu tag itu dipush, lalu MENIMPA release draft itu dgn hasil
-#      build yang sudah ditandatangani).
+#      Lewat GitHub web: repo > "Releases" > "Create a new release" > isi
+#      "Choose a tag" dgn desktop-app-v1.6.0 > pilih target branch main >
+#      Publish release (biarkan judul/deskripsi apa adanya, yang penting
+#      TAG-nya benar -- workflow ini jalan otomatis begitu tag itu dipush,
+#      lalu MENIMPA release draft itu dgn hasil build yang sudah
+#      ditandatangani).
 #   4. Tunggu workflow ini selesai (tab Actions) -- begitu selesai, semua
 #      app yang sudah terinstall & lagi dibuka akan otomatis mendeteksi
 #      update ini & menawarkan install sendiri (dialog bawaan Tauri).
