@@ -2,7 +2,12 @@
   "adminUserIds": [
     216663781
   ],
-  "topics": {},
+  "topics": {
+    "kopi_pagi": {
+      "threadId": 9270,
+      "label": "Kopi Pagi"
+    }
+  },
   "puasaPoll": {
     "enabled": true,
     "days": [
@@ -102,7 +107,14 @@
   },
   "calendarReminderMinutes": 30,
   "calendarRemindedIds": [],
+  "calendarTopicKey": null,
   "reminders": [],
+  "liburReminder": {
+    "enabled": false,
+    "time": null,
+    "topicKey": null,
+    "lastSentDate": null
+  },
   "puasaLog": {},
   "lastPuasaPollSentDate": null,
   "lastKajianCheckDate": "2026-08-24"
