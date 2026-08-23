@@ -214,9 +214,80 @@
   @media (prefers-reduced-motion: reduce){
     *{transition:none !important; animation:none !important;}
   }
+
+  /* ====== Mode WIDGET (dipakai kalau URL ?widget=1, khusus versi desktop) ======
+     Jendela kecil always-on-top di pojok layar -- cuma tampilkan nama sholat
+     berikutnya + hitung mundur, tanpa jadwal lengkap/tombol pengaturan.
+     Class "is-widget" ditambahkan via JS di bawah, deteksi dari query string. */
+  html.is-widget, html.is-widget body{
+    background:transparent !important; overflow:hidden;
+  }
+  html.is-widget #sky, html.is-widget #stars,
+  html.is-widget .schedule, html.is-widget .footnote,
+  html.is-widget #settingsBtn, html.is-widget #fsBtn, html.is-widget #widgetBtn,
+  html.is-widget .dot-status,
+  html.is-widget .overlay{
+    display:none !important;
+  }
+  html.is-widget .topbar{
+    padding:10px 14px 4px !important;
+  }
+  html.is-widget .city{ font-size:12px !important; }
+  html.is-widget .date{ font-size:10px !important; }
+  html.is-widget .mihrab{
+    padding:6px 14px 14px !important;
+    -webkit-app-region: drag; /* jendela ditarik-geser lewat area ini krn tanpa title bar */
+  }
+  html.is-widget .label-next{ font-size:9px !important; }
+  html.is-widget .prayer-name{ font-size:22px !important; }
+  html.is-widget .prayer-clock{ font-size:15px !important; }
+  html.is-widget .countdown{ font-size:20px !important; }
+  html.is-widget .countdown-label{ font-size:9px !important; }
+  html.is-widget .widget-frame{
+    position:fixed; inset:0; border-radius:16px;
+    background:linear-gradient(180deg, rgba(8,22,25,.92), rgba(15,43,48,.92));
+    border:1px solid rgba(201,162,39,.35);
+    box-shadow:0 8px 24px rgba(0,0,0,.35);
+    -webkit-app-region: drag;
+    z-index:-1;
+  }
+  html:not(.is-widget) .widget-frame{ display:none; }
 </style>
 </head>
 <body>
+<div class="widget-frame"></div>
+<script>
+  // Deteksi mode widget SEBELUM apa pun lain dirender, supaya tidak sempat
+  // "kelap-kelip" tampilan penuh lalu baru mengecil.
+  // 2 cara dicoba (mana yang berhasil duluan dipakai):
+  //   1) query string ?widget=1 di URL -- cara paling sederhana
+  //   2) nama/label jendela Tauri === "widget" -- fallback lebih diandalkan,
+  //      krn di webview lokal (bukan browser biasa) kadang query string di
+  //      URL asset lokal tidak konsisten terbaca lewat location.search.
+  function aktifkanModeWidget(){ document.documentElement.classList.add("is-widget"); }
+  if (new URLSearchParams(location.search).get("widget") === "1") {
+    aktifkanModeWidget();
+  }
+  try {
+    if (window.__TAURI__ && window.__TAURI__.window) {
+      var jendelaSaatIni = window.__TAURI__.window.getCurrent();
+      if (jendelaSaatIni && jendelaSaatIni.label === "widget") aktifkanModeWidget();
+
+      // KHUSUS jendela "main": kalau di-minimize (klik tombol _ bawaan
+      // Windows), sembunyikan total ke system tray (bukan minimize biasa
+      // yang masih nongkrong di taskbar bawah) -- Tauri v1 tidak punya
+      // event "minimized" langsung di sisi Rust, jadi dicek dari sini
+      // tiap kali ukuran jendela berubah.
+      if (jendelaSaatIni && jendelaSaatIni.label === "main") {
+        jendelaSaatIni.listen("tauri://resize", function () {
+          jendelaSaatIni.isMinimized().then(function (min) {
+            if (min) jendelaSaatIni.hide();
+          });
+        });
+      }
+    }
+  } catch (e) { /* bukan di dalam Tauri (mis. dibuka di browser biasa) -- abaikan */ }
+</script>
 <div id="sky"></div>
 <div id="stars"></div>
 
@@ -228,6 +299,9 @@
     </div>
     <div class="status">
       <div class="dot-status"><span class="dot" id="onlineDot"></span><span id="onlineLabel">memeriksa…</span></div>
+      <button class="icon-btn" id="widgetBtn" title="Tambah Widget" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      </button>
       <button class="icon-btn" id="fsBtn" title="Layar penuh">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/></svg>
       </button>
@@ -359,7 +433,7 @@
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.4.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
+const APP_VERSION = "1.5.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -831,6 +905,25 @@ document.getElementById("fsBtn").addEventListener("click", ()=>{
   if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
   else document.exitFullscreen();
 });
+
+/* ---------------- Tombol "Tambah Widget" (khusus versi desktop/Tauri) ----------------
+   Tombol ini disembunyikan bawaan (style="display:none" di HTML) --
+   cuma dimunculkan kalau app ini memang jalan di dalam Tauri (bukan di
+   browser/PWA biasa, yang tidak punya jendela widget terpisah). Klik ->
+   tampilkan jendela "widget" (kecil, always-on-top, pojok layar) tanpa
+   menutup jendela utama ini -- keduanya boleh jalan bareng. */
+(function initWidgetButton(){
+  if (!(window.__TAURI__ && window.__TAURI__.window)) return; // bukan di Tauri -> biarkan tersembunyi
+  const btn = document.getElementById("widgetBtn");
+  btn.style.display = "";
+  btn.addEventListener("click", async () => {
+    try {
+      const { WebviewWindow } = window.__TAURI__.window;
+      const w = WebviewWindow.getByLabel("widget");
+      if (w) await w.show();
+    } catch (e) { console.log("Gagal membuka widget:", e); }
+  });
+})();
 
 /* ---------------- Modal pengaturan ---------------- */
 const overlay = document.getElementById("overlay");
