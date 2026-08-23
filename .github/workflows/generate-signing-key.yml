@@ -21,13 +21,17 @@ jobs:
 
       - name: Tampilkan PUBLIC key (aman dilihat, BUKAN rahasia)
         run: |
-          echo "===================================================="
-          echo "COPY teks di bawah ini (termasuk baris paling atas &"
-          echo "paling bawah) ke tauri.conf.json, gantikan placeholder"
+          echo "=================================================="
+          echo "COPY teks di antara PUBKEY_MULAI dan PUBKEY_SELESAI"
+          echo "(TIDAK TERMASUK baris PUBKEY_MULAI/PUBKEY_SELESAI"
+          echo "itu sendiri) ke tauri.conf.json, gantikan placeholder"
           echo "GANTI_DENGAN_PUBLIC_KEY_HASIL_LANGKAH_1_SOP :"
-          echo "===================================================="
+          echo "=================================================="
+          echo "PUBKEY_MULAI"
           cat ./pengingat-sholat.key.pub
-          echo "===================================================="
+          echo ""
+          echo "PUBKEY_SELESAI"
+          echo "=================================================="
 
       - name: Simpan PRIVATE key sbg artifact (RAHASIA -- jangan disebar)
         uses: actions/upload-artifact@v4
