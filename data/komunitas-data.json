@@ -16,7 +16,16 @@
       "MBOTHEN"
     ]
   },
-  "kajian": [],
+  "kajian": [
+    {
+      "id": 1787481535362,
+      "tanggal": "2024-06-19",
+      "pengisi": "Jumat",
+      "tema": "Arbain Nawawi \n/kajian_tambah 24-07-2024|Jumat|Arbain Nawawi \n/kajian_tambah 20-08-2024|Kamis|Arbain Nawawi \n/kajian_tambah 24-09-2024|Kamis|Arbain Nawawi \n/kajian_tambah 29-10-2024|Kamis|Arbain Nawawi \n/kajian_tambah 26-11-2024|Kamis",
+      "remindersSent": [],
+      "googleEventId": null
+    }
+  ],
   "kajianSettings": {
     "offsetsDays": [],
     "time": null,
