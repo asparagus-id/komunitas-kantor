@@ -26,12 +26,28 @@
       "googleEventId": "2thdcp16va8dtaf0da06l9acp0"
     },
     {
+      "id": 1787504813256,
+      "tanggal": "2026-06-19",
+      "pengisi": "Tangguh",
+      "tema": "Hadist Arbain Nawawi 1",
+      "remindersSent": [],
+      "googleEventId": "sdmahtqp3r76bujp1b71qs9js4"
+    },
+    {
       "id": 1787504665603,
       "tanggal": "2026-07-24",
       "pengisi": "Mila",
       "tema": "Kajian Hadist Arbain Nawawi",
       "remindersSent": [],
       "googleEventId": "vu5airaboaa3fnaunrsgcldd1k"
+    },
+    {
+      "id": 1787504813847,
+      "tanggal": "2026-07-24",
+      "pengisi": "Mila",
+      "tema": "Hadist Arbain Nawawi 2",
+      "remindersSent": [],
+      "googleEventId": "mupio08m9lerd3chiq4phatdos"
     },
     {
       "id": 1787504666164,
@@ -42,12 +58,28 @@
       "googleEventId": "9b2u9i6mc1gohsai1qq54u4l7c"
     },
     {
+      "id": 1787504814420,
+      "tanggal": "2026-08-20",
+      "pengisi": "Edwin",
+      "tema": "Hadist Arbain Nawawi 3",
+      "remindersSent": [],
+      "googleEventId": "7nlnpkdtnu6fbpkkl71rfophe0"
+    },
+    {
       "id": 1787504666743,
       "tanggal": "2026-09-24",
       "pengisi": "Heri",
       "tema": "Kajian Hadist Arbain Nawawi",
       "remindersSent": [],
       "googleEventId": "o086aikbov31argpg6ng3kmhq8"
+    },
+    {
+      "id": 1787504814981,
+      "tanggal": "2026-09-24",
+      "pengisi": "Heri",
+      "tema": "Hadist Arbain Nawawi 4",
+      "remindersSent": [],
+      "googleEventId": "kmu280bdic4btqp2cfgg5b63a8"
     },
     {
       "id": 1787504667277,
@@ -58,12 +90,28 @@
       "googleEventId": "navcpnfnbpjqtcq6f3ahap3368"
     },
     {
+      "id": 1787504815490,
+      "tanggal": "2026-10-29",
+      "pengisi": "Ulva",
+      "tema": "Hadist Arbain Nawawi 5",
+      "remindersSent": [],
+      "googleEventId": "ra2qqgo0c5oampdhqghi8q68ho"
+    },
+    {
       "id": 1787504667876,
       "tanggal": "2026-11-26",
       "pengisi": "Toyyib",
       "tema": "Kajian Hadist Arbain Nawawi",
       "remindersSent": [],
       "googleEventId": "jbjhn2anvajvumrd4qhefcngvk"
+    },
+    {
+      "id": 1787504816063,
+      "tanggal": "2026-11-26",
+      "pengisi": "Toyyib",
+      "tema": "Hadist Arbain Nawawi 6",
+      "remindersSent": [],
+      "googleEventId": "qss5bkk1ldpubdkoub19d8hfi0"
     }
   ],
   "kajianSettings": {
