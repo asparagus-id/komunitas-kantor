@@ -20,9 +20,6 @@
       "notification": {
         "all": true
       },
-      "updater": {
-        "all": true
-      },
       "window": {
         "all": false,
         "close": true,
@@ -37,7 +34,7 @@
       }
     },
     "updater": {
-      "active": true,
+      "active": false,
       "endpoints": [
         "https://github.com/asparagus-id/komunitas-kantor/releases/latest/download/latest.json"
       ],
