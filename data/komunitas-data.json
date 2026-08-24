@@ -134,7 +134,9 @@
     "topicKey": "kopi_pagi"
   },
   "calendarReminderMinutes": 30,
-  "calendarRemindedIds": [],
+  "calendarRemindedIds": [
+    "4qj2c0h5vv5cisav8n89lu5gn9_20260824T013000Z"
+  ],
   "calendarTopicKey": "pengumuman",
   "reminders": [],
   "liburReminder": {
@@ -143,7 +145,13 @@
     "topicKey": "pengumuman",
     "lastSentDate": null
   },
-  "puasaLog": {},
-  "lastPuasaPollSentDate": null,
+  "puasaLog": {
+    "2026-08-24": {
+      "pollId": "6080341675748623395",
+      "threadId": 9028,
+      "answers": {}
+    }
+  },
+  "lastPuasaPollSentDate": "2026-08-24",
   "lastKajianCheckDate": "2026-08-24"
 }
