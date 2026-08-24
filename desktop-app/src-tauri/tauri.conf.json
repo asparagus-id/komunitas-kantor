@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "Pengingat Sholat",
-    "version": "1.8.1"
+    "version": "1.10.0"
   },
   "tauri": {
     "allowlist": {
