@@ -265,6 +265,24 @@
   .panel-footer{padding:16px 22px 20px; border-top:1px solid var(--line);}
   .panel-footer .btn{width:100%;}
 
+  /* ---------- Modal Jadwal Tahunan (lebar, di tengah -- beda dari drawer Pengaturan) ---------- */
+  .yearly-panel{
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:min(720px, 94vw); max-height:86vh; background:var(--surface);
+    border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow-lg);
+    display:flex; flex-direction:column; opacity:0; pointer-events:none; transition:opacity .2s;
+  }
+  .overlay.open .yearly-panel{opacity:1; pointer-events:auto;}
+  .yearly-nav{display:flex; align-items:center; gap:8px; padding:14px 22px 8px; flex-wrap:wrap;}
+  .yearly-nav select{
+    background:var(--surface-2); border:1px solid var(--line); color:var(--text);
+    border-radius:9px; padding:8px 10px; font-size:13px; font-family:inherit;
+  }
+  .yearly-table-wrap{flex:1; overflow-y:auto; padding:0 22px 20px;}
+  .yearly-table-wrap table.sched{font-size:13px;}
+  .yearly-table-wrap th, .yearly-table-wrap td{padding:8px 6px; white-space:nowrap;}
+  .yearly-table-wrap tr.today-row td{background:var(--gold-light); font-weight:700;}
+
   @media (prefers-reduced-motion: reduce){*{transition:none !important; animation:none !important;}}
 
   /* ====== Mode WIDGET ====== */
@@ -405,6 +423,9 @@
       <button class="icon-btn" id="widgetBtn" title="Tambah Widget" style="display:none;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
       </button>
+      <button class="icon-btn" id="yearlyBtn" title="Jadwal Tahunan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      </button>
       <button class="icon-btn" id="fsBtn" title="Layar penuh">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/></svg>
       </button>
@@ -493,6 +514,13 @@
       <!-- ---- TAB: LOKASI ---- -->
       <div class="tab-pane active" data-pane="lokasi">
         <div class="sub">Tersimpan otomatis di komputer ini saja (tidak terhubung ke server lain).</div>
+
+        <button class="btn primary" id="autoDetectBtn" style="width:100%; margin-bottom:6px;">📍 Deteksi Otomatis Lokasi Saya</button>
+        <div class="hint" style="margin-bottom:16px;">
+          Pakai posisi WiFi/jaringan komputer ini (BUKAN GPS — komputer kantor umumnya tidak punya GPS fisik seperti HP). Akurasinya bisa presisi (kalau area sudah terpetakan Microsoft) atau meleset beberapa km (fallback ke lokasi provider internet). Selalu <b>cek hasilnya</b> sebelum simpan — kalau meleset, pakai pencarian kota manual di bawah saja.
+        </div>
+        <div id="autoDetectStatus" class="hint" style="margin-top:-10px; margin-bottom:14px;"></div>
+
         <div class="field-row">
           <div class="field">
             <label>Cari kota</label>
@@ -593,6 +621,31 @@
   </div>
 </div>
 
+<!-- ============ OVERLAY: JADWAL TAHUNAN ============ -->
+<div class="overlay" id="yearlyOverlay">
+  <div class="yearly-panel">
+    <div class="panel-head">
+      <h2>Jadwal Tahunan</h2>
+      <button class="panel-close" id="yearlyCloseX">&times;</button>
+    </div>
+    <div class="yearly-nav">
+      <button class="icon-btn" id="yearlyPrevBtn" title="Bulan sebelumnya">‹</button>
+      <select id="yearlyMonthSelect"></select>
+      <select id="yearlyYearSelect"></select>
+      <button class="icon-btn" id="yearlyNextBtn" title="Bulan berikutnya">›</button>
+      <div style="flex:1;"></div>
+      <button class="btn primary" id="yearlyDownloadAllBtn">Unduh semua (4 tahun)</button>
+    </div>
+    <div class="hint" id="yearlyStatus" style="margin:0 22px 10px;"></div>
+    <div class="yearly-table-wrap">
+      <table class="sched">
+        <thead><tr><th>Tgl</th><th>Subuh</th><th>Terbit</th><th>Dzuhur</th><th>Ashar</th><th>Maghrib</th><th>Isya</th></tr></thead>
+        <tbody id="yearlyTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <audio id="audioEl" preload="auto"></audio>
 
 <script>
@@ -646,7 +699,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.8.1"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
+const APP_VERSION = "1.10.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -1330,6 +1383,131 @@ function closeSettings(){ overlay.classList.remove("open"); }
 document.getElementById("settingsBtn").addEventListener("click", openSettings);
 overlay.addEventListener("click", (e)=>{ if(e.target===overlay) closeSettings(); });
 
+/* ---------------- Jadwal Tahunan (lihat & unduh cadangan sampai 3 tahun ke depan) ----------------
+   Reuse TOTAL dari infrastruktur kalender yang sudah ada (calendarCache,
+   fetchCalendarMonth, monthKeyOf) -- fitur ini CUMA nambah cara LIHAT
+   bulan mana saja (bukan cuma buffer geser 3 bulan dari hari ini spt
+   ensureCalendarBuffer), plus tombol unduh borongan sampai 3 tahun ke
+   depan. Koreksi manual (settings.correctionMinutes) ikut diterapkan di
+   tabel ini juga, supaya konsisten dgn yg tampil di halaman utama. */
+const yearlyOverlay = document.getElementById("yearlyOverlay");
+let yearlyViewYear, yearlyViewMonth; // 1-12 utk bulan
+
+function bulanKoreksi(hhmm, prayerKey){
+  const [h,mi] = hhmm.split(":").map(Number);
+  const menitKoreksi = (settings.correctionMinutes && settings.correctionMinutes[prayerKey]) || 0;
+  const total = h*60 + mi + menitKoreksi;
+  const hh2 = Math.floor(((total%1440)+1440)%1440 / 60);
+  const mm2 = ((total%1440)+1440)%1440 % 60;
+  return `${String(hh2).padStart(2,"0")}:${String(mm2).padStart(2,"0")}`;
+}
+function isiPilihanBulanTahun(){
+  const monthSel = document.getElementById("yearlyMonthSelect");
+  const yearSel = document.getElementById("yearlyYearSelect");
+  const namaBulan = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  monthSel.innerHTML = namaBulan.map((n,i)=>`<option value="${i+1}">${n}</option>`).join("");
+  const tahunSekarang = new Date().getFullYear();
+  const opsiTahun = [];
+  for(let y=tahunSekarang; y<=tahunSekarang+3; y++) opsiTahun.push(y); // tahun ini + 3 tahun ke depan
+  yearSel.innerHTML = opsiTahun.map(y=>`<option value="${y}">${y}</option>`).join("");
+}
+async function renderYearlyTable(){
+  const statusEl = document.getElementById("yearlyStatus");
+  const tbody = document.getElementById("yearlyTableBody");
+  const mk = monthKeyOf(yearlyViewYear, yearlyViewMonth);
+  let entry = calendarCache[mk];
+  if(!cacheParamsMatch(entry)){
+    if(!locationConfigured()){ statusEl.textContent = "⚠️ Lokasi belum diatur -- isi dulu di Pengaturan > Lokasi."; tbody.innerHTML=""; return; }
+    if(!navigator.onLine){ statusEl.textContent = "Offline & bulan ini belum ada di cadangan. Sambungkan internet dulu."; tbody.innerHTML=""; return; }
+    statusEl.textContent = "Mengambil data bulan ini...";
+    tbody.innerHTML = "";
+    try{
+      entry = await fetchCalendarMonth(yearlyViewYear, yearlyViewMonth);
+      calendarCache[mk] = entry;
+      saveCalendarCache();
+    }catch(e){
+      statusEl.textContent = "Gagal mengambil data: " + String(e.message||e);
+      return;
+    }
+  }
+  statusEl.textContent = "";
+  const todayKeyStr = dateKey(new Date());
+  const hariList = Object.keys(entry.days).sort();
+  tbody.innerHTML = hariList.map(tgl=>{
+    const d = entry.days[tgl];
+    const [,, dd] = tgl.split("-");
+    const isToday = tgl === todayKeyStr;
+    return `<tr class="${isToday ? "today-row":""}">
+      <td>${parseInt(dd,10)}</td>
+      <td>${bulanKoreksi(d.times.Fajr,"Fajr")}</td>
+      <td>${d.times.Sunrise}</td>
+      <td>${bulanKoreksi(d.times.Dhuhr,"Dhuhr")}</td>
+      <td>${bulanKoreksi(d.times.Asr,"Asr")}</td>
+      <td>${bulanKoreksi(d.times.Maghrib,"Maghrib")}</td>
+      <td>${bulanKoreksi(d.times.Isha,"Isha")}</td>
+    </tr>`;
+  }).join("");
+}
+function openYearly(){
+  const now = new Date();
+  yearlyViewYear = now.getFullYear();
+  yearlyViewMonth = now.getMonth()+1;
+  isiPilihanBulanTahun();
+  document.getElementById("yearlyMonthSelect").value = String(yearlyViewMonth);
+  document.getElementById("yearlyYearSelect").value = String(yearlyViewYear);
+  yearlyOverlay.classList.add("open");
+  renderYearlyTable();
+}
+function closeYearly(){ yearlyOverlay.classList.remove("open"); }
+document.getElementById("yearlyBtn").addEventListener("click", openYearly);
+document.getElementById("yearlyCloseX").addEventListener("click", closeYearly);
+yearlyOverlay.addEventListener("click",(e)=>{ if(e.target===yearlyOverlay) closeYearly(); });
+document.getElementById("yearlyMonthSelect").addEventListener("change",(e)=>{ yearlyViewMonth = parseInt(e.target.value,10); renderYearlyTable(); });
+document.getElementById("yearlyYearSelect").addEventListener("change",(e)=>{ yearlyViewYear = parseInt(e.target.value,10); renderYearlyTable(); });
+document.getElementById("yearlyPrevBtn").addEventListener("click", ()=>{
+  yearlyViewMonth--; if(yearlyViewMonth<1){ yearlyViewMonth=12; yearlyViewYear--; }
+  document.getElementById("yearlyMonthSelect").value = String(yearlyViewMonth);
+  document.getElementById("yearlyYearSelect").value = String(yearlyViewYear);
+  renderYearlyTable();
+});
+document.getElementById("yearlyNextBtn").addEventListener("click", ()=>{
+  yearlyViewMonth++; if(yearlyViewMonth>12){ yearlyViewMonth=1; yearlyViewYear++; }
+  document.getElementById("yearlyMonthSelect").value = String(yearlyViewMonth);
+  document.getElementById("yearlyYearSelect").value = String(yearlyViewYear);
+  renderYearlyTable();
+});
+document.getElementById("yearlyDownloadAllBtn").addEventListener("click", async ()=>{
+  if(!locationConfigured()){ showToast("Atur lokasi dulu di Pengaturan.", "err"); return; }
+  if(!navigator.onLine){ showToast("Tidak ada koneksi internet.", "err"); return; }
+  const btn = document.getElementById("yearlyDownloadAllBtn");
+  const statusEl = document.getElementById("yearlyStatus");
+  btn.disabled = true;
+  const tahunSekarang = new Date().getFullYear();
+  const daftarBulan = [];
+  for(let y=tahunSekarang; y<=tahunSekarang+3; y++){
+    for(let m=1; m<=12; m++) daftarBulan.push([y,m]);
+  }
+  let selesai = 0, gagal = 0;
+  for(const [y,m] of daftarBulan){
+    const mk = monthKeyOf(y,m);
+    if(!cacheParamsMatch(calendarCache[mk])){
+      statusEl.textContent = `Mengunduh ${selesai+gagal+1}/${daftarBulan.length} (${m}/${y})...`;
+      try{
+        calendarCache[mk] = await fetchCalendarMonth(y,m);
+        saveCalendarCache(); // simpan progresif -- kalau berhenti di tengah (mis. koneksi putus), yg sudah terunduh tetap tersimpan
+      }catch(e){ gagal++; }
+    }
+    selesai++;
+  }
+  btn.disabled = false;
+  statusEl.textContent = gagal
+    ? `Selesai, tapi ${gagal} bulan gagal diunduh (coba lagi kalau perlu).`
+    : `✅ Semua ${daftarBulan.length} bulan (${tahunSekarang}-${tahunSekarang+3}) berhasil diunduh & tersimpan offline.`;
+  showToast(gagal ? `Unduh selesai, ${gagal} bulan gagal.` : "Jadwal 4 tahun berhasil diunduh & tersimpan offline.", gagal ? "err" : "ok");
+  refreshOfflineCoverage();
+  renderYearlyTable();
+});
+
 function renderPrayerRows(){
   const box = document.getElementById("prayerRows");
   box.innerHTML = "";
@@ -1480,6 +1658,62 @@ async function searchCityCoords(query){
   if(!res.ok) throw new Error("HTTP " + res.status);
   return res.json();
 }
+/* Reverse geocoding -- dari koordinat KEMBALI jadi nama kota, dipakai
+   setelah Geolocation API browser dapat lat/lng, supaya field "Nama kota"
+   ikut terisi otomatis (bukan cuma angka lat/lng kosong tanpa label). */
+async function reverseGeocode(lat, lng){
+  const url = `https://nominatim.openstreetmap.org/reverse?format=json&addressdetails=1&accept-language=id&lat=${lat}&lon=${lng}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error("HTTP " + res.status);
+  const data = await res.json();
+  const a = data.address || {};
+  return a.city || a.town || a.regency || a.county || a.state || data.display_name || "";
+}
+/* ---------------- Deteksi otomatis lokasi (WiFi/IP, BUKAN GPS) ----------------
+   Pakai Geolocation API browser standar (navigator.geolocation) -- ini
+   API bawaan webview, BUKAN fitur khusus Tauri, jadi tidak perlu ubah
+   tauri.conf.json/main.rs sama sekali. Di komputer TANPA GPS fisik (hampir
+   semua desktop/laptop kantor), Windows/WebView2 akan pakai posisi WiFi
+   (kalau area sudah terpetakan Microsoft) atau fallback ke lokasi
+   perkiraan dari alamat IP (bisa jauh meleset) -- makanya UI selalu
+   tampilkan akurasi & minta user CEK hasilnya sebelum simpan, TIDAK
+   otomatis dianggap benar begitu saja. */
+document.getElementById("autoDetectBtn").addEventListener("click", ()=>{
+  const statusEl = document.getElementById("autoDetectStatus");
+  const btn = document.getElementById("autoDetectBtn");
+  if(!("geolocation" in navigator)){
+    statusEl.textContent = "❌ Browser/webview ini tidak mendukung deteksi lokasi. Pakai pencarian kota manual di bawah.";
+    return;
+  }
+  btn.disabled = true;
+  statusEl.textContent = "Mendeteksi lokasi... (mungkin muncul izin akses lokasi, klik Izinkan)";
+  navigator.geolocation.getCurrentPosition(
+    async (pos)=>{
+      const lat = pos.coords.latitude, lng = pos.coords.longitude, akurasi = pos.coords.accuracy;
+      document.getElementById("inLat").value = lat.toFixed(6);
+      document.getElementById("inLng").value = lng.toFixed(6);
+      const keteranganAkurasi = akurasi != null
+        ? (akurasi <= 200 ? `presisi tinggi (±${Math.round(akurasi)}m — kemungkinan WiFi/GPS)` : `KURANG PRESISI (±${(akurasi/1000).toFixed(1)}km — kemungkinan dari alamat IP, CEK ulang!)`)
+        : "akurasi tidak diketahui";
+      statusEl.innerHTML = `✅ Terdeteksi: <b>${lat.toFixed(6)}, ${lng.toFixed(6)}</b> — ${keteranganAkurasi}`;
+      try{
+        const namaKota = await reverseGeocode(lat, lng);
+        if(namaKota) document.getElementById("inCity").value = namaKota;
+      }catch(e){ /* nama kota gagal diambil, tidak apa -- lat/lng tetap terisi, cukup diedit manual */ }
+      btn.disabled = false;
+    },
+    (err)=>{
+      btn.disabled = false;
+      const pesan = err.code === err.PERMISSION_DENIED
+        ? "Izin akses lokasi ditolak. Pakai pencarian kota manual di bawah, atau izinkan lewat Pengaturan Privasi Lokasi Windows."
+        : err.code === err.POSITION_UNAVAILABLE
+        ? "Lokasi tidak tersedia di perangkat ini (komputer tanpa data WiFi/GPS). Pakai pencarian kota manual di bawah."
+        : "Gagal mendeteksi lokasi (timeout/error lain). Pakai pencarian kota manual di bawah.";
+      statusEl.textContent = "❌ " + pesan;
+    },
+    { enableHighAccuracy:true, timeout:12000, maximumAge:0 }
+  );
+});
 function renderCityResults(items){
   const box = document.getElementById("citySearchResults");
   box.innerHTML = "";
