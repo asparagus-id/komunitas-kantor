@@ -209,6 +209,9 @@
   .section-title{font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--gold-soft); margin:18px 0 10px; font-weight:700;}
   .day-grid{display:flex; flex-direction:column; gap:7px;}
   .day-row{display:flex; align-items:center; gap:10px; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:8px 12px;}
+  .day-row .dname{flex:1; font-size:13px; font-weight:600;}
+  .day-row .correctionInput{width:70px; padding:6px 8px; font-size:13px; text-align:center;}
+  .day-row .unit{font-size:11.5px; color:var(--muted); flex-shrink:0;}
   .prayer-row{background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:8px; transition:.15s;}
   .prayer-row.off{opacity:.5;}
   .prayer-row-top{display:flex; align-items:center; justify-content:space-between; gap:10px;}
@@ -290,6 +293,37 @@
   }
   html.is-widget #widgetCloseBtn:hover{background:rgba(201,162,39,.25); color:#fff;}
 
+  /* ====== Mode POPUP PENGINGAT (bar tipis, always-on-top) ======
+     SELALU terang, apapun tema app (terang/gelap/otomatis) sedang aktif --
+     warna di sini SENGAJA hardcode, tidak pakai var(--...) yang ikut
+     berubah tema, sesuai permintaan eksplisit: "saya ingin pop up yang
+     light". */
+  html.is-popup, html.is-popup body{background:transparent !important; overflow:hidden;}
+  html.is-popup #sky, html.is-popup #stars,
+  html.is-popup .card, html.is-popup .info-grid, html.is-popup .quote-box, html.is-popup .version-tag,
+  html.is-popup .header, html.is-popup .overlay, html.is-popup .prayer-card,
+  html.is-popup #widgetCloseBtn{display:none !important;}
+  html.is-popup .content{padding:0; align-items:stretch; height:100vh;}
+  #reminderBar{display:none;}
+  html.is-popup #reminderBar{
+    display:flex; align-items:center; gap:12px; height:100vh; padding:0 18px;
+    background:#ffffff; border:1px solid #e2e8f0; border-radius:14px;
+    box-shadow:0 10px 30px rgba(15,23,42,.18); -webkit-app-region:drag;
+  }
+  #reminderBar .rb-icon{font-size:18px; color:#a5760b; flex-shrink:0;}
+  #reminderBar .rb-name{font-family:'Amiri',serif; font-size:16px; color:#0f172a; flex-shrink:0;}
+  #reminderBar .rb-countdown{
+    flex:1; text-align:center; font-family:'Inter Tight',sans-serif; font-weight:700;
+    font-size:19px; color:#a5760b; font-variant-numeric:tabular-nums; letter-spacing:.02em;
+  }
+  #reminderBar .rb-sub{font-size:10.5px; color:#64748b; flex-shrink:0; margin-right:4px;}
+  #reminderBar .rb-close{
+    flex-shrink:0; width:26px; height:26px; border-radius:50%; border:1px solid #e2e8f0;
+    background:#f8f9fb; color:#64748b; font-size:15px; line-height:1; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; -webkit-app-region:no-drag;
+  }
+  #reminderBar .rb-close:hover{background:#fef2f2; color:#dc2626; border-color:#fecaca;}
+
   /* ====== Toast ====== */
   #toastWrap{position:fixed; top:24px; left:50%; transform:translateX(-50%); z-index:9999;
     display:flex; flex-direction:column; gap:10px; align-items:center; pointer-events:none; width:min(92vw, 480px);}
@@ -320,13 +354,21 @@
 <div id="toastWrap" aria-live="polite"></div>
 <script>
   function aktifkanModeWidget(){ document.documentElement.classList.add("is-widget"); }
+  // Mode popup pengingat (bar tipis di atas layar) -- SAMA POLA dgn mode
+  // widget di atas, cuma beda nama query string & class. Dideteksi di sini
+  // (paling awal) supaya tidak sempat "kelap-kelip" tampilan penuh dulu.
+  function aktifkanModePopup(){ document.documentElement.classList.add("is-popup"); }
   if (new URLSearchParams(location.search).get("widget") === "1") aktifkanModeWidget();
+  if (new URLSearchParams(location.search).get("popup") === "1") aktifkanModePopup();
   try {
     if (window.__TAURI__ && window.__TAURI__.window) {
       var jendelaSaatIni = window.__TAURI__.window.getCurrent();
       if (jendelaSaatIni && jendelaSaatIni.label === "widget") {
         aktifkanModeWidget();
         document.getElementById("widgetCloseBtn").addEventListener("click", function(){ jendelaSaatIni.hide(); });
+      }
+      if (jendelaSaatIni && jendelaSaatIni.label === "reminder") {
+        aktifkanModePopup();
       }
     }
   } catch (e) { /* bukan di dalam Tauri -- abaikan */ }
@@ -374,6 +416,15 @@
 
   <!-- ============ KONTEN UTAMA ============ -->
   <div class="content">
+    <!-- Bar pengingat (mode popup) -- hidden default, cuma tampil kalau
+         html punya class "is-popup" (lihat CSS & deteksi di atas). -->
+    <div id="reminderBar">
+      <i class="rb-icon">🕌</i>
+      <div class="rb-name" id="popupPrayerName">—</div>
+      <div class="rb-countdown" id="popupCountdown">--:--:--</div>
+      <div class="rb-sub">menuju adzan</div>
+      <button class="rb-close" id="popupCloseBtn" title="Tutup">&times;</button>
+    </div>
     <div class="main-col">
       <div class="prayer-card">
         <div class="prayer-illustration"><img src="./masjid.png" alt="Ilustrasi masjid"></div>
@@ -467,6 +518,12 @@
       <div class="tab-pane" data-pane="jadwal">
         <div class="sub">Aktifkan/nonaktifkan tiap sholat, dan atur berapa menit sebelum adzan pengingat dibunyikan.</div>
         <div id="prayerRows"></div>
+
+        <div class="section-title">Koreksi manual (menit)</div>
+        <div class="hint" style="margin-top:-4px; margin-bottom:12px;">
+          <b>Sudah otomatis diisi +2 menit</b> (ihtiyat/marjin pengaman resmi Kemenag RI) — AlAdhan API cuma menghitung posisi matahari MURNI, sedangkan jadwal resmi Kemenag menambah ihtiyat ini di atasnya. Kalau masih ada selisih 0-1 menit dari jadwal rujukan masjid/kantor Anda (wajar, karena ada 1 lapisan lain — pembulatan — yang tidak bisa kami replikasi persis), sesuaikan lagi angkanya di sini. Boleh angka negatif.
+        </div>
+        <div class="day-grid" id="correctionRows"></div>
       </div>
 
       <!-- ---- TAB: AUDIO ---- -->
@@ -589,7 +646,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.6.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
+const APP_VERSION = "1.8.1"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -603,6 +660,20 @@ const DEFAULTS = {
     Maghrib: {enabled:true, minutes:10},
     Isha:    {enabled:true, minutes:10}
   },
+  // Koreksi manual (dalam MENIT, boleh negatif) per waktu sholat.
+  // DEFAULT +2 menit (BUKAN 0 lagi) -- ini angka ihtiyat resmi Kemenag RI
+  // hasil riset (OIF UMSU & FivePrayer: "ditambah ihtiyati 2 menit"),
+  // karena AlAdhan API (method 20) cuma menghitung posisi matahari MURNI
+  // TANPA ihtiyat ini otomatis. Terbit (Sunrise) TIDAK diberi ihtiyat --
+  // itu bukan waktu sholat, cuma penanda, jadi tidak relevan.
+  // CATATAN JUJUR soal batasannya: ini cuma mengoreksi bagian ihtiyat-nya
+  // saja. Ada 1 lapisan lain (pembulatan ke ATAS/ceiling rounding yg
+  // dipakai app resmi) yang TIDAK bisa direplikasi di sini, karena AlAdhan
+  // API cuma memberi string "HH:MM" yang detik aslinya sudah hilang/
+  // dibulatkan duluan oleh mereka -- jadi total koreksi +2 ini mungkin
+  // masih kurang 0-1 menit dari jadwal rujukan Anda. Field ini TETAP bisa
+  // diubah manual lewat Pengaturan > Jadwal kalau perlu pas-kan lebih presisi.
+  correctionMinutes: { Fajr:2, Sunrise:0, Dhuhr:2, Asr:2, Maghrib:2, Isha:2 },
   volume: 0.8
 };
 
@@ -879,9 +950,12 @@ function scheduleFromCache(dateObj){
   const day = entry.days[dateKey(dateObj)];
   if(!day) return null;
   const out = {};
+  const koreksi = settings.correctionMinutes || {};
   for(const k of DISPLAY_ORDER){
     const [h,mi] = day.times[k].split(":").map(Number);
     const dd = new Date(dateObj); dd.setHours(h,mi,0,0);
+    const menitKoreksi = koreksi[k] || 0;
+    if(menitKoreksi) dd.setTime(dd.getTime() + menitKoreksi*60000); // koreksi manual, boleh negatif
     out[k] = dd;
   }
   out.hijri = day.hijri;
@@ -1115,6 +1189,7 @@ function checkTriggers(now){
     if(!triggeredLog[remLogKey] && now.getTime() >= remindAt && now.getTime() < prayerTime){
       triggeredLog[remLogKey] = true; saveTriggerLog();
       playSound("reminder");
+      showReminderPopup(pKey, prayerTime);
     }
     const azanLogKey = `${key}:${pKey}:azan`;
     if(!triggeredLog[azanLogKey] && now.getTime() >= prayerTime && now.getTime() < prayerTime + 60000){
@@ -1127,6 +1202,70 @@ function checkTriggers(now){
 function flashNowBadge(key){
   document.getElementById("nextLabel").innerHTML = `WAKTU ${PRAYER_LABEL[key].toUpperCase()} TELAH TIBA`;
 }
+
+/* ---------------- Popup pengingat (bar tipis, jendela Tauri terpisah) ----------------
+   ARSITEKTUR: jendela "reminder" didefinisikan di tauri.conf.json, hidden
+   dari awal (persis pola jendela "widget"). Yang MEMICU tampil/hitung
+   mundurnya cuma checkTriggers() di jendela manapun yang sedang aktif
+   (main/widget) -- SAMA seperti pemicu playSound("reminder") yang sudah
+   ada, jadi otomatis TIDAK dobel-trigger (triggeredLog sudah mencegah itu
+   duluan). Jendela popup sendiri TIDAK ikut menjalankan checkTriggers()-
+   nya sendiri -- dia murni PENAMPIL, baca info dari localStorage
+   (adzan_active_popup) yang ditulis fungsi showReminderPopup() di bawah,
+   supaya tidak ada risiko suara/popup terpicu 2x dari 2 jendela berbeda.
+   Popup TETAP hidup (JS-nya jalan terus) walau lagi disembunyikan --
+   Tauri cuma hide(), bukan destroy() -- jadi dia dengarkan event
+   "storage" utk langsung update begitu ada trigger BARU sementara dia
+   masih idle di background dari trigger sebelumnya. */
+async function showReminderPopup(prayerKey, prayerTimeMs){
+  try{
+    localStorage.setItem("adzan_active_popup", JSON.stringify({
+      prayerKey, targetTime: new Date(prayerTimeMs).toISOString()
+    }));
+  }catch(e){ /* localStorage penuh/diblokir -- popup tetap dicoba tampil, cuma tanpa data tersimpan */ }
+  try{
+    if (window.__TAURI__ && window.__TAURI__.window) {
+      const { WebviewWindow } = window.__TAURI__.window;
+      const w = WebviewWindow.getByLabel("reminder");
+      if (w){ await w.show(); await w.setFocus(); }
+    }
+  }catch(e){ console.log("Gagal tampilkan popup pengingat:", e); }
+}
+/* Logika di DALAM jendela popup itu sendiri -- cuma jalan kalau memang
+   lagi di mode popup (class "is-popup" di <html>). */
+(function initPopupMode(){
+  if (!document.documentElement.classList.contains("is-popup")) return;
+
+  async function tutupPopup(){
+    try{
+      if (window.__TAURI__ && window.__TAURI__.window){
+        await window.__TAURI__.window.getCurrent().hide();
+      }
+    }catch(e){ /* bukan di Tauri / gagal -- abaikan, bar tetap disembunyikan via CSS kalau perlu */ }
+  }
+  function updatePopupCountdown(){
+    let info;
+    try{
+      const raw = localStorage.getItem("adzan_active_popup");
+      if(!raw) return;
+      info = JSON.parse(raw);
+    }catch(e){ return; }
+    const target = new Date(info.targetTime).getTime();
+    const diff = target - Date.now();
+    if (diff <= 0){ tutupPopup(); return; } // waktu adzan sudah tiba -- selesai tugas popup ini
+    const nameEl = document.getElementById("popupPrayerName");
+    const cdEl = document.getElementById("popupCountdown");
+    if(nameEl) nameEl.textContent = PRAYER_LABEL[info.prayerKey] || "-";
+    if(cdEl) cdEl.textContent = fmtCountdown(diff);
+  }
+  document.getElementById("popupCloseBtn").addEventListener("click", tutupPopup);
+  // begitu jendela ini DITAMPILKAN LAGI dari trigger baru (sementara JS-nya
+  // sudah jalan terus dari sebelumnya, cuma disembunyikan), event storage
+  // ini yang membuatnya langsung update ke prayer/waktu yang baru.
+  window.addEventListener("storage", (e)=>{ if(e.key === "adzan_active_popup") updatePopupCountdown(); });
+  updatePopupCountdown();
+  setInterval(updatePopupCountdown, 1000);
+})();
 
 /* ---------------- Wake lock ---------------- */
 async function requestWakeLock(){
@@ -1177,6 +1316,7 @@ function openSettings(){
   document.getElementById("inVolume").value = Math.round(settings.volume*100);
   document.getElementById("volumeVal").textContent = Math.round(settings.volume*100)+"%";
   renderPrayerRows();
+  renderCorrectionRows();
   refreshAudioStatus();
   document.getElementById("urlReminder").value = localStorage.getItem("reminderAudioUrl") || "";
   document.getElementById("urlAzan").value = localStorage.getItem("azanAudioUrl") || "";
@@ -1230,6 +1370,36 @@ function readPrayerRowsIntoSettings(){
     settings.prayerSettings[key].minutes = minutes;
     const fridayEl = row.querySelector(".fridayInput");
     if(fridayEl) settings.prayerSettings[key].fridayMinutes = Math.max(0, parseInt(fridayEl.value,10) || 0);
+  });
+}
+
+/* ---------------- Koreksi manual per waktu sholat (menit, boleh negatif) ----------------
+   Lihat catatan lengkap di DEFAULTS.correctionMinutes -- ini buat
+   menyamakan hasil hitung AlAdhan (murni astronomis) ke jadwal rujukan
+   masjid/kantor yang biasanya sudah pakai ihtiyat Kemenag. */
+function renderCorrectionRows(){
+  const box = document.getElementById("correctionRows");
+  if(!box) return;
+  box.innerHTML = "";
+  const koreksi = settings.correctionMinutes || {};
+  DISPLAY_ORDER.forEach(key=>{
+    const row = document.createElement("div");
+    row.className = "day-row";
+    row.dataset.key = key;
+    row.innerHTML = `
+      <div class="dname">${PRAYER_LABEL[key]}</div>
+      <input type="number" class="correctionInput" step="1" value="${koreksi[key] || 0}">
+      <div class="unit">menit</div>
+    `;
+    box.appendChild(row);
+  });
+}
+function readCorrectionRowsIntoSettings(){
+  settings.correctionMinutes = settings.correctionMinutes || {};
+  document.querySelectorAll("#correctionRows .day-row").forEach(row=>{
+    const key = row.dataset.key;
+    const val = parseInt(row.querySelector(".correctionInput").value, 10);
+    settings.correctionMinutes[key] = Number.isFinite(val) ? val : 0;
   });
 }
 
@@ -1379,6 +1549,7 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
   settings.lng = parseFloat(document.getElementById("inLng").value) || DEFAULTS.lng;
   settings.volume = parseInt(document.getElementById("inVolume").value,10)/100;
   readPrayerRowsIntoSettings();
+  readCorrectionRowsIntoSettings();
   saveSettings();
   closeSettings();
   scheduleDateStr = null;
