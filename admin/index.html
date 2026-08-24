@@ -170,12 +170,12 @@
       <button class="btn primary" id="addKajianBtn">+ Tambah kajian</button>
     </div>
 
-    <!-- GOOGLE CALENDAR: PENGINGAT EVENT -->
+    <!-- GOOGLE CALENDAR: DIGEST AGENDA HARI INI -->
     <div class="card">
-      <h2>🗓️ Pengingat event Google Calendar <span class="badge" id="calReminderBadge"></span></h2>
-      <div class="desc">Sama dengan <code>/kalender_reminder</code>. Berlaku untuk SEMUA event di Google Calendar yang dipantau (bukan cuma kajian/pengingat umum yang dibuat dari bot ini) — dikirim sekian menit sebelum event mulai. Fitur ini butuh ENV Google (service account) sudah diisi di Worker; kosongkan kolom untuk mematikan. Cek status koneksi lewat <code>/kalender_cek</code> di Telegram.</div>
+      <h2>🗓️ Digest "Agenda Hari Ini" (Google Calendar) <span class="badge" id="calReminderBadge"></span></h2>
+      <div class="desc">Sama dengan <code>/kalender_digest</code>. Berlaku untuk SEMUA event di Google Calendar yang dipantau (bukan cuma kajian/pengingat umum yang dibuat dari bot ini) — <b>1x setiap pagi</b>, bot kirim 1 pesan ringkasan berisi SEMUA agenda hari itu (bukan reminder terpisah per-event lagi). Fitur ini butuh ENV Google (service account) sudah diisi di Worker; kosongkan kolom untuk mematikan. Cek status koneksi lewat <code>/kalender_cek</code> di Telegram.</div>
       <div class="row">
-        <div class="field"><label>Ingatkan berapa menit sebelum event mulai</label><input type="number" id="calReminderMinutes" min="0" placeholder="mis. 15"></div>
+        <div class="field"><label>Jam kirim digest (WIB)</label><input type="time" id="calReminderMinutes" placeholder="mis. 07:00"></div>
         <div class="field"><label>Kirim ke topik</label><select id="calReminderTopic"><option value="">(topik bernama "kalender", kalau ada)</option></select></div>
       </div>
       <button class="btn small" id="saveCalReminderBtn">Simpan pengaturan kalender</button>
@@ -200,7 +200,7 @@
     <!-- PENGINGAT UMUM -->
     <div class="card">
       <h2>🔔 Pengingat umum</h2>
-      <div class="desc">Sama dengan <code>/ingat_tambah</code>. Bebas judul &amp; pesan, ke topik mana saja, sekali/harian/mingguan/bulanan. Otomatis tersinkron ke Google Calendar kalau sudah dikonfigurasi (termasuk sebagai recurring event asli untuk yang berulang).</div>
+      <div class="desc">Sama dengan <code>/ingat_tambah</code>. Bebas judul &amp; pesan, ke topik mana saja, sekali/harian/mingguan/bulanan. Otomatis tersinkron ke Google Calendar kalau sudah dikonfigurasi (termasuk sebagai recurring event asli untuk yang berulang). <b>Tips:</b> pilih topik <code>pengumuman</code> di dropdown Topik untuk bikin pengumuman — ini fitur yang SAMA PERSIS dengan command <code>/pengumuman &lt;judul&gt; | &lt;pesan&gt; | &lt;jadwal&gt;</code> di Telegram (cuma lebih singkat karena topiknya otomatis).</div>
       <table id="remindersTable"><thead><tr><th>Judul</th><th>Jadwal</th><th>Topik</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
       <div class="row" style="margin-top:14px;">
         <div class="field"><label>Judul</label><input type="text" id="newRemTitle" placeholder="Rapat Bulanan"></div>
@@ -541,24 +541,18 @@ document.getElementById("addKajianBtn").addEventListener("click", async ()=>{
   }catch(e){ toast("Gagal simpan: " + e.message, true); }
 });
 
-/* ---------- GOOGLE CALENDAR: PENGINGAT EVENT ---------- */
+/* ---------- GOOGLE CALENDAR: DIGEST "AGENDA HARI INI" ---------- */
 function renderCalReminder(){
-  const menit = data.calendarReminderMinutes;
-  document.getElementById("calReminderMinutes").value = (menit != null) ? menit : "";
+  const jam = data.calendarDigestTime;
+  document.getElementById("calReminderMinutes").value = jam || "";
   document.getElementById("calReminderTopic").value = data.calendarTopicKey || "";
   const badge = document.getElementById("calReminderBadge");
-  badge.textContent = (menit != null) ? "Aktif" : "Nonaktif";
-  badge.className = "badge " + ((menit != null) ? "on" : "off");
+  badge.textContent = jam ? "Aktif" : "Nonaktif";
+  badge.className = "badge " + (jam ? "on" : "off");
 }
 document.getElementById("saveCalReminderBtn").addEventListener("click", async ()=>{
-  const raw = document.getElementById("calReminderMinutes").value.trim();
-  if(raw === ""){
-    data.calendarReminderMinutes = null;
-  } else {
-    const menit = parseInt(raw, 10);
-    if(isNaN(menit) || menit < 0){ toast("Isi angka menit yang valid (0 atau lebih), atau kosongkan untuk mematikan.", true); return; }
-    data.calendarReminderMinutes = menit;
-  }
+  const jam = document.getElementById("calReminderMinutes").value.trim();
+  data.calendarDigestTime = jam || null; // input type="time" sudah pasti format HH:MM kalau diisi, kosong = matikan
   data.calendarTopicKey = document.getElementById("calReminderTopic").value || null;
   if(await saveData()) renderCalReminder();
 });
