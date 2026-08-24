@@ -1,6 +1,7 @@
 {
   "adminUserIds": [
-    216663781
+    216663781,
+    121822437
   ],
   "topics": {
     "kopi_pagi": {
@@ -137,6 +138,8 @@
   "calendarRemindedIds": [
     "4qj2c0h5vv5cisav8n89lu5gn9_20260824T013000Z"
   ],
+  "calendarDigestTime": null,
+  "calendarDigestLastSentDate": null,
   "calendarTopicKey": "pengumuman",
   "reminders": [],
   "liburReminder": {
