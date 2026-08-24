@@ -49,9 +49,20 @@
   .dot{width:7px;height:7px;border-radius:50%; background:var(--muted-dim);}
   .dot.on{background:var(--ok); box-shadow:0 0 6px var(--ok);}
   .dot.err{background:var(--ember); box-shadow:0 0 6px var(--ember);}
-  .toast{position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--panel-2); border:1px solid var(--gold); color:var(--text); padding:10px 18px; border-radius:10px; font-size:13px; opacity:0; pointer-events:none; transition:.25s; z-index:50;}
-  .toast.show{opacity:1; transform:translateX(-50%) translateY(-6px);}
-  .toast.error{border-color:var(--ember);}
+  .toast{
+    position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(16px);
+    display:flex; align-items:flex-start; gap:12px;
+    background:#173321; border:2px solid #2fae64; color:#eafff1;
+    padding:16px 22px; border-radius:14px;
+    font-size:15px; font-weight:600; line-height:1.45;
+    max-width:min(560px, 92vw); text-align:left;
+    box-shadow:0 12px 40px rgba(0,0,0,.5);
+    opacity:0; pointer-events:none; transition:.28s ease; z-index:9999;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .toast.error{background:#3a1414; border-color:var(--ember); color:#ffe9e5;}
+  .toast .toast-icon{font-size:22px; line-height:1; flex-shrink:0;}
+  .toast .toast-text{flex:1;}
   .gate{max-width:420px; margin:15vh auto; text-align:center;}
   .gate input{margin-bottom:10px;}
   .hidden{display:none !important;}
@@ -171,12 +182,16 @@
       <button class="btn primary" id="addKajianBtn">+ Tambah kajian</button>
     </div>
 
-    <!-- GOOGLE CALENDAR: DIGEST AGENDA HARI INI -->
+    <!-- GOOGLE CALENDAR: NOTIFIKASI ONTIME PER-EVENT -->
     <div class="card">
-      <h2>🗓️ Digest "Agenda Hari Ini" (Google Calendar) <span class="badge" id="calReminderBadge"></span></h2>
-      <div class="desc">Sama dengan <code>/kalender_digest</code>. Berlaku untuk SEMUA event di Google Calendar yang dipantau (bukan cuma kajian/pengingat umum yang dibuat dari bot ini) — <b>1x setiap pagi</b>, bot kirim 1 pesan ringkasan berisi SEMUA agenda hari itu (bukan reminder terpisah per-event lagi). Fitur ini butuh ENV Google (service account) sudah diisi di Worker; kosongkan kolom untuk mematikan. Cek status koneksi lewat <code>/kalender_cek</code> di Telegram.</div>
+      <h2>🗓️ Notifikasi ontime Google Calendar <span class="badge" id="calReminderBadge"></span></h2>
+      <div class="desc">Sama dengan <code>/kalender_ontime</code>. Berlaku untuk SEMUA event di Google Calendar yang dipantau (bukan cuma kajian/pengingat umum yang dibuat dari bot ini) — bot kirim notifikasi <b>PAS jam yang tertulis di event</b> (bukan N menit sebelum, bukan rangkuman pagi). Bikin event jam 10:00 → notif terkirim jam 10:00, otomatis, tidak perlu atur jam manual. Fitur ini butuh ENV Google (service account) sudah diisi di Worker. Cek status koneksi lewat <code>/kalender_cek</code> di Telegram.</div>
       <div class="row">
-        <div class="field"><label>Jam kirim digest (WIB)</label><input type="time" id="calReminderMinutes" placeholder="mis. 07:00"></div>
+        <div class="field">
+          <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
+            <input type="checkbox" id="calOntimeEnabled" style="width:auto;"> Aktifkan notifikasi ontime
+          </label>
+        </div>
         <div class="field"><label>Kirim ke topik</label><select id="calReminderTopic"><option value="">(topik bernama "kalender", kalau ada)</option></select></div>
       </div>
       <button class="btn small" id="saveCalReminderBtn">Simpan pengaturan kalender</button>
@@ -185,7 +200,7 @@
     <!-- LIBUR NASIONAL -->
     <div class="card">
       <h2>🕋 Pengingat H-1 libur nasional</h2>
-      <div class="desc">Sama dengan <code>/libur_reminder</code>. Dicek otomatis dari kalender publik Google tiap hari jam yang dipilih -- kalau BESOK libur nasional, pesan dikirim; kalau bukan, diam saja. <b>Fitur terkait (otomatis, tanpa perlu diatur di sini):</b> "Libur Internal" — bikin event sepanjang hari (all-day) di Google Calendar bot dengan judul diawali kata "LIBUR" (mis. "LIBUR: Cuti Bersama"). Di hari libur (nasional ATAU internal): polling &amp; rekap puasa dimatikan total, digest kalender tidak dikirim, reminder kajian ditunda ke hari kerja berikutnya.</div>
+      <div class="desc">Sama dengan <code>/libur_reminder</code>. Dicek otomatis dari kalender publik Google tiap hari jam yang dipilih -- kalau BESOK libur nasional, pesan dikirim; kalau bukan, diam saja. <b>Fitur terkait (otomatis, tanpa perlu diatur di sini):</b> "Libur Internal" — bikin event sepanjang hari (all-day) di Google Calendar bot dengan judul diawali kata "LIBUR" (mis. "LIBUR: Cuti Bersama"). Di hari libur (nasional ATAU internal): polling &amp; rekap puasa dimatikan total, notifikasi ontime Google Calendar tidak dikirim, reminder kajian ditunda ke hari kerja berikutnya.</div>
       <div class="row">
         <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
           <input type="checkbox" id="liburEnabled" style="width:auto;"> Aktifkan pengingat H-1
@@ -249,9 +264,21 @@ let data = null, sha = null;
 
 function toast(msg, isError){
   const t = document.getElementById("toast");
-  t.textContent = msg;
+  clearTimeout(t._hideTimer);
+  t.innerHTML = "";
+  const icon = document.createElement("span");
+  icon.className = "toast-icon";
+  icon.textContent = isError ? "❌" : "✅";
+  const text = document.createElement("span");
+  text.className = "toast-text";
+  text.textContent = msg;
+  t.appendChild(icon);
+  t.appendChild(text);
   t.className = "toast show" + (isError ? " error" : "");
-  setTimeout(()=> t.className = "toast", 2600);
+  // pesan error dikasih waktu lebih lama supaya sempat kebaca (biasanya
+  // lebih panjang, berisi detail error dari server), pesan sukses tetap
+  // singkat & tidak mengganggu.
+  t._hideTimer = setTimeout(()=> t.className = "toast", isError ? 5000 : 3200);
 }
 function setConn(state){ // "ok" | "err" | "checking"
   const dot = document.getElementById("connDot");
@@ -546,18 +573,17 @@ document.getElementById("addKajianBtn").addEventListener("click", async ()=>{
   }catch(e){ toast("Gagal simpan: " + e.message, true); }
 });
 
-/* ---------- GOOGLE CALENDAR: DIGEST "AGENDA HARI INI" ---------- */
+/* ---------- GOOGLE CALENDAR: NOTIFIKASI ONTIME PER-EVENT ---------- */
 function renderCalReminder(){
-  const jam = data.calendarDigestTime;
-  document.getElementById("calReminderMinutes").value = jam || "";
+  const aktif = !!data.calendarOntimeEnabled;
+  document.getElementById("calOntimeEnabled").checked = aktif;
   document.getElementById("calReminderTopic").value = data.calendarTopicKey || "";
   const badge = document.getElementById("calReminderBadge");
-  badge.textContent = jam ? "Aktif" : "Nonaktif";
-  badge.className = "badge " + (jam ? "on" : "off");
+  badge.textContent = aktif ? "Aktif" : "Nonaktif";
+  badge.className = "badge " + (aktif ? "on" : "off");
 }
 document.getElementById("saveCalReminderBtn").addEventListener("click", async ()=>{
-  const jam = document.getElementById("calReminderMinutes").value.trim();
-  data.calendarDigestTime = jam || null; // input type="time" sudah pasti format HH:MM kalau diisi, kosong = matikan
+  data.calendarOntimeEnabled = document.getElementById("calOntimeEnabled").checked;
   data.calendarTopicKey = document.getElementById("calReminderTopic").value || null;
   if(await saveData()) renderCalReminder();
 });
