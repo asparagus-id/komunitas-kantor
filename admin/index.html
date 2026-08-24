@@ -415,6 +415,14 @@
           <hr style="border:none; border-top:1px solid var(--line); margin:18px 0;">
           <div class="desc" style="margin-bottom:8px;">Rekap jawaban hari ini:</div>
           <div id="puasaRekap" class="empty">Memuat…</div>
+          <button class="btn small" id="puasaInsightBtn" style="margin-top:10px;">🧠 Minta catatan AI dari rekap ini</button>
+          <div id="puasaInsightResult" class="hint" style="margin-top:8px;"></div>
+        </div>
+
+        <div class="card">
+          <h2>📅 Riwayat rekap puasa (14 hari terakhir)</h2>
+          <div class="desc">Data lebih lama dari 14 hari otomatis dibersihkan oleh bot, jadi cuma segini yang bisa ditampilkan.</div>
+          <table id="puasaRiwayatTable"><thead><tr><th>Tanggal</th><th>Puasa</th><th>Tidak puasa</th></tr></thead><tbody></tbody></table>
         </div>
 
         <div class="card">
@@ -422,6 +430,10 @@
           <div class="desc">150 varian bawaan selalu aktif (tidak bisa dihapus). Admin bisa minta AI bikinkan varian TAMBAHAN lewat <code>/puasa_variant_generate &lt;jumlah&gt;</code> di Telegram (fitur ini butuh AI, cuma bisa dipicu dari Telegram bukan dari panel). Hasilnya masuk antrian di bawah — cek dulu maknanya benar (opsi 1 harus berarti "puasa", opsi 2 harus berarti "tidak puasa") sebelum di-approve.</div>
           <table id="variantTable"><thead><tr><th>Pertanyaan</th><th>Opsi 1 (puasa)</th><th>Opsi 2 (tidak)</th><th></th></tr></thead><tbody></tbody></table>
           <div class="hint" id="variantCustomCount" style="margin-top:10px;"></div>
+          <div id="variantCustomListWrap" style="margin-top:14px;">
+            <div class="desc" style="margin-bottom:8px;">Varian tambahan yang sudah aktif (bisa dihapus kalau ternyata salah makna):</div>
+            <table id="variantCustomTable"><thead><tr><th>Pertanyaan</th><th>Opsi 1 (puasa)</th><th>Opsi 2 (tidak)</th><th></th></tr></thead><tbody></tbody></table>
+          </div>
         </div>
       </section>
 
@@ -450,6 +462,12 @@
           </div>
           <button class="btn primary" id="addKajianBtn">+ Tambah kajian</button>
         </div>
+
+        <div class="card">
+          <h2>🗂️ Riwayat kajian</h2>
+          <div class="desc">Kajian yang sudah lewat tanggalnya — cuma untuk dilihat, tidak bisa diedit dari sini (data mentah tersimpan selamanya di <code>data.kajian</code>, tapi otomatis dibersihkan dari daftar aktif setelah &gt;7 hari lewat).</div>
+          <table id="kajianRiwayatTable"><thead><tr><th>Tanggal</th><th>Pengisi</th><th>Tema</th></tr></thead><tbody></tbody></table>
+        </div>
       </section>
 
       <section class="page" id="page-kalender">
@@ -465,6 +483,8 @@
             <div class="field"><label>Kirim ke topik</label><select id="calReminderTopic"><option value="">(topik bernama "kalender", kalau ada)</option></select></div>
           </div>
           <button class="btn small" id="saveCalReminderBtn">Simpan pengaturan kalender</button>
+          <button class="btn small" id="testKalenderBtn" style="margin-left:8px;">Tes koneksi</button>
+          <div id="kalenderCekResult" class="hint" style="margin-top:10px;"></div>
         </div>
       </section>
 
@@ -540,6 +560,11 @@
           <h2>🎨 Tampilan</h2>
           <div class="desc">Terang / Gelap / Otomatis (ikut pengaturan perangkat) — tombolnya ada di pojok kanan atas, di sebelah jam.</div>
         </div>
+        <div class="card">
+          <h2>📶 Detail kuota AI</h2>
+          <div class="desc">Sama dengan <code>/kuota</code> di Telegram — rincian lengkap, bukan cuma angka ringkas yang ada di header.</div>
+          <div id="quotaDetailBox" class="empty">Memuat…</div>
+        </div>
       </section>
 
     </div>
@@ -563,7 +588,7 @@ let data = null, sha = null;
 
 // Versi panel ini -- naikkan tiap kali ada perubahan berarti, cocokkan
 // dengan entri di CHANGELOG.md & WORKER_VERSION di worker-komunitas.js.
-const APP_VERSION = "2.0.3";
+const APP_VERSION = "2.2.0";
 const WORKER_URL_FOR_VERSION_CHECK = "https://gus-asisten.rempahecho.workers.dev";
 
 /* Cek versi worker LANGSUNG saat halaman dibuka, SEBELUM login (endpoint
@@ -748,6 +773,7 @@ function renderAll(){
   renderPuasa();
   renderKajian();
   renderRekap();
+  renderPuasaRiwayat();
   renderReminders();
   renderCalReminder();
   renderLibur();
@@ -820,20 +846,41 @@ function renderOverview(){
       active:true,
     });
   }
+  // Agenda Google Calendar mendatang (max 2) -- diambil dari endpoint
+  // /kalender-mendatang lewat loadCalendarEvents(), disimpan sementara di
+  // window.__lastCalendarEvents. Ditaruh SEBELUM pengingat umum, supaya
+  // yang paling "mendesak" (kajian, lalu kalender) muncul duluan.
+  const calEvents = (window.__lastCalendarEvents || []).slice(0, 2);
+  calEvents.forEach(ev=>{
+    let sub;
+    if(ev.startDateTime){
+      const shifted = new Date(new Date(ev.startDateTime).getTime() + 7*3600000);
+      const jam = shifted.toISOString().substring(11,16);
+      const tgl = shifted.toISOString().substring(0,10);
+      sub = fmtTanggalID(tgl) + " • " + jam + " WIB";
+    } else if(ev.startDate){
+      sub = fmtTanggalID(ev.startDate) + " • Sepanjang hari";
+    } else {
+      sub = "-";
+    }
+    items.push({ icon:"🗓️", title: ev.summary, sub, active:true, isCalendar:true });
+  });
   (data.reminders || []).forEach(r=>{
     items.push({ icon:"🔔", title:r.title, sub: formatJadwalUmum(r.schedule), active: r.enabled });
   });
   if(!items.length){
-    remListEl.innerHTML = `<div class="empty">Belum ada pengingat aktif.</div>`;
+    remListEl.innerHTML = `<div class="empty">Belum ada pengingat aktif.${window.__calendarConfigured===false ? ' Google Calendar juga belum dikonfigurasi.' : ''}</div>`;
   } else {
-    remListEl.innerHTML = items.slice(0,3).map(it=>`
+    remListEl.innerHTML = items.slice(0,5).map(it=>`
       <div class="list-item">
-        <div class="list-icon" style="background:rgba(var(--gold-rgb),.13); color:var(--gold);">${it.icon}</div>
+        <div class="list-icon" style="background:rgba(${it.isCalendar ? 'var(--ok-rgb)' : 'var(--gold-rgb)'},.13); color:${it.isCalendar ? 'var(--ok)' : 'var(--gold)'};">${it.icon}</div>
         <div style="flex:1;">
           <div class="li-title">${it.title}</div>
           <div class="li-sub">${it.sub}</div>
         </div>
-        <span class="badge ${it.active?"on":"off"}" style="align-self:flex-start;">${it.active?"Aktif":"Nonaktif"}</span>
+        ${it.isCalendar
+          ? `<span class="badge on" style="align-self:flex-start;">Kalender</span>`
+          : `<span class="badge ${it.active?"on":"off"}" style="align-self:flex-start;">${it.active?"Aktif":"Nonaktif"}</span>`}
       </div>
     `).join("");
   }
@@ -1055,6 +1102,34 @@ function renderVariantQueue(){
       if(await saveData()) renderVariantQueue();
     });
   });
+
+  // Varian custom yang SUDAH aktif (bukan lagi antrian) -- disimpan tanpa
+  // id unik ({q, opts} saja), jadi dihapus berdasarkan INDEX di array saat
+  // render ini (aman selama tabelnya di-render ulang stlh tiap perubahan,
+  // spt yang selalu terjadi di sini lewat renderVariantQueue()).
+  const customTbody = document.querySelector("#variantCustomTable tbody");
+  const customWrap = document.getElementById("variantCustomListWrap");
+  if(customWrap) customWrap.style.display = custom.length ? "" : "none";
+  if(customTbody){
+    customTbody.innerHTML = "";
+    custom.forEach((v, idx)=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${v.q}</td>
+        <td>${v.opts[0]}</td>
+        <td>${v.opts[1]}</td>
+        <td><button class="btn small danger" data-del-custom-variant="${idx}">Hapus</button></td>
+      `;
+      customTbody.appendChild(tr);
+    });
+    customTbody.querySelectorAll("[data-del-custom-variant]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const idx = Number(btn.dataset.delCustomVariant);
+        data.puasaVariantsCustom.splice(idx, 1);
+        if(await saveData()) renderVariantQueue();
+      });
+    });
+  }
 }
 
 function renderRekap(){
@@ -1075,6 +1150,40 @@ function renderRekap(){
     </div>
   `;
 }
+/* Ringkasan 14 hari terakhir (angka saja, bukan nama-nama) -- data.puasaLog
+   dari GET /data sudah otomatis cuma berisi 14 hari terakhir (dibersihkan
+   sendiri oleh Worker tiap tick cron), jadi tinggal tampilkan apa adanya. */
+function renderPuasaRiwayat(){
+  const tbody = document.querySelector("#puasaRiwayatTable tbody");
+  if(!tbody) return;
+  const keys = Object.keys(data.puasaLog || {}).sort((a,b)=>b.localeCompare(a)); // terbaru dulu
+  tbody.innerHTML = keys.length ? "" : `<tr><td colspan="3" class="empty">Belum ada riwayat rekap.</td></tr>`;
+  keys.forEach(key=>{
+    const log = data.puasaLog[key];
+    const answers = Object.values(log.answers || {});
+    const puasa = answers.filter(a=>a.choice===0).length;
+    const tidak = answers.filter(a=>a.choice===1).length;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${fmtTanggalID(key)}</td><td>${puasa}</td><td>${tidak}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+document.getElementById("puasaInsightBtn").addEventListener("click", async ()=>{
+  const box = document.getElementById("puasaInsightResult");
+  const btn = document.getElementById("puasaInsightBtn");
+  btn.disabled = true;
+  box.textContent = "Meminta AI...";
+  try{
+    const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/puasa-insight", {
+      method:"POST", headers:{ "Authorization":"Bearer " + APP_TOKEN }
+    });
+    const j = await res.json();
+    box.innerHTML = (j.insight || "Gagal mendapat catatan.").replace(/\n/g,"<br>");
+  }catch(e){
+    box.textContent = "Gagal: " + e.message;
+  }
+  btn.disabled = false;
+});
 
 /* ---------- KAJIAN ---------- */
 function renderKajian(){
@@ -1108,6 +1217,22 @@ function renderKajian(){
         await loadData();
       }catch(e){ toast("Gagal hapus: " + e.message, true); }
     });
+  });
+  renderKajianRiwayat();
+}
+/* Kajian yang tanggalnya SUDAH LEWAT -- cuma tampilan, tidak ada tombol
+   hapus/edit (mengikuti pola read-only). Diurutkan terbaru dulu supaya
+   yang paling relevan (baru saja lewat) ada di atas. */
+function renderKajianRiwayat(){
+  const tbody = document.querySelector("#kajianRiwayatTable tbody");
+  if(!tbody) return;
+  const today = getTodayKey();
+  const list = (data.kajian || []).filter(k=>k.tanggal < today).sort((a,b)=>b.tanggal.localeCompare(a.tanggal));
+  tbody.innerHTML = list.length ? "" : `<tr><td colspan="3" class="empty">Belum ada riwayat (atau semua sudah lewat &gt;7 hari, jadi sudah dibersihkan otomatis).</td></tr>`;
+  list.forEach(k=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${fmtTanggalID(k.tanggal)}</td><td>${k.pengisi}</td><td>${k.tema}</td>`;
+    tbody.appendChild(tr);
   });
 }
 function fmtTanggalID(iso){
@@ -1156,6 +1281,23 @@ document.getElementById("saveCalReminderBtn").addEventListener("click", async ()
   data.calendarOntimeEnabled = document.getElementById("calOntimeEnabled").checked;
   data.calendarTopicKey = document.getElementById("calReminderTopic").value || null;
   if(await saveData()) renderCalReminder();
+});
+document.getElementById("testKalenderBtn").addEventListener("click", async ()=>{
+  const box = document.getElementById("kalenderCekResult");
+  box.textContent = "Menguji koneksi...";
+  try{
+    const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/kalender-cek", { headers:{ "Authorization":"Bearer " + APP_TOKEN }, cache:"no-store" });
+    const j = await res.json();
+    if(j.connected){
+      box.innerHTML = `✅ Tersambung dengan baik.<br>Kalender: <code>${j.calendarId}</code><br>Event dalam 2 hari ke depan: ${j.eventCount2Hari}`;
+    } else if(j.missingEnv){
+      box.innerHTML = `❌ Belum tersambung -- ENV berikut belum diisi di Worker:<br>${j.missingEnv.map(e=>"• "+e).join("<br>")}`;
+    } else {
+      box.innerHTML = `❌ ENV sudah diisi tapi gagal konek: ${j.error || "unknown error"}`;
+    }
+  }catch(e){
+    box.textContent = "Gagal menguji: " + e.message;
+  }
 });
 
 /* ---------- PENGINGAT UMUM ---------- */
@@ -1314,14 +1456,17 @@ async function boot(){
   if(savedPage) showPage(savedPage);
   await loadData();
   loadAiQuota();
+  loadCalendarEvents();
   setInterval(async ()=>{
     try{ const res = await api("GET"); data = res.data; sha = res.sha; renderRekap(); renderOverview(); setConn("ok"); }
     catch(e){ /* diam, jangan ganggu kalau kebetulan gagal sesaat */ }
   }, 60000);
   setInterval(loadAiQuota, 300000);
+  setInterval(loadCalendarEvents, 300000);
 }
 async function loadAiQuota(){
   const chipEl = document.getElementById("aiQuotaChipVal");
+  const detailEl = document.getElementById("quotaDetailBox");
   try{
     const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/ai-quota", { headers:{ "Authorization":"Bearer " + APP_TOKEN } });
     const q = await res.json();
@@ -1333,10 +1478,44 @@ async function loadAiQuota(){
     } else {
       chipEl.textContent = q.workersAi.usedNeuron.toLocaleString("id-ID") + " / " + q.workersAi.budgetNeuron.toLocaleString("id-ID");
     }
+    if(detailEl){
+      if(!q.aiConfigured){
+        detailEl.className = "empty";
+        detailEl.textContent = "Fitur AI belum dikonfigurasi (GROQ_API_KEY & binding \"AI\" dua-duanya belum diisi di Worker).";
+      } else {
+        detailEl.className = "";
+        const baris = [];
+        baris.push(`<div style="margin-bottom:10px;"><b>Groq (utama):</b> ` + (q.groqConfigured
+          ? (q.groq.budgetTokens != null
+              ? `${q.groq.usedTokens.toLocaleString("id-ID")} / ${q.groq.budgetTokens.toLocaleString("id-ID")} token (${q.groq.percent}%)` + (q.groq.cooldown ? ' <span style="color:var(--ember)">⚠️ cooldown</span>' : '')
+              : (q.groq.cooldown ? '⚠️ mendekati limit' : '✓ normal'))
+          : "belum dikonfigurasi — langsung pakai Workers AI") + `</div>`);
+        baris.push(`<div><b>Workers AI (cadangan):</b> ${q.workersAi.usedNeuron.toLocaleString("id-ID")} / ${q.workersAi.budgetNeuron.toLocaleString("id-ID")} Neuron (${q.workersAi.percent}%)</div>`);
+        if(!q.quotaTrackingActive) baris.push(`<div class="hint" style="margin-top:10px;">Catatan: KV "AI_QUOTA" belum diisi — angka di atas belum terlacak sungguhan (AI tetap jalan tapi tanpa pengaman kuota).</div>`);
+        detailEl.innerHTML = baris.join("");
+      }
+    }
     if(data) renderOverview();
   }catch(e){
     chipEl.textContent = "-";
+    if(detailEl){ detailEl.className = "empty"; detailEl.textContent = "Gagal memuat: " + e.message; }
   }
+}
+/* Ambil agenda Google Calendar mendatang dari Worker (endpoint
+   /kalender-mendatang) -- panel tidak punya kredensial Google sendiri,
+   jadi WAJIB lewat Worker. Hasilnya dipakai kartu "Pengingat Mendatang"
+   di Overview (lihat renderOverview()). */
+async function loadCalendarEvents(){
+  try{
+    const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/kalender-mendatang", { headers:{ "Authorization":"Bearer " + APP_TOKEN }, cache:"no-store" });
+    const j = await res.json();
+    window.__lastCalendarEvents = (j && j.events) || [];
+    window.__calendarConfigured = !!(j && j.configured);
+  }catch(e){
+    window.__lastCalendarEvents = [];
+    window.__calendarConfigured = false;
+  }
+  if(data) renderOverview();
 }
 
 if(APP_TOKEN){
