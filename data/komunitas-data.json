@@ -144,7 +144,7 @@
   "calendarReminderMinutes": 30,
   "calendarDigestTime": null,
   "calendarDigestLastSentDate": null,
-  "calendarOntimeEnabled": false,
+  "calendarOntimeEnabled": true,
   "calendarRemindedIds": [
     "4qj2c0h5vv5cisav8n89lu5gn9_20260824T013000Z"
   ],
