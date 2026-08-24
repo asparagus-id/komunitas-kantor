@@ -31,8 +31,13 @@
     ],
     "topicKey": "puasa",
     "rekapTime": "11:00",
-    "lastRekapSentDate": null
+    "lastRekapSentDate": "2026-08-24"
   },
+  "puasaVariantsPending": [],
+  "puasaVariantsCustom": [],
+  "puasaVariantNextId": 1,
+  "puasaVariantQueue": [],
+  "puasaVariantQueuePoolSize": 0,
   "kajian": [
     {
       "id": 1787504664944,
