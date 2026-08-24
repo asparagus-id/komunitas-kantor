@@ -4,15 +4,52 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Bot Komunitas</title>
+<script>
+// Diterapkan SEBELUM CSS/halaman sempat dirender, supaya tidak ada kedipan
+// "tema salah" sesaat pas halaman baru dibuka (mis. kelihatan gelap dulu
+// baru berubah terang). Baca preferensi tersimpan (light/dark/auto); kalau
+// "auto" atau belum pernah diatur, ikuti preferensi sistem/device saat itu.
+(function(){
+  try{
+    var pref = localStorage.getItem("admkom_theme") || "auto";
+    var eff = (pref === "light" || pref === "dark")
+      ? pref
+      : (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    document.documentElement.setAttribute("data-theme", eff);
+  }catch(e){}
+})();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Inter+Tight:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{
+  :root, [data-theme="dark"]{
     --bg:#081619; --panel:#0e2a2f; --panel-2:#12363d; --line:#1e4a52;
     --gold:#c9a227; --gold-soft:#e0c368; --text:#f5f1e6; --muted:#7fa5a3;
     --muted-dim:#4c6c6a; --ok:#6fbf8b; --ember:#e0723c;
+    --input-bg:#08181b; --bg-glow:#0f2b30; --on-gold-text:#0e2a2f;
+    --toast-ok-bg:#173321; --toast-ok-border:#2fae64; --toast-ok-text:#eafff1;
+    --toast-err-bg:#3a1414; --toast-err-text:#ffe9e5;
+    --line-rgb:30,74,82; --gold-rgb:201,162,39; --ember-rgb:224,114,60;
+    --ok-rgb:111,191,139; --muted-dim-rgb:76,108,106;
+    --shadow-color:rgba(0,0,0,.5);
+    color-scheme: dark;
+  }
+  /* Tema TERANG -- semua pasangan warna dicek ulang kontrasnya (teks vs
+     latar) supaya tidak ada yang jadi tidak terbaca, bukan cuma dibalik
+     mentah-mentah dari tema gelap. */
+  [data-theme="light"]{
+    --bg:#f5f2ea; --panel:#ffffff; --panel-2:#f1ede1; --line:#ddd5c0;
+    --gold:#9c6f0a; --gold-soft:#7d590a; --text:#1d2523; --muted:#5c6d69;
+    --muted-dim:#8a9a97; --ok:#1f8a4c; --ember:#bf4e28;
+    --input-bg:#ffffff; --bg-glow:#eee7d6; --on-gold-text:#fffaf0;
+    --toast-ok-bg:#e3f7ea; --toast-ok-border:#1f8a4c; --toast-ok-text:#0c3d21;
+    --toast-err-bg:#fdeceb; --toast-err-text:#7a2013;
+    --line-rgb:221,213,192; --gold-rgb:156,111,10; --ember-rgb:191,78,40;
+    --ok-rgb:31,138,76; --muted-dim-rgb:138,154,151;
+    --shadow-color:rgba(20,20,10,.14);
+    color-scheme: light;
   }
   *{box-sizing:border-box;}
-  body{margin:0; min-height:100vh; background:radial-gradient(ellipse 120% 80% at 50% -10%, #0f2b30, var(--bg) 60%); color:var(--text); font-family:'Inter',system-ui,sans-serif;}
+  body{margin:0; min-height:100vh; background:radial-gradient(ellipse 120% 80% at 50% -10%, var(--bg-glow), var(--bg) 60%); color:var(--text); font-family:'Inter',system-ui,sans-serif; transition:background .25s, color .25s;}
   .wrap{max-width:880px; margin:0 auto; padding:32px 20px 60px;}
   h1{font-family:'Inter Tight',sans-serif; font-size:22px; margin:0 0 4px;}
   .sub{color:var(--muted); font-size:13px; margin-bottom:24px;}
@@ -23,26 +60,26 @@
   .field{flex:1; min-width:120px; display:flex; flex-direction:column; gap:5px;}
   .field label{font-size:11.5px; color:var(--muted);}
   input, select{
-    background:#08181b; border:1px solid var(--line); color:var(--text);
+    background:var(--input-bg); border:1px solid var(--line); color:var(--text);
     border-radius:9px; padding:9px 11px; font-size:13.5px; font-family:inherit; width:100%;
   }
   input:focus, select:focus{outline:none; border-color:var(--gold);}
   .btn{border:1px solid var(--line); background:var(--panel-2); color:var(--text); border-radius:9px; padding:9px 16px; font-size:13px; cursor:pointer; font-family:inherit;}
   .btn:hover{border-color:var(--gold);}
-  .btn.primary{background:var(--gold); color:#0e2a2f; border-color:var(--gold); font-weight:700;}
+  .btn.primary{background:var(--gold); color:var(--on-gold-text); border-color:var(--gold); font-weight:700;}
   .btn.primary:hover{background:var(--gold-soft);}
-  .btn.danger{color:var(--ember); border-color:rgba(224,114,60,.4); background:transparent;}
+  .btn.danger{color:var(--ember); border-color:rgba(var(--ember-rgb),.4); background:transparent;}
   .btn.small{padding:6px 11px; font-size:12px;}
   .chip-days{display:flex; gap:6px; flex-wrap:wrap;}
   .chip-days label{
     display:flex; align-items:center; gap:5px; padding:6px 11px; border-radius:999px;
-    border:1px solid var(--line); background:#08181b; font-size:12px; color:var(--muted); cursor:pointer;
+    border:1px solid var(--line); background:var(--input-bg); font-size:12px; color:var(--muted); cursor:pointer;
   }
   .chip-days input{width:auto; accent-color:var(--gold);}
-  .chip-days label:has(input:checked){border-color:var(--gold); color:var(--gold-soft); background:rgba(201,162,39,.1);}
+  .chip-days label:has(input:checked){border-color:var(--gold); color:var(--gold-soft); background:rgba(var(--gold-rgb),.1);}
   table{width:100%; border-collapse:collapse; font-size:13px;}
   th{text-align:left; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; padding:6px 8px; border-bottom:1px solid var(--line);}
-  td{padding:9px 8px; border-bottom:1px solid rgba(30,74,82,.5); vertical-align:top;}
+  td{padding:9px 8px; border-bottom:1px solid rgba(var(--line-rgb),.5); vertical-align:top;}
   tr:last-child td{border-bottom:none;}
   .empty{color:var(--muted-dim); font-size:12.5px; padding:10px 0;}
   .status-bar{display:flex; align-items:center; gap:10px; font-size:12px; color:var(--muted); margin-bottom:18px;}
@@ -52,15 +89,15 @@
   .toast{
     position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(16px);
     display:flex; align-items:flex-start; gap:12px;
-    background:#173321; border:2px solid #2fae64; color:#eafff1;
+    background:var(--toast-ok-bg); border:2px solid var(--toast-ok-border); color:var(--toast-ok-text);
     padding:16px 22px; border-radius:14px;
     font-size:15px; font-weight:600; line-height:1.45;
     max-width:min(560px, 92vw); text-align:left;
-    box-shadow:0 12px 40px rgba(0,0,0,.5);
+    box-shadow:0 12px 40px var(--shadow-color);
     opacity:0; pointer-events:none; transition:.28s ease; z-index:9999;
   }
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
-  .toast.error{background:#3a1414; border-color:var(--ember); color:#ffe9e5;}
+  .toast.error{background:var(--toast-err-bg); border-color:var(--ember); color:var(--toast-err-text);}
   .toast .toast-icon{font-size:22px; line-height:1; flex-shrink:0;}
   .toast .toast-text{flex:1;}
   .gate{max-width:420px; margin:15vh auto; text-align:center;}
@@ -68,11 +105,33 @@
   .hidden{display:none !important;}
   .hint{font-size:11px; color:var(--muted-dim); margin-top:4px; line-height:1.5;}
   .badge{display:inline-block; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:600;}
-  .badge.on{background:rgba(111,191,139,.15); color:var(--ok);}
-  .badge.off{background:rgba(76,108,106,.25); color:var(--muted);}
+  .badge.on{background:rgba(var(--ok-rgb),.15); color:var(--ok);}
+  .badge.off{background:rgba(var(--muted-dim-rgb),.25); color:var(--muted);}
+  .theme-toggle{
+    position:fixed; top:16px; right:16px; z-index:200;
+    display:flex; gap:2px; background:var(--panel-2); border:1px solid var(--line);
+    border-radius:999px; padding:4px; box-shadow:0 4px 14px var(--shadow-color);
+  }
+  .theme-toggle button{
+    border:none; background:transparent; color:var(--muted); font-size:15px;
+    width:32px; height:32px; border-radius:50%; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; transition:.2s; font-family:inherit;
+  }
+  .theme-toggle button:hover{color:var(--text); background:rgba(var(--gold-rgb),.12);}
+  .theme-toggle button.active{background:var(--gold); color:var(--on-gold-text);}
+  @media (max-width:480px){
+    .theme-toggle{top:10px; right:10px;}
+    .theme-toggle button{width:28px; height:28px; font-size:13px;}
+  }
 </style>
 </head>
 <body>
+
+<div class="theme-toggle" id="themeToggle">
+  <button type="button" data-theme-choice="light" title="Mode terang">☀️</button>
+  <button type="button" data-theme-choice="dark" title="Mode gelap">🌙</button>
+  <button type="button" data-theme-choice="auto" title="Otomatis (ikuti perangkat)">🖥️</button>
+</div>
 
 <div class="wrap">
   <!-- ---------- GATE: isi URL worker + token sekali, disimpan lokal ---------- -->
@@ -258,6 +317,36 @@ const HARI = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
 // untuk Worker "gus-asisten" milik Anda, jadi pengguna cuma perlu isi
 // APP_TOKEN. Kalau nanti Worker-nya pindah alamat, ganti nilai di baris
 // ini saja.
+/* ---------- TEMA: terang / gelap / otomatis ---------- */
+const THEME_KEY = "admkom_theme";
+function effectiveTheme(pref){
+  if(pref === "light" || pref === "dark") return pref;
+  return (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) ? "light" : "dark";
+}
+function applyTheme(pref){
+  document.documentElement.setAttribute("data-theme", effectiveTheme(pref));
+  document.querySelectorAll("#themeToggle button").forEach(b=>{
+    b.classList.toggle("active", b.dataset.themeChoice === pref);
+  });
+}
+let themePref = localStorage.getItem(THEME_KEY) || "auto";
+applyTheme(themePref);
+document.querySelectorAll("#themeToggle button").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    themePref = b.dataset.themeChoice;
+    localStorage.setItem(THEME_KEY, themePref);
+    applyTheme(themePref);
+  });
+});
+// Kalau lagi mode "Otomatis" & preferensi device berubah SAAT halaman
+// masih terbuka (mis. HP masuk mode malam otomatis jam tertentu), ikut
+// berubah live tanpa perlu reload halaman.
+if(window.matchMedia){
+  window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", ()=>{
+    if(themePref === "auto") applyTheme("auto");
+  });
+}
+
 const WORKER_URL = "https://gus-asisten.rempahecho.workers.dev";
 let APP_TOKEN = localStorage.getItem("admkom_token") || "";
 let data = null, sha = null;
