@@ -6,9 +6,9 @@
 <title>Admin Bot Komunitas</title>
 <script>
 // Diterapkan SEBELUM CSS/halaman sempat dirender, supaya tidak ada kedipan
-// "tema salah" sesaat pas halaman baru dibuka (mis. kelihatan gelap dulu
-// baru berubah terang). Baca preferensi tersimpan (light/dark/auto); kalau
-// "auto" atau belum pernah diatur, ikuti preferensi sistem/device saat itu.
+// "tema salah" sesaat pas halaman baru dibuka. Baca preferensi tersimpan
+// (light/dark/auto); kalau "auto"/belum pernah diatur, ikuti preferensi
+// sistem/device saat itu.
 (function(){
   try{
     var pref = localStorage.getItem("admkom_theme") || "auto";
@@ -20,6 +20,7 @@
 })();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Inter+Tight:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root, [data-theme="dark"]{
     --bg:#081619; --panel:#0e2a2f; --panel-2:#12363d; --line:#1e4a52;
@@ -30,31 +31,127 @@
     --toast-err-bg:#3a1414; --toast-err-text:#ffe9e5;
     --line-rgb:30,74,82; --gold-rgb:201,162,39; --ember-rgb:224,114,60;
     --ok-rgb:111,191,139; --muted-dim-rgb:76,108,106;
+    --warning:#c9a227; --warning-rgb:201,162,39; --purple:#a378e0; --purple-rgb:163,120,224;
     --shadow-color:rgba(0,0,0,.5);
     color-scheme: dark;
   }
-  /* Tema TERANG -- semua pasangan warna dicek ulang kontrasnya (teks vs
-     latar) supaya tidak ada yang jadi tidak terbaca, bukan cuma dibalik
-     mentah-mentah dari tema gelap. */
   [data-theme="light"]{
-    --bg:#f5f2ea; --panel:#ffffff; --panel-2:#f1ede1; --line:#ddd5c0;
-    --gold:#9c6f0a; --gold-soft:#7d590a; --text:#1d2523; --muted:#5c6d69;
-    --muted-dim:#8a9a97; --ok:#1f8a4c; --ember:#bf4e28;
-    --input-bg:#ffffff; --bg-glow:#eee7d6; --on-gold-text:#fffaf0;
-    --toast-ok-bg:#e3f7ea; --toast-ok-border:#1f8a4c; --toast-ok-text:#0c3d21;
-    --toast-err-bg:#fdeceb; --toast-err-text:#7a2013;
-    --line-rgb:221,213,192; --gold-rgb:156,111,10; --ember-rgb:191,78,40;
-    --ok-rgb:31,138,76; --muted-dim-rgb:138,154,151;
-    --shadow-color:rgba(20,20,10,.14);
+    --bg:#f6f7f9; --panel:#ffffff; --panel-2:#f0fdf4; --line:#e5e7eb;
+    --gold:#16a34a; --gold-soft:#15803d; --text:#0f172a; --muted:#64748b;
+    --muted-dim:#94a3b8; --ok:#16a34a; --ember:#f59e0b;
+    --input-bg:#ffffff; --bg-glow:#eef2f5; --on-gold-text:#ffffff;
+    --toast-ok-bg:#f0fdf4; --toast-ok-border:#16a34a; --toast-ok-text:#14532d;
+    --toast-err-bg:#fef2f2; --toast-err-text:#7f1d1d;
+    --line-rgb:229,231,235; --gold-rgb:22,163,74; --ember-rgb:245,158,11;
+    --ok-rgb:22,163,74; --muted-dim-rgb:148,163,184;
+    --warning:#f59e0b; --warning-rgb:245,158,11; --purple:#7c3aed; --purple-rgb:124,58,237;
+    --shadow-color:rgba(15,23,42,.06);
     color-scheme: light;
   }
   *{box-sizing:border-box;}
-  body{margin:0; min-height:100vh; background:radial-gradient(ellipse 120% 80% at 50% -10%, var(--bg-glow), var(--bg) 60%); color:var(--text); font-family:'Inter',system-ui,sans-serif; transition:background .25s, color .25s;}
-  .wrap{max-width:880px; margin:0 auto; padding:32px 20px 60px;}
-  h1{font-family:'Inter Tight',sans-serif; font-size:22px; margin:0 0 4px;}
-  .sub{color:var(--muted); font-size:13px; margin-bottom:24px;}
-  .card{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:20px 22px; margin-bottom:18px;}
-  .card h2{font-family:'Inter Tight',sans-serif; font-size:15px; margin:0 0 4px; display:flex; align-items:center; gap:8px;}
+  html,body{margin:0; padding:0;}
+  body{min-height:100vh; background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif; transition:background .25s, color .25s;}
+  h1,h2,h3{font-family:'Inter Tight',sans-serif;}
+
+  .gate-wrap{min-height:100vh; display:flex; align-items:center; justify-content:center; background:radial-gradient(ellipse 120% 80% at 50% -10%, var(--bg-glow), var(--bg) 60%); padding:20px;}
+  .gate{max-width:420px; width:100%; text-align:center;}
+  .gate h1{font-size:22px; margin:0 0 4px;}
+  .gate .sub{color:var(--muted); font-size:13px; margin-bottom:24px;}
+  .gate input{margin-bottom:10px;}
+  .hidden{display:none !important;}
+
+  .layout{display:flex; min-height:100vh;}
+  .sidebar{
+    width:240px; flex-shrink:0; background:var(--panel); border-right:1px solid var(--line);
+    padding:18px 12px; display:flex; flex-direction:column; gap:2px;
+    position:sticky; top:0; align-self:flex-start; height:100vh; overflow-y:auto; z-index:60;
+  }
+  .sidebar-brand{display:flex; align-items:center; gap:10px; padding:8px 10px 22px;}
+  .sidebar-brand .emoji{font-size:26px; line-height:1;}
+  .sidebar-brand b{display:block; font-size:14.5px;}
+  .sidebar-brand span{font-size:11px; color:var(--muted);}
+  .nav-item{
+    display:flex; align-items:center; gap:11px; padding:10px 12px; border-radius:10px;
+    color:var(--muted); font-size:13.5px; cursor:pointer; user-select:none; transition:.15s;
+  }
+  .nav-item .ic{font-size:16px; width:18px; text-align:center; flex-shrink:0;}
+  .nav-item:hover{background:rgba(var(--gold-rgb),.09); color:var(--text);}
+  .nav-item.active{background:var(--gold); color:var(--on-gold-text); font-weight:700;}
+  .sidebar-note{margin-top:auto; padding:12px 10px 4px; font-size:10.5px; color:var(--muted-dim); line-height:1.5;}
+
+  .main-col{flex:1; min-width:0; display:flex; flex-direction:column;}
+  .topbar{
+    display:flex; align-items:center; gap:12px; padding:14px 26px; border-bottom:1px solid var(--line);
+    background:var(--panel); position:sticky; top:0; z-index:50; flex-wrap:wrap;
+  }
+  .hamburger{display:none; background:none; border:none; color:var(--text); font-size:20px; cursor:pointer; padding:4px;}
+  #pageTitle{font-size:17px; margin:0; flex:1; min-width:100px;}
+  .chip{
+    display:flex; align-items:center; gap:7px; background:var(--panel-2); border:1px solid var(--line);
+    border-radius:10px; padding:7px 12px; font-size:11px; color:var(--muted); white-space:nowrap;
+  }
+  .chip b{color:var(--text); font-size:12.5px; display:block; line-height:1.3;}
+  .chip .chip-sub{font-size:10px; color:var(--muted);}
+  .icon-btn{
+    border:1px solid var(--line); background:var(--panel-2); color:var(--muted); width:36px; height:36px;
+    border-radius:10px; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; transition:.15s;
+  }
+  .icon-btn:hover{border-color:var(--gold); color:var(--text);}
+
+  .content{padding:24px 26px 60px; max-width:1400px;}
+  .page{display:none;}
+  .page.active{display:block;}
+
+  .greet h2{font-size:21px; margin:2px 0 4px;}
+  .greet .sub{color:var(--muted); font-size:13px; margin-bottom:22px;}
+
+  .stat-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(190px,1fr)); gap:14px; margin-bottom:16px;}
+  .stat-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; cursor:pointer; transition:.15s;}
+  .stat-card:hover{border-color:var(--gold);}
+  .stat-icon{width:38px; height:38px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:18px; margin-bottom:12px;}
+  .stat-card .stat-label{font-size:12.5px; color:var(--muted); margin-bottom:3px;}
+  .stat-card .stat-value{font-size:17px; font-weight:800; font-family:'Inter Tight',sans-serif; line-height:1.3;}
+  .stat-card .stat-sub{font-size:11px; color:var(--muted-dim); margin-top:5px;}
+  .ic-blue{background:rgba(79,157,224,.15); color:#4f9de0;}
+  .ic-purple{background:rgba(var(--purple-rgb),.15); color:var(--purple);}
+  .ic-gold{background:rgba(var(--warning-rgb),.15); color:var(--warning);}
+  .ic-ok{background:rgba(var(--ok-rgb),.15); color:var(--ok);}
+
+  .ov-grid{display:grid; grid-template-columns:1.15fr 1fr 1fr; gap:14px; margin-bottom:16px; align-items:stretch;}
+  @media (max-width:1080px){.ov-grid{grid-template-columns:1fr;}}
+  .panel-card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px 22px; display:flex; flex-direction:column;}
+  .panel-card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .panel-card-head h3{font-size:14.5px; margin:0;}
+  .link-btn{background:none; border:none; color:var(--gold); font-size:12px; font-weight:700; cursor:pointer; padding:0; font-family:inherit;}
+  .link-btn:hover{text-decoration:underline;}
+
+  .donut-wrap{position:relative; width:158px; height:158px; margin:4px auto 18px;}
+  .donut-center{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none;}
+  .donut-center b{font-size:26px; font-family:'Inter Tight',sans-serif;}
+  .donut-center span{font-size:10.5px; color:var(--muted);}
+  .legend-row{display:flex; align-items:center; justify-content:space-between; font-size:12.5px; padding:6px 0;}
+  .legend-row .dotc{width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:8px;}
+  .legend-row .lbl{display:flex; align-items:center; color:var(--text);}
+  .legend-row .val{color:var(--muted); font-weight:700;}
+
+  .list-item{display:flex; gap:12px; padding:11px 0; border-bottom:1px solid rgba(var(--line-rgb),.5);}
+  .list-item:last-child{border-bottom:none; padding-bottom:0;}
+  .date-badge{background:var(--panel-2); border:1px solid var(--line); border-radius:11px; width:46px; text-align:center; padding:6px 0 5px; flex-shrink:0;}
+  .date-badge .d{font-size:15px; font-weight:800; line-height:1.1; font-family:'Inter Tight',sans-serif;}
+  .date-badge .m{font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em;}
+  .list-item .li-title{font-size:13px; font-weight:700; margin-bottom:2px;}
+  .list-item .li-sub{font-size:11.5px; color:var(--muted);}
+  .list-icon{width:36px; height:36px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:15px;}
+
+  .feat-row{display:flex; gap:28px; flex-wrap:wrap;}
+  .feat-item{display:flex; align-items:center; gap:9px; font-size:13px;}
+  .feat-item .fdot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
+  .feat-item .fdot.on{background:var(--ok); box-shadow:0 0 5px var(--ok);}
+  .feat-item .fdot.off{background:var(--muted-dim);}
+  .feat-item small{display:block; color:var(--muted); font-size:11px; font-weight:400;}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px 22px; margin-bottom:18px;}
+  .card h2{font-size:15px; margin:0 0 4px; display:flex; align-items:center; gap:8px;}
   .card .desc{font-size:12.5px; color:var(--muted); margin-bottom:16px;}
   .row{display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap;}
   .field{flex:1; min-width:120px; display:flex; flex-direction:column; gap:5px;}
@@ -82,10 +179,14 @@
   td{padding:9px 8px; border-bottom:1px solid rgba(var(--line-rgb),.5); vertical-align:top;}
   tr:last-child td{border-bottom:none;}
   .empty{color:var(--muted-dim); font-size:12.5px; padding:10px 0;}
-  .status-bar{display:flex; align-items:center; gap:10px; font-size:12px; color:var(--muted); margin-bottom:18px;}
+  .hint{font-size:11px; color:var(--muted-dim); margin-top:4px; line-height:1.5;}
+  .badge{display:inline-block; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:600;}
+  .badge.on{background:rgba(var(--ok-rgb),.15); color:var(--ok);}
+  .badge.off{background:rgba(var(--muted-dim-rgb),.25); color:var(--muted);}
   .dot{width:7px;height:7px;border-radius:50%; background:var(--muted-dim);}
   .dot.on{background:var(--ok); box-shadow:0 0 6px var(--ok);}
   .dot.err{background:var(--ember); box-shadow:0 0 6px var(--ember);}
+
   .toast{
     position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(16px);
     display:flex; align-items:flex-start; gap:12px;
@@ -100,43 +201,33 @@
   .toast.error{background:var(--toast-err-bg); border-color:var(--ember); color:var(--toast-err-text);}
   .toast .toast-icon{font-size:22px; line-height:1; flex-shrink:0;}
   .toast .toast-text{flex:1;}
-  .gate{max-width:420px; margin:15vh auto; text-align:center;}
-  .gate input{margin-bottom:10px;}
-  .hidden{display:none !important;}
-  .hint{font-size:11px; color:var(--muted-dim); margin-top:4px; line-height:1.5;}
-  .badge{display:inline-block; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:600;}
-  .badge.on{background:rgba(var(--ok-rgb),.15); color:var(--ok);}
-  .badge.off{background:rgba(var(--muted-dim-rgb),.25); color:var(--muted);}
-  .theme-toggle{
-    position:fixed; top:16px; right:16px; z-index:200;
-    display:flex; gap:2px; background:var(--panel-2); border:1px solid var(--line);
-    border-radius:999px; padding:4px; box-shadow:0 4px 14px var(--shadow-color);
-  }
+
+  .theme-toggle{display:flex; gap:2px; background:var(--panel-2); border:1px solid var(--line); border-radius:999px; padding:4px;}
   .theme-toggle button{
-    border:none; background:transparent; color:var(--muted); font-size:15px;
-    width:32px; height:32px; border-radius:50%; cursor:pointer;
+    border:none; background:transparent; color:var(--muted); font-size:14px;
+    width:28px; height:28px; border-radius:50%; cursor:pointer;
     display:flex; align-items:center; justify-content:center; transition:.2s; font-family:inherit;
   }
   .theme-toggle button:hover{color:var(--text); background:rgba(var(--gold-rgb),.12);}
   .theme-toggle button.active{background:var(--gold); color:var(--on-gold-text);}
-  @media (max-width:480px){
-    .theme-toggle{top:10px; right:10px;}
-    .theme-toggle button{width:28px; height:28px; font-size:13px;}
+
+  @media (max-width:880px){
+    .hamburger{display:block;}
+    .sidebar{position:fixed; left:0; top:0; transform:translateX(-105%); transition:transform .25s; box-shadow:0 0 40px var(--shadow-color);}
+    body.sidebar-open .sidebar{transform:translateX(0);}
+    body.sidebar-open .sidebar-overlay{display:block;}
+    .sidebar-overlay{display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:55;}
+    .topbar{padding:12px 14px;}
+    .content{padding:16px;}
+    .chip .chip-sub, .chip small{display:none;}
   }
 </style>
 </head>
 <body>
 
-<div class="theme-toggle" id="themeToggle">
-  <button type="button" data-theme-choice="light" title="Mode terang">☀️</button>
-  <button type="button" data-theme-choice="dark" title="Mode gelap">🌙</button>
-  <button type="button" data-theme-choice="auto" title="Otomatis (ikuti perangkat)">🖥️</button>
-</div>
-
-<div class="wrap">
-  <!-- ---------- GATE: isi URL worker + token sekali, disimpan lokal ---------- -->
-  <div class="gate" id="gate">
-    <h1>Admin Bot Komunitas</h1>
+<div class="gate-wrap" id="gate">
+  <div class="gate">
+    <h1>🕌 Admin Bot Komunitas</h1>
     <div class="sub">Masukkan APP_TOKEN Worker Anda dulu.</div>
     <div class="card" style="text-align:left;">
       <div class="field" style="margin-bottom:14px;">
@@ -146,177 +237,387 @@
       <button class="btn primary" id="gateConnect" style="width:100%;">Hubungkan</button>
       <div class="hint">Tersimpan cuma di browser ini (localStorage), tidak dikirim ke mana pun selain Worker Anda sendiri.</div>
     </div>
-  </div>
-
-  <!-- ---------- ISI ADMIN (muncul setelah terhubung) ---------- -->
-  <div id="app" class="hidden">
-    <h1>Admin Bot Komunitas</h1>
-    <div class="sub">Perubahan di sini &amp; command Telegram sama-sama berlaku — tersinkron dua arah lewat data yang sama.</div>
-    <div class="status-bar">
-      <span class="dot" id="connDot"></span><span id="connLabel">memeriksa…</span>
-      <span style="flex:1"></span>
-      <span id="aiQuotaLabel" style="color:var(--muted-dim)"></span>
-      <button class="btn small" id="reloadBtn">Muat ulang</button>
-      <button class="btn small" id="disconnectBtn">Putuskan</button>
-    </div>
-
-    <!-- ADMIN BOT -->
-    <div class="card">
-      <h2>👮 Admin bot</h2>
-      <div class="desc">ID Telegram yang boleh pakai perintah pengaturan (topik/jadwal/kajian/pengingat). Kosongkan daftar ini kalau mau semua anggota grup bebas pakai semua perintah — begitu ada 1 ID di sini, pembatasan otomatis aktif. Anggota bisa lihat ID mereka sendiri lewat <code>/id</code> di Telegram.</div>
-      <table id="adminsTable"><thead><tr><th>User ID</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="row" style="margin-top:12px;">
-        <div class="field"><label>User ID Telegram</label><input type="number" id="newAdminId" placeholder="123456789"></div>
-      </div>
-      <button class="btn" id="addAdminBtn">+ Tambah admin</button>
-    </div>
-
-    <!-- TOPIK -->
-    <div class="card">
-      <h2>🗂️ Topik grup</h2>
-      <div class="desc">Cocok dengan hasil <code>/topik_set</code> di Telegram. thread_id didapat otomatis kalau didaftarkan lewat command; di sini Anda bisa lihat, ubah nama, atau tambah manual kalau sudah tahu thread_id-nya. <b>Baru:</b> topik juga otomatis kedeteksi diam-diam dari aktivitas chat biasa di grup (lihat <code>autoRegisterTopicFromMessage</code> di Worker) — topik yang namanya masih <code>topik_&lt;angka&gt;</code> di bawah ini artinya hasil deteksi otomatis, belum di-rename manual.</div>
-      <table id="topicsTable"><thead><tr><th>Nama pendek</th><th>Label</th><th>Thread ID</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="row" style="margin-top:12px;">
-        <div class="field"><label>Nama pendek</label><input type="text" id="newTopicKey" placeholder="puasa"></div>
-        <div class="field"><label>Label</label><input type="text" id="newTopicLabel" placeholder="Puasa"></div>
-        <div class="field"><label>Thread ID</label><input type="number" id="newTopicThread" placeholder="123"></div>
-      </div>
-      <button class="btn" id="addTopicBtn">+ Tambah topik</button>
-    </div>
-
-    <!-- POLLING PUASA -->
-    <div class="card">
-      <h2>🌙 Absensi puasa <span class="badge" id="puasaBadge"></span></h2>
-      <div class="desc">Sama dengan <code>/puasa_jadwal</code>. Poll dikirim otomatis ke topik "puasa" pada hari &amp; jam yang dipilih. <b>Baru:</b> isi "Jam rekap otomatis" (sama dengan <code>/puasa_rekap_jadwal</code>) supaya bot otomatis kirim rekap siapa saja yang sudah menjawab (mis. jam 11:00) — kosongkan untuk mematikan, tetap bisa cek manual kapan saja lewat <code>/puasa_rekap</code> di Telegram.</div>
-      <div class="row">
-        <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
-          <input type="checkbox" id="puasaEnabled" style="width:auto;"> Aktifkan polling otomatis
-        </label>
-      </div>
-      <div class="field" style="margin-bottom:10px;">
-        <label>Hari</label>
-        <div class="chip-days" id="puasaDays"></div>
-      </div>
-      <div class="row">
-        <div class="field"><label>Jam (WIB)</label><input type="time" id="puasaTime"></div>
-        <div class="field" style="flex:2"><label>Pertanyaan poll</label><input type="text" id="puasaQuestion"></div>
-      </div>
-      <div class="row">
-        <div class="field"><label>Opsi 1</label><input type="text" id="puasaOpt1"></div>
-        <div class="field"><label>Opsi 2</label><input type="text" id="puasaOpt2"></div>
-      </div>
-      <div class="row">
-        <div class="field"><label>Kirim ke topik</label><select id="puasaTopic"><option value="">(topik bernama "puasa", kalau ada)</option></select></div>
-        <div class="field"><label>Jam rekap otomatis (WIB)</label><input type="time" id="puasaRekapTime" placeholder="mis. 11:00"></div>
-      </div>
-      <button class="btn primary" id="savePuasaBtn">Simpan pengaturan puasa</button>
-      <hr style="border:none; border-top:1px solid var(--line); margin:18px 0;">
-      <div class="desc" style="margin-bottom:8px;">Rekap jawaban hari ini:</div>
-      <div id="puasaRekap" class="empty">Memuat…</div>
-    </div>
-
-    <!-- KAJIAN -->
-    <div class="card">
-      <h2>📚 Jadwal kajian</h2>
-      <div class="desc">Sama dengan <code>/kajian_tambah</code>. Diingatkan otomatis ke topik "kajian" H- sekian hari sebelum tanggalnya.</div>
-      <div class="row" style="align-items:flex-end;">
-        <div class="field"><label>Diingatkan H- (pisah koma, 0 = hari-H)</label><input type="text" id="kajianOffsets" placeholder="7,0"></div>
-        <div class="field"><label>Jam pengingat dikirim (WIB)</label><input type="time" id="kajianTime"></div>
-      </div>
-      <div class="row" style="align-items:flex-end;">
-        <div class="field"><label>Jam mulai acara</label><input type="time" id="kajianJamAcara"></div>
-        <div class="field"><label>Lokasi</label><input type="text" id="kajianLokasi" placeholder="Mushollah"></div>
-      </div>
-      <div class="row">
-        <div class="field" style="flex:2"><label>Catatan tambahan (muncul di tiap reminder)</label><input type="text" id="kajianCatatan" placeholder="Tidak wajib bawa konsumsi. Kabari petugas selanjutnya jika berhalangan."></div>
-        <div class="field"><label>Kirim ke topik</label><select id="kajianTopic"><option value="">(topik bernama "kajian", kalau ada)</option></select></div>
-      </div>
-      <button class="btn small" id="saveKajianSettingsBtn">Simpan pengaturan kajian</button>
-      <table id="kajianTable"><thead><tr><th>Tanggal</th><th>Pengisi</th><th>Tema</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="row" style="margin-top:14px;">
-        <div class="field"><label>Tanggal</label><input type="date" id="newKajianDate"></div>
-        <div class="field"><label>Pengisi</label><input type="text" id="newKajianPengisi" placeholder="Ust. Fulan"></div>
-        <div class="field" style="flex:2"><label>Tema</label><input type="text" id="newKajianTema" placeholder="Fiqih Puasa Sunnah"></div>
-      </div>
-      <button class="btn primary" id="addKajianBtn">+ Tambah kajian</button>
-    </div>
-
-    <!-- GOOGLE CALENDAR: NOTIFIKASI ONTIME PER-EVENT -->
-    <div class="card">
-      <h2>🗓️ Notifikasi ontime Google Calendar <span class="badge" id="calReminderBadge"></span></h2>
-      <div class="desc">Sama dengan <code>/kalender_ontime</code>. Berlaku untuk SEMUA event di Google Calendar yang dipantau (bukan cuma kajian/pengingat umum yang dibuat dari bot ini) — bot kirim notifikasi <b>PAS jam yang tertulis di event</b> (bukan N menit sebelum, bukan rangkuman pagi). Bikin event jam 10:00 → notif terkirim jam 10:00, otomatis, tidak perlu atur jam manual. Fitur ini butuh ENV Google (service account) sudah diisi di Worker. Cek status koneksi lewat <code>/kalender_cek</code> di Telegram.</div>
-      <div class="row">
-        <div class="field">
-          <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
-            <input type="checkbox" id="calOntimeEnabled" style="width:auto;"> Aktifkan notifikasi ontime
-          </label>
-        </div>
-        <div class="field"><label>Kirim ke topik</label><select id="calReminderTopic"><option value="">(topik bernama "kalender", kalau ada)</option></select></div>
-      </div>
-      <button class="btn small" id="saveCalReminderBtn">Simpan pengaturan kalender</button>
-    </div>
-
-    <!-- LIBUR NASIONAL -->
-    <div class="card">
-      <h2>🕋 Pengingat H-1 libur nasional</h2>
-      <div class="desc">Sama dengan <code>/libur_reminder</code>. Dicek otomatis dari kalender publik Google tiap hari jam yang dipilih -- kalau BESOK libur nasional, pesan dikirim; kalau bukan, diam saja. <b>Fitur terkait (otomatis, tanpa perlu diatur di sini):</b> "Libur Internal" — bikin event sepanjang hari (all-day) di Google Calendar bot dengan judul diawali kata "LIBUR" (mis. "LIBUR: Cuti Bersama"). Di hari libur (nasional ATAU internal): polling &amp; rekap puasa dimatikan total, notifikasi ontime Google Calendar tidak dikirim, reminder kajian ditunda ke hari kerja berikutnya.</div>
-      <div class="row">
-        <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
-          <input type="checkbox" id="liburEnabled" style="width:auto;"> Aktifkan pengingat H-1
-        </label>
-      </div>
-      <div class="row">
-        <div class="field"><label>Jam cek &amp; kirim (WIB)</label><input type="time" id="liburTime"></div>
-        <div class="field"><label>Kirim ke topik</label><select id="liburTopic"><option value="">(percakapan umum grup)</option></select></div>
-      </div>
-      <button class="btn small" id="saveLiburBtn">Simpan pengaturan libur nasional</button>
-    </div>
-
-    <!-- PENGINGAT UMUM -->
-    <div class="card">
-      <h2>🔔 Pengingat umum</h2>
-      <div class="desc">Sama dengan <code>/ingat_tambah</code>. Bebas judul &amp; pesan, ke topik mana saja, sekali/harian/mingguan/bulanan. Otomatis tersinkron ke Google Calendar kalau sudah dikonfigurasi (termasuk sebagai recurring event asli untuk yang berulang). <b>Tips:</b> pilih topik <code>pengumuman</code> di dropdown Topik untuk bikin pengumuman — ini fitur yang SAMA PERSIS dengan command <code>/pengumuman &lt;judul&gt; | &lt;pesan&gt; | &lt;jadwal&gt;</code> di Telegram (cuma lebih singkat karena topiknya otomatis).</div>
-      <table id="remindersTable"><thead><tr><th>Judul</th><th>Jadwal</th><th>Topik</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
-      <div class="row" style="margin-top:14px;">
-        <div class="field"><label>Judul</label><input type="text" id="newRemTitle" placeholder="Rapat Bulanan"></div>
-        <div class="field"><label>Topik</label><select id="newRemTopic"></select></div>
-      </div>
-      <div class="row">
-        <div class="field" style="flex:2"><label>Pesan</label><input type="text" id="newRemMessage" placeholder="Jangan lupa rapat evaluasi"></div>
-      </div>
-      <div class="row">
-        <div class="field"><label>Tipe jadwal</label>
-          <select id="newRemType">
-            <option value="once">Sekali</option>
-            <option value="daily">Harian</option>
-            <option value="weekly">Mingguan</option>
-            <option value="monthly">Bulanan</option>
-          </select>
-        </div>
-        <div class="field"><label>Jam</label><input type="time" id="newRemTime" value="08:00"></div>
-      </div>
-      <div class="row" id="remFieldOnce">
-        <div class="field"><label>Tanggal</label><input type="date" id="newRemDate"></div>
-      </div>
-      <div class="row" id="remFieldWeekly" style="display:none;">
-        <div class="field"><label>Hari</label><div class="chip-days" id="newRemDays"></div></div>
-      </div>
-      <div class="row" id="remFieldMonthly" style="display:none;">
-        <div class="field" style="max-width:140px;"><label>Tanggal tiap bulan</label><input type="number" id="newRemDom" min="1" max="31" value="1"></div>
-      </div>
-      <button class="btn primary" id="addRemBtn">+ Tambah pengingat</button>
+    <div class="hint" style="margin-top:14px;">
+      Panel <b id="gatePanelVersion">v?.?.?</b> · Worker <b id="gateWorkerVersion">memeriksa…</b>
+      <span id="gateVersionWarn" class="hidden" style="display:block; color:var(--ember); margin-top:4px; font-weight:600;">⚠️ Versi panel &amp; worker berbeda — kemungkinan salah satu belum di-deploy ulang.</span>
     </div>
   </div>
+</div>
+
+<div id="app" class="hidden">
+<div class="layout">
+
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <span class="emoji">🕌</span>
+      <div><b>Komunitas</b><span>Admin Panel</span></div>
+    </div>
+    <div class="nav-item" data-page="overview"><span class="ic">📊</span> Overview</div>
+    <div class="nav-item" data-page="admin"><span class="ic">👮</span> Admin &amp; Akses</div>
+    <div class="nav-item" data-page="topik"><span class="ic">🗂️</span> Topik (Forum)</div>
+    <div class="nav-item" data-page="puasa"><span class="ic">🌙</span> Absensi Puasa</div>
+    <div class="nav-item" data-page="kajian"><span class="ic">📚</span> Kajian</div>
+    <div class="nav-item" data-page="kalender"><span class="ic">🗓️</span> Google Calendar</div>
+    <div class="nav-item" data-page="pengingat"><span class="ic">🔔</span> Pengingat Umum</div>
+    <div class="nav-item" data-page="libur"><span class="ic">🕋</span> Libur Nasional</div>
+    <div class="nav-item" data-page="pengaturan"><span class="ic">⚙️</span> Pengaturan</div>
+    <div class="sidebar-note">Perubahan di sini &amp; command Telegram sama-sama berlaku — tersinkron dua arah lewat data yang sama.<br><br>Panel <span id="sidebarPanelVersion">v?.?.?</span> · Worker <span id="sidebarWorkerVersion">memeriksa…</span></div>
+  </aside>
+
+  <div class="main-col">
+    <div class="topbar">
+      <button class="hamburger" id="hamburgerBtn">☰</button>
+      <h2 id="pageTitle">Overview</h2>
+      <div class="chip"><span class="dot" id="connDot"></span><div><b id="connLabel">memeriksa…</b><span class="chip-sub">Worker</span></div></div>
+      <div class="chip"><span>📶</span><div><b id="aiQuotaChipVal">–</b><span class="chip-sub">Kuota AI Hari Ini</span></div></div>
+      <div class="chip"><span>🕐</span><div><b id="liveClock">--:--:--</b><span class="chip-sub">WIB</span></div></div>
+      <div class="theme-toggle" id="themeToggle">
+        <button type="button" data-theme-choice="light" title="Mode terang">☀️</button>
+        <button type="button" data-theme-choice="dark" title="Mode gelap">🌙</button>
+        <button type="button" data-theme-choice="auto" title="Otomatis (ikuti perangkat)">🖥️</button>
+      </div>
+      <button class="icon-btn" id="reloadBtn" title="Muat ulang data">⟳</button>
+      <button class="icon-btn" id="disconnectBtn" title="Putuskan / ganti token">⎋</button>
+    </div>
+
+    <div class="content">
+
+      <section class="page active" id="page-overview">
+        <div class="greet">
+          <h2>Assalamu'alaikum 👋</h2>
+          <div class="sub">Berikut ringkasan sistem bot komunitas Anda hari ini.</div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card" data-goto="puasa">
+            <div class="stat-icon ic-blue">🌙</div>
+            <div class="stat-label">Polling Puasa</div>
+            <div class="stat-value" id="ovPuasaStatus">–</div>
+            <div class="stat-sub" id="ovPuasaSub">Memuat…</div>
+          </div>
+          <div class="stat-card" data-goto="kajian">
+            <div class="stat-icon ic-purple">📚</div>
+            <div class="stat-label">Kajian Berikutnya</div>
+            <div class="stat-value" id="ovKajianDate">–</div>
+            <div class="stat-sub" id="ovKajianSub">Memuat…</div>
+          </div>
+          <div class="stat-card" data-goto="kalender">
+            <div class="stat-icon ic-gold">🗓️</div>
+            <div class="stat-label">Google Calendar</div>
+            <div class="stat-value" id="ovCalStatus">–</div>
+            <div class="stat-sub">Notifikasi ontime</div>
+          </div>
+          <div class="stat-card" data-goto="pengingat">
+            <div class="stat-icon ic-ok">🔔</div>
+            <div class="stat-label">Pengingat Aktif</div>
+            <div class="stat-value" id="ovRemCount">–</div>
+            <div class="stat-sub">Jadwal pengingat</div>
+          </div>
+        </div>
+
+        <div class="ov-grid">
+          <div class="panel-card">
+            <div class="panel-card-head">
+              <h3>Polling Puasa Hari Ini</h3>
+              <span class="badge" id="ovPuasaBadge"></span>
+            </div>
+            <div id="ovPuasaEmpty" class="empty" style="text-align:center; padding:40px 0;">Belum ada jawaban untuk hari ini.</div>
+            <div id="ovPuasaChartWrap" class="hidden">
+              <div class="donut-wrap">
+                <canvas id="chartPuasaOverview"></canvas>
+                <div class="donut-center"><b id="ovDonutTotal">0</b><span>Menjawab</span></div>
+              </div>
+              <div id="ovLegend"></div>
+            </div>
+            <div style="flex:1"></div>
+            <button class="link-btn" data-goto="puasa" style="text-align:left; margin-top:10px;">Lihat Rekap Lengkap ›</button>
+          </div>
+
+          <div class="panel-card">
+            <div class="panel-card-head">
+              <h3>Kajian Mendatang</h3>
+              <button class="link-btn" data-goto="kajian">Lihat Semua</button>
+            </div>
+            <div id="ovKajianList"></div>
+            <div style="flex:1"></div>
+            <button class="link-btn" data-goto="kajian" style="text-align:left; margin-top:10px;">Kelola Jadwal Kajian ›</button>
+          </div>
+
+          <div class="panel-card">
+            <div class="panel-card-head">
+              <h3>Pengingat Mendatang</h3>
+              <button class="link-btn" data-goto="pengingat">Lihat Semua</button>
+            </div>
+            <div id="ovRemList"></div>
+            <div style="flex:1"></div>
+            <button class="link-btn" data-goto="pengingat" style="text-align:left; margin-top:10px;">Kelola Pengingat ›</button>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="panel-card-head"><h3>Status Fitur</h3></div>
+          <div class="feat-row">
+            <div class="feat-item"><span class="fdot" id="featAiDot"></span><div><span id="featAiLabel">AI (Groq/Workers)</span><small id="featAiSub">Memuat…</small></div></div>
+            <div class="feat-item"><span class="fdot" id="featCalDot"></span><div><span>Google Calendar (ontime)</span><small id="featCalSub">Memuat…</small></div></div>
+            <div class="feat-item"><span class="fdot on"></span><div><span id="featTopikLabel">0 topik terdaftar</span><small>Termasuk auto-deteksi</small></div></div>
+            <div class="feat-item"><span class="fdot on"></span><div><span id="featAdminLabel">0 admin terdaftar</span><small id="featAdminSub">Semua anggota bebas pakai perintah</small></div></div>
+          </div>
+          <div class="hint" style="margin-top:14px;">Baris ini cuma menampilkan hal yang benar-benar bisa dicek dari data bot (bukan status infrastruktur Cloudflare/GitHub live) — supaya tidak ada info yang menyesatkan.</div>
+        </div>
+      </section>
+
+      <section class="page" id="page-admin">
+        <div class="card">
+          <h2>👮 Admin bot</h2>
+          <div class="desc">ID Telegram yang boleh pakai perintah pengaturan (topik/jadwal/kajian/pengingat). Kosongkan daftar ini kalau mau semua anggota grup bebas pakai semua perintah — begitu ada 1 ID di sini, pembatasan otomatis aktif. Anggota bisa lihat ID mereka sendiri lewat <code>/id</code> di Telegram.</div>
+          <table id="adminsTable"><thead><tr><th>User ID</th><th></th></tr></thead><tbody></tbody></table>
+          <div class="row" style="margin-top:12px;">
+            <div class="field"><label>User ID Telegram</label><input type="number" id="newAdminId" placeholder="123456789"></div>
+          </div>
+          <button class="btn" id="addAdminBtn">+ Tambah admin</button>
+        </div>
+      </section>
+
+      <section class="page" id="page-topik">
+        <div class="card">
+          <h2>🗂️ Topik grup</h2>
+          <div class="desc">Cocok dengan hasil <code>/topik_set</code> di Telegram. thread_id didapat otomatis kalau didaftarkan lewat command; di sini Anda bisa lihat, ubah nama, atau tambah manual kalau sudah tahu thread_id-nya. <b>Baru:</b> topik juga otomatis kedeteksi diam-diam dari aktivitas chat biasa di grup (lihat <code>autoRegisterTopicFromMessage</code> di Worker) — topik yang namanya masih <code>topik_&lt;angka&gt;</code> di bawah ini artinya hasil deteksi otomatis, belum di-rename manual.</div>
+          <table id="topicsTable"><thead><tr><th>Nama pendek</th><th>Label</th><th>Thread ID</th><th></th></tr></thead><tbody></tbody></table>
+          <div class="row" style="margin-top:12px;">
+            <div class="field"><label>Nama pendek</label><input type="text" id="newTopicKey" placeholder="puasa"></div>
+            <div class="field"><label>Label</label><input type="text" id="newTopicLabel" placeholder="Puasa"></div>
+            <div class="field"><label>Thread ID</label><input type="number" id="newTopicThread" placeholder="123"></div>
+          </div>
+          <button class="btn" id="addTopicBtn">+ Tambah topik</button>
+        </div>
+      </section>
+
+      <section class="page" id="page-puasa">
+        <div class="card">
+          <h2>🌙 Absensi puasa <span class="badge" id="puasaBadge"></span></h2>
+          <div class="desc">Sama dengan <code>/puasa_jadwal</code>. Poll dikirim otomatis ke topik "puasa" pada hari &amp; jam yang dipilih. <b>Pertanyaan &amp; opsi poll dipilih ACAK otomatis</b> dari 150 varian bawaan (Indonesia, Jawa, Madura, Arab, Sunda, Inggris, dll) tiap kali kirim — tidak perlu &amp; tidak bisa diisi manual lagi. Isi "Jam rekap otomatis" (sama dengan <code>/puasa_rekap_jadwal</code>) supaya bot otomatis kirim rekap siapa saja yang sudah menjawab (mis. jam 11:00) — kosongkan untuk mematikan, tetap bisa cek manual kapan saja lewat <code>/puasa_rekap</code> di Telegram.</div>
+          <div class="row">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
+              <input type="checkbox" id="puasaEnabled" style="width:auto;"> Aktifkan polling otomatis
+            </label>
+          </div>
+          <div class="field" style="margin-bottom:10px;">
+            <label>Hari</label>
+            <div class="chip-days" id="puasaDays"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Jam (WIB)</label><input type="time" id="puasaTime"></div>
+            <div class="field"><label>Kirim ke topik</label><select id="puasaTopic"><option value="">(topik bernama "puasa", kalau ada)</option></select></div>
+            <div class="field"><label>Jam rekap otomatis (WIB)</label><input type="time" id="puasaRekapTime" placeholder="mis. 11:00"></div>
+          </div>
+          <button class="btn primary" id="savePuasaBtn">Simpan pengaturan puasa</button>
+          <hr style="border:none; border-top:1px solid var(--line); margin:18px 0;">
+          <div class="desc" style="margin-bottom:8px;">Rekap jawaban hari ini:</div>
+          <div id="puasaRekap" class="empty">Memuat…</div>
+        </div>
+
+        <div class="card">
+          <h2>🧠 Varian poll puasa (AI) <span class="badge" id="variantBadge"></span></h2>
+          <div class="desc">150 varian bawaan selalu aktif (tidak bisa dihapus). Admin bisa minta AI bikinkan varian TAMBAHAN lewat <code>/puasa_variant_generate &lt;jumlah&gt;</code> di Telegram (fitur ini butuh AI, cuma bisa dipicu dari Telegram bukan dari panel). Hasilnya masuk antrian di bawah — cek dulu maknanya benar (opsi 1 harus berarti "puasa", opsi 2 harus berarti "tidak puasa") sebelum di-approve.</div>
+          <table id="variantTable"><thead><tr><th>Pertanyaan</th><th>Opsi 1 (puasa)</th><th>Opsi 2 (tidak)</th><th></th></tr></thead><tbody></tbody></table>
+          <div class="hint" id="variantCustomCount" style="margin-top:10px;"></div>
+        </div>
+      </section>
+
+      <section class="page" id="page-kajian">
+        <div class="card">
+          <h2>📚 Jadwal kajian</h2>
+          <div class="desc">Sama dengan <code>/kajian_tambah</code>. Diingatkan otomatis ke topik "kajian" H- sekian hari sebelum tanggalnya.</div>
+          <div class="row" style="align-items:flex-end;">
+            <div class="field"><label>Diingatkan H- (pisah koma, 0 = hari-H)</label><input type="text" id="kajianOffsets" placeholder="7,0"></div>
+            <div class="field"><label>Jam pengingat dikirim (WIB)</label><input type="time" id="kajianTime"></div>
+          </div>
+          <div class="row" style="align-items:flex-end;">
+            <div class="field"><label>Jam mulai acara</label><input type="time" id="kajianJamAcara"></div>
+            <div class="field"><label>Lokasi</label><input type="text" id="kajianLokasi" placeholder="Mushollah"></div>
+          </div>
+          <div class="row">
+            <div class="field" style="flex:2"><label>Catatan tambahan (muncul di tiap reminder)</label><input type="text" id="kajianCatatan" placeholder="Tidak wajib bawa konsumsi. Kabari petugas selanjutnya jika berhalangan."></div>
+            <div class="field"><label>Kirim ke topik</label><select id="kajianTopic"><option value="">(topik bernama "kajian", kalau ada)</option></select></div>
+          </div>
+          <button class="btn small" id="saveKajianSettingsBtn">Simpan pengaturan kajian</button>
+          <table id="kajianTable"><thead><tr><th>Tanggal</th><th>Pengisi</th><th>Tema</th><th></th></tr></thead><tbody></tbody></table>
+          <div class="row" style="margin-top:14px;">
+            <div class="field"><label>Tanggal</label><input type="date" id="newKajianDate"></div>
+            <div class="field"><label>Pengisi</label><input type="text" id="newKajianPengisi" placeholder="Ust. Fulan"></div>
+            <div class="field" style="flex:2"><label>Tema</label><input type="text" id="newKajianTema" placeholder="Fiqih Puasa Sunnah"></div>
+          </div>
+          <button class="btn primary" id="addKajianBtn">+ Tambah kajian</button>
+        </div>
+      </section>
+
+      <section class="page" id="page-kalender">
+        <div class="card">
+          <h2>🗓️ Notifikasi ontime Google Calendar <span class="badge" id="calReminderBadge"></span></h2>
+          <div class="desc">Sama dengan <code>/kalender_ontime</code>. Berlaku untuk SEMUA event di Google Calendar yang dipantau (bukan cuma kajian/pengingat umum yang dibuat dari bot ini) — bot kirim notifikasi <b>PAS jam yang tertulis di event</b> (bukan N menit sebelum, bukan rangkuman pagi). Bikin event jam 10:00 → notif terkirim jam 10:00, otomatis, tidak perlu atur jam manual. Fitur ini butuh ENV Google (service account) sudah diisi di Worker. Cek status koneksi lewat <code>/kalender_cek</code> di Telegram.</div>
+          <div class="row">
+            <div class="field">
+              <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
+                <input type="checkbox" id="calOntimeEnabled" style="width:auto;"> Aktifkan notifikasi ontime
+              </label>
+            </div>
+            <div class="field"><label>Kirim ke topik</label><select id="calReminderTopic"><option value="">(topik bernama "kalender", kalau ada)</option></select></div>
+          </div>
+          <button class="btn small" id="saveCalReminderBtn">Simpan pengaturan kalender</button>
+        </div>
+      </section>
+
+      <section class="page" id="page-pengingat">
+        <div class="card">
+          <h2>🔔 Pengingat umum</h2>
+          <div class="desc">Sama dengan <code>/ingat_tambah</code>. Bebas judul &amp; pesan, ke topik mana saja, sekali/harian/mingguan/bulanan. Otomatis tersinkron ke Google Calendar kalau sudah dikonfigurasi (termasuk sebagai recurring event asli untuk yang berulang). <b>Tips:</b> pilih topik <code>pengumuman</code> di dropdown Topik untuk bikin pengumuman — ini fitur yang SAMA PERSIS dengan command <code>/pengumuman &lt;judul&gt; | &lt;pesan&gt; | &lt;jadwal&gt;</code> di Telegram (cuma lebih singkat karena topiknya otomatis).</div>
+          <table id="remindersTable"><thead><tr><th>Judul</th><th>Jadwal</th><th>Topik</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+          <div class="row" style="margin-top:14px;">
+            <div class="field"><label>Judul</label><input type="text" id="newRemTitle" placeholder="Rapat Bulanan"></div>
+            <div class="field"><label>Topik</label><select id="newRemTopic"></select></div>
+          </div>
+          <div class="row">
+            <div class="field" style="flex:2"><label>Pesan</label><input type="text" id="newRemMessage" placeholder="Jangan lupa rapat evaluasi"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Tipe jadwal</label>
+              <select id="newRemType">
+                <option value="once">Sekali</option>
+                <option value="daily">Harian</option>
+                <option value="weekly">Mingguan</option>
+                <option value="monthly">Bulanan</option>
+              </select>
+            </div>
+            <div class="field"><label>Jam</label><input type="time" id="newRemTime" value="08:00"></div>
+          </div>
+          <div class="row" id="remFieldOnce">
+            <div class="field"><label>Tanggal</label><input type="date" id="newRemDate"></div>
+          </div>
+          <div class="row" id="remFieldWeekly" style="display:none;">
+            <div class="field"><label>Hari</label><div class="chip-days" id="newRemDays"></div></div>
+          </div>
+          <div class="row" id="remFieldMonthly" style="display:none;">
+            <div class="field" style="max-width:140px;"><label>Tanggal tiap bulan</label><input type="number" id="newRemDom" min="1" max="31" value="1"></div>
+          </div>
+          <button class="btn primary" id="addRemBtn">+ Tambah pengingat</button>
+        </div>
+      </section>
+
+      <section class="page" id="page-libur">
+        <div class="card">
+          <h2>🕋 Pengingat H-1 libur nasional</h2>
+          <div class="desc">Sama dengan <code>/libur_reminder</code>. Dicek otomatis dari kalender publik Google tiap hari jam yang dipilih -- kalau BESOK libur nasional, pesan dikirim; kalau bukan, diam saja. <b>Fitur terkait (otomatis, tanpa perlu diatur di sini):</b> "Libur Internal" — bikin event sepanjang hari (all-day) di Google Calendar bot dengan judul diawali kata "LIBUR" (mis. "LIBUR: Cuti Bersama"). Di hari libur (nasional ATAU internal): polling &amp; rekap puasa dimatikan total, notifikasi ontime Google Calendar tidak dikirim, reminder kajian ditunda ke hari kerja berikutnya.</div>
+          <div class="row">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
+              <input type="checkbox" id="liburEnabled" style="width:auto;"> Aktifkan pengingat H-1
+            </label>
+          </div>
+          <div class="row">
+            <div class="field"><label>Jam cek &amp; kirim (WIB)</label><input type="time" id="liburTime"></div>
+            <div class="field"><label>Kirim ke topik</label><select id="liburTopic"><option value="">(percakapan umum grup)</option></select></div>
+          </div>
+          <button class="btn small" id="saveLiburBtn">Simpan pengaturan libur nasional</button>
+        </div>
+      </section>
+
+      <section class="page" id="page-pengaturan">
+        <div class="card">
+          <h2>⚙️ Pengaturan panel</h2>
+          <div class="desc">Pengaturan koneksi panel ini ke Worker Anda. Ini beda dari pengaturan bot (yang ada di menu-menu lain) — ini cuma soal panel HTML-nya sendiri.</div>
+          <div class="field" style="margin-bottom:14px;">
+            <label>Worker URL</label>
+            <input type="text" id="settingsWorkerUrl" readonly>
+            <div class="hint">Ditanam permanen di kode panel ini — kalau Worker pindah alamat, filenya perlu di-generate ulang.</div>
+          </div>
+          <div class="field" style="margin-bottom:14px;">
+            <label>Status token</label>
+            <input type="text" id="settingsTokenStatus" readonly>
+          </div>
+          <button class="btn danger" id="settingsDisconnectBtn">Putuskan &amp; ganti token</button>
+        </div>
+        <div class="card">
+          <h2>🎨 Tampilan</h2>
+          <div class="desc">Terang / Gelap / Otomatis (ikut pengaturan perangkat) — tombolnya ada di pojok kanan atas, di sebelah jam.</div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
 const HARI = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
-// WORKER_URL ditanam permanen di sini -- panel ini dikonfigurasi khusus
-// untuk Worker "gus-asisten" milik Anda, jadi pengguna cuma perlu isi
-// APP_TOKEN. Kalau nanti Worker-nya pindah alamat, ganti nilai di baris
-// ini saja.
+
+// Versi panel ini -- naikkan tiap kali ada perubahan berarti, cocokkan
+// dengan entri di CHANGELOG.md & WORKER_VERSION di worker-komunitas.js.
+const APP_VERSION = "2.0.2";
+const WORKER_URL_FOR_VERSION_CHECK = "https://gus-asisten.rempahecho.workers.dev";
+
+/* Cek versi worker LANGSUNG saat halaman dibuka, SEBELUM login (endpoint
+   /versi tidak butuh token) -- supaya kalau lupa deploy salah satu sisi
+   (panel HTML sudah baru tapi Worker masih lama, atau sebaliknya), langsung
+   kelihatan jelas di layar gate & sidebar, tidak perlu nebak-nebak dari
+   gejala aneh di UI lagi. */
+async function checkVersions(){
+  document.querySelectorAll("#gatePanelVersion, #sidebarPanelVersion").forEach(el=> el.textContent = "v" + APP_VERSION);
+  try{
+    // cache:"no-store" + timestamp di URL -- MENCEGAH browser menjawab dari
+    // cache lama (mis. respons 404 yg sempat ke-cache sebelum endpoint
+    // /versi ini ada di Worker), supaya angka yg ditampilkan SELALU hasil
+    // fetch fresh ke Worker saat itu juga, bukan sisa percobaan lama.
+    const bust = Date.now();
+    const res = await fetch(WORKER_URL_FOR_VERSION_CHECK.replace(/\/$/,"") + "/versi?t=" + bust, { cache: "no-store" });
+    const j = await res.json();
+    const workerVer = j.worker_version || "?";
+    document.querySelectorAll("#gateWorkerVersion, #sidebarWorkerVersion").forEach(el=> el.textContent = "v" + workerVer);
+    const mismatch = workerVer !== APP_VERSION;
+    const warnEl = document.getElementById("gateVersionWarn");
+    if(warnEl) warnEl.classList.toggle("hidden", !mismatch);
+  }catch(e){
+    document.querySelectorAll("#gateWorkerVersion, #sidebarWorkerVersion").forEach(el=> el.textContent = "tidak diketahui");
+  }
+}
+checkVersions();
+
+
+/* ---------- NAVIGASI SIDEBAR (SPA) ---------- */
+const PAGES = ["overview","admin","topik","puasa","kajian","kalender","pengingat","libur","pengaturan"];
+const PAGE_TITLES = {
+  overview:"Overview", admin:"Admin & Akses", topik:"Topik (Forum)", puasa:"Absensi Puasa",
+  kajian:"Kajian", kalender:"Google Calendar", pengingat:"Pengingat Umum", libur:"Libur Nasional",
+  pengaturan:"Pengaturan"
+};
+function showPage(id){
+  if(!PAGES.includes(id)) id = "overview";
+  PAGES.forEach(p=>{
+    const el = document.getElementById("page-"+p);
+    if(el) el.classList.toggle("active", p===id);
+  });
+  document.querySelectorAll(".nav-item").forEach(el=>{
+    el.classList.toggle("active", el.dataset.page===id);
+  });
+  document.getElementById("pageTitle").textContent = PAGE_TITLES[id] || id;
+  localStorage.setItem("admkom_page", id);
+  document.body.classList.remove("sidebar-open");
+  window.scrollTo(0,0);
+}
+document.querySelectorAll(".nav-item").forEach(el=>{
+  el.addEventListener("click", ()=> showPage(el.dataset.page));
+});
+document.querySelectorAll("[data-goto]").forEach(el=>{
+  el.addEventListener("click", ()=> showPage(el.dataset.goto));
+});
+document.getElementById("hamburgerBtn").addEventListener("click", ()=>{
+  document.body.classList.toggle("sidebar-open");
+});
+document.getElementById("sidebarOverlay").addEventListener("click", ()=>{
+  document.body.classList.remove("sidebar-open");
+});
+
 /* ---------- TEMA: terang / gelap / otomatis ---------- */
 const THEME_KEY = "admkom_theme";
 function effectiveTheme(pref){
@@ -328,6 +629,7 @@ function applyTheme(pref){
   document.querySelectorAll("#themeToggle button").forEach(b=>{
     b.classList.toggle("active", b.dataset.themeChoice === pref);
   });
+  if(data) renderOverviewPuasaChart();
 }
 let themePref = localStorage.getItem(THEME_KEY) || "auto";
 applyTheme(themePref);
@@ -338,14 +640,20 @@ document.querySelectorAll("#themeToggle button").forEach(b=>{
     applyTheme(themePref);
   });
 });
-// Kalau lagi mode "Otomatis" & preferensi device berubah SAAT halaman
-// masih terbuka (mis. HP masuk mode malam otomatis jam tertentu), ikut
-// berubah live tanpa perlu reload halaman.
 if(window.matchMedia){
   window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", ()=>{
     if(themePref === "auto") applyTheme("auto");
   });
 }
+
+/* ---------- JAM WIB LIVE ---------- */
+function tickClock(){
+  const el = document.getElementById("liveClock");
+  if(!el) return;
+  el.textContent = new Date().toLocaleTimeString("id-ID", { timeZone:"Asia/Jakarta", hour:"2-digit", minute:"2-digit", second:"2-digit" });
+}
+tickClock();
+setInterval(tickClock, 1000);
 
 const WORKER_URL = "https://gus-asisten.rempahecho.workers.dev";
 let APP_TOKEN = localStorage.getItem("admkom_token") || "";
@@ -364,16 +672,13 @@ function toast(msg, isError){
   t.appendChild(icon);
   t.appendChild(text);
   t.className = "toast show" + (isError ? " error" : "");
-  // pesan error dikasih waktu lebih lama supaya sempat kebaca (biasanya
-  // lebih panjang, berisi detail error dari server), pesan sukses tetap
-  // singkat & tidak mengganggu.
   t._hideTimer = setTimeout(()=> t.className = "toast", isError ? 5000 : 3200);
 }
 function setConn(state){ // "ok" | "err" | "checking"
   const dot = document.getElementById("connDot");
   const label = document.getElementById("connLabel");
   dot.className = "dot" + (state==="ok"?" on":state==="err"?" err":"");
-  label.textContent = state==="ok" ? "Terhubung • " + new Date().toLocaleTimeString("id-ID") : state==="err" ? "Gagal terhubung" : "memeriksa…";
+  label.textContent = state==="ok" ? "Terhubung" : state==="err" ? "Gagal terhubung" : "Memeriksa…";
 }
 
 async function api(method, body){
@@ -387,10 +692,6 @@ async function api(method, body){
   if(!res.ok) throw new Error("HTTP " + res.status);
   return res.json();
 }
-// Endpoint khusus (bukan /data) -- dipakai utk aksi yang butuh Worker ikut
-// panggil Google Calendar (tambah/hapus pengingat umum & kajian), supaya
-// sinkron kalender jalan sama persis kayak lewat command Telegram, bukan
-// cuma tulis data mentah lewat POST /data.
 async function apiAction(path, body){
   const res = await fetch(WORKER_URL.replace(/\/$/,"") + path, {
     method: "POST",
@@ -435,7 +736,7 @@ async function saveData(){
 function renderAll(){
   renderAdmins();
   renderTopics();
-  populateTopicSelect(); // isi semua dropdown topik dulu, supaya field topicKey di tiap card (puasa/kajian/kalender/libur/pengingat umum) bisa langsung ke-set nilainya
+  populateTopicSelect();
   renderPuasa();
   renderKajian();
   renderRekap();
@@ -443,6 +744,142 @@ function renderAll(){
   renderCalReminder();
   renderLibur();
   toggleRemFields();
+  renderVariantQueue();
+  renderOverview();
+}
+
+/* ================= OVERVIEW ================= */
+function getTodayKey(){
+  return new Date().toLocaleDateString("sv-SE");
+}
+function getUpcomingKajian(){
+  const today = getTodayKey();
+  return (data.kajian || []).filter(k=>k.tanggal >= today).sort((a,b)=>a.tanggal.localeCompare(b.tanggal));
+}
+function renderOverview(){
+  if(!data) return;
+
+  const p = data.puasaPoll || {};
+  document.getElementById("ovPuasaStatus").textContent = p.enabled ? "Aktif" : "Nonaktif";
+  document.getElementById("ovPuasaSub").textContent = data.lastPuasaPollSentDate
+    ? (data.lastPuasaPollSentDate === getTodayKey() ? "Terakhir: Hari ini" : "Terakhir: " + fmtTanggalID(data.lastPuasaPollSentDate))
+    : "Belum pernah dikirim";
+
+  const upcoming = getUpcomingKajian();
+  if(upcoming.length){
+    const k = upcoming[0];
+    document.getElementById("ovKajianDate").textContent = fmtTanggalID(k.tanggal) + (data.kajianSettings && data.kajianSettings.jamAcara ? " " + data.kajianSettings.jamAcara + " WIB" : "");
+    document.getElementById("ovKajianSub").textContent = k.pengisi + " — " + k.tema;
+  } else {
+    document.getElementById("ovKajianDate").textContent = "-";
+    document.getElementById("ovKajianSub").textContent = "Belum ada jadwal";
+  }
+
+  document.getElementById("ovCalStatus").textContent = data.calendarOntimeEnabled ? "Aktif" : "Nonaktif";
+
+  const remActive = (data.reminders || []).filter(r=>r.enabled).length;
+  document.getElementById("ovRemCount").textContent = remActive;
+
+  const badge = document.getElementById("ovPuasaBadge");
+  badge.textContent = p.enabled ? "Aktif" : "Nonaktif";
+  badge.className = "badge " + (p.enabled ? "on" : "off");
+  renderOverviewPuasaChart();
+
+  const kajianListEl = document.getElementById("ovKajianList");
+  if(!upcoming.length){
+    kajianListEl.innerHTML = `<div class="empty">Belum ada jadwal kajian mendatang.</div>`;
+  } else {
+    kajianListEl.innerHTML = upcoming.slice(0,3).map(k=>{
+      const [y,m,d] = k.tanggal.split("-").map(Number);
+      const bln = ["JAN","FEB","MAR","APR","MEI","JUN","JUL","AGU","SEP","OKT","NOV","DES"][m-1];
+      return `<div class="list-item">
+        <div class="date-badge"><div class="d">${d}</div><div class="m">${bln}</div></div>
+        <div>
+          <div class="li-title">${k.tema}</div>
+          <div class="li-sub">${k.pengisi}${data.kajianSettings && data.kajianSettings.jamAcara ? " • " + data.kajianSettings.jamAcara + " WIB" : ""}</div>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  const remListEl = document.getElementById("ovRemList");
+  const items = [];
+  const ks = data.kajianSettings;
+  if(ks && ks.time && ks.offsetsDays && ks.offsetsDays.length){
+    items.push({
+      icon:"📚", title:"Reminder Kajian",
+      sub:"H-" + ks.offsetsDays.join(", H-") + ", " + ks.time + " WIB",
+      active:true,
+    });
+  }
+  (data.reminders || []).forEach(r=>{
+    items.push({ icon:"🔔", title:r.title, sub: formatJadwalUmum(r.schedule), active: r.enabled });
+  });
+  if(!items.length){
+    remListEl.innerHTML = `<div class="empty">Belum ada pengingat aktif.</div>`;
+  } else {
+    remListEl.innerHTML = items.slice(0,3).map(it=>`
+      <div class="list-item">
+        <div class="list-icon" style="background:rgba(var(--gold-rgb),.13); color:var(--gold);">${it.icon}</div>
+        <div style="flex:1;">
+          <div class="li-title">${it.title}</div>
+          <div class="li-sub">${it.sub}</div>
+        </div>
+        <span class="badge ${it.active?"on":"off"}" style="align-self:flex-start;">${it.active?"Aktif":"Nonaktif"}</span>
+      </div>
+    `).join("");
+  }
+
+  const aiConfigured = !!(window.__lastAiQuota && window.__lastAiQuota.aiConfigured);
+  document.getElementById("featAiDot").className = "fdot " + (aiConfigured ? "on" : "off");
+  document.getElementById("featAiSub").textContent = aiConfigured ? "Siap dipakai" : "Belum dikonfigurasi";
+  document.getElementById("featCalDot").className = "fdot " + (data.calendarOntimeEnabled ? "on" : "off");
+  document.getElementById("featCalSub").textContent = data.calendarOntimeEnabled ? "Notifikasi ontime aktif" : "Notifikasi ontime nonaktif";
+  const topicCount = Object.keys(data.topics || {}).length;
+  document.getElementById("featTopikLabel").textContent = topicCount + " topik terdaftar";
+  const adminCount = (data.adminUserIds || []).length;
+  document.getElementById("featAdminLabel").textContent = adminCount + " admin terdaftar";
+  document.getElementById("featAdminSub").textContent = adminCount ? "Perintah pengaturan dibatasi" : "Semua anggota bebas pakai perintah";
+}
+
+let puasaChartInstance = null;
+function renderOverviewPuasaChart(){
+  const key = getTodayKey();
+  const log = (data.puasaLog || {})[key];
+  const answers = log ? Object.values(log.answers || {}) : [];
+  const sudah = answers.filter(a=>a.choice===0).length;
+  const belum = answers.filter(a=>a.choice===1).length;
+  const total = sudah + belum;
+
+  const emptyEl = document.getElementById("ovPuasaEmpty");
+  const wrapEl = document.getElementById("ovPuasaChartWrap");
+  if(total === 0){
+    emptyEl.classList.remove("hidden");
+    wrapEl.classList.add("hidden");
+    return;
+  }
+  emptyEl.classList.add("hidden");
+  wrapEl.classList.remove("hidden");
+  document.getElementById("ovDonutTotal").textContent = total;
+
+  const opsi = ["Puasa", "Tidak puasa"]; // label TETAP -- sesuai buildRekapPuasaText() di worker; teks poll asli (hasil acak varian) tidak dipakai di sini biar rekap konsisten tiap hari
+  const css = getComputedStyle(document.documentElement);
+  const cOk = css.getPropertyValue("--ok").trim();
+  const cGold = css.getPropertyValue("--gold").trim();
+
+  document.getElementById("ovLegend").innerHTML = `
+    <div class="legend-row"><span class="lbl"><span class="dotc" style="background:${cOk}"></span>${opsi[0]}</span><span class="val">${sudah} (${Math.round(sudah/total*100)}%)</span></div>
+    <div class="legend-row"><span class="lbl"><span class="dotc" style="background:${cGold}"></span>${opsi[1]}</span><span class="val">${belum} (${Math.round(belum/total*100)}%)</span></div>
+  `;
+
+  const canvas = document.getElementById("chartPuasaOverview");
+  if(!canvas || typeof Chart === "undefined") return;
+  if(puasaChartInstance){ puasaChartInstance.destroy(); puasaChartInstance = null; }
+  puasaChartInstance = new Chart(canvas.getContext("2d"), {
+    type: "doughnut",
+    data: { labels:[opsi[0],opsi[1]], datasets:[{ data:[sudah,belum], backgroundColor:[cOk,cGold], borderWidth:0 }] },
+    options: { cutout:"72%", plugins:{ legend:{ display:false }, tooltip:{ enabled:true } }, responsive:true, maintainAspectRatio:false }
+  });
 }
 
 /* ---------- ADMIN BOT ---------- */
@@ -482,7 +919,7 @@ function renderTopics(){
   tbody.innerHTML = keys.length ? "" : `<tr><td colspan="4" class="empty">Belum ada topik terdaftar. Tambah lewat form di bawah, kirim /topik_set &lt;nama&gt; di Telegram, atau tunggu auto-deteksi dari aktivitas chat biasa.</td></tr>`;
   keys.forEach(k=>{
     const t = data.topics[k];
-    const isAuto = /^topik_\d+$/.test(k); // pola placeholder dari autoRegisterTopicFromMessage() di Worker
+    const isAuto = /^topik_\d+$/.test(k);
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><code>${k}</code>${isAuto ? ' <span class="badge off" title="Terdeteksi otomatis dari chat biasa, belum di-rename">Auto</span>' : ''}</td>
@@ -513,9 +950,6 @@ function renderTopics(){
       if(await saveData()) renderTopics();
     });
   });
-  // refresh semua dropdown pilih-topik (puasa/kajian/kalender/libur/pengingat
-  // umum) supaya langsung tersinkron begitu topik ditambah/dihapus di sini,
-  // tanpa perlu klik "Muat ulang".
   populateTopicSelect();
 }
 document.getElementById("addTopicBtn").addEventListener("click", async ()=>{
@@ -523,6 +957,7 @@ document.getElementById("addTopicBtn").addEventListener("click", async ()=>{
   const label = document.getElementById("newTopicLabel").value.trim();
   const threadId = parseInt(document.getElementById("newTopicThread").value, 10);
   if(!key || !threadId){ toast("Isi nama pendek & thread ID dulu.", true); return; }
+  data.topics = data.topics || {};
   data.topics[key] = { threadId, label: label || key };
   if(await saveData()){
     renderTopics();
@@ -537,9 +972,6 @@ function renderPuasa(){
   const p = data.puasaPoll;
   document.getElementById("puasaEnabled").checked = !!p.enabled;
   document.getElementById("puasaTime").value = p.time || "";
-  document.getElementById("puasaQuestion").value = p.question || "";
-  document.getElementById("puasaOpt1").value = (p.options && p.options[0]) || "";
-  document.getElementById("puasaOpt2").value = (p.options && p.options[1]) || "";
   document.getElementById("puasaTopic").value = p.topicKey || "";
   document.getElementById("puasaRekapTime").value = p.rekapTime || "";
   const badge = document.getElementById("puasaBadge");
@@ -557,26 +989,68 @@ function renderPuasa(){
 document.getElementById("savePuasaBtn").addEventListener("click", async ()=>{
   const days = Array.from(document.querySelectorAll("#puasaDays input:checked")).map(el=>parseInt(el.value,10));
   const time = document.getElementById("puasaTime").value.trim();
-  const question = document.getElementById("puasaQuestion").value.trim();
-  const opt1 = document.getElementById("puasaOpt1").value.trim();
-  const opt2 = document.getElementById("puasaOpt2").value.trim();
   const topicKey = document.getElementById("puasaTopic").value || null;
   const rekapTime = document.getElementById("puasaRekapTime").value || null;
   data.puasaPoll = {
     enabled: document.getElementById("puasaEnabled").checked,
     days,
     time: time || null,
-    question: question || null,
-    options: (opt1 && opt2) ? [opt1, opt2] : [],
+    // pertanyaan & opsi TIDAK lagi diatur dari sini -- dipilih acak
+    // otomatis oleh worker dari 150 varian bawaan tiap kali poll dikirim.
     topicKey,
     rekapTime,
-    lastRekapSentDate: data.puasaPoll.lastRekapSentDate || null, // state internal, jangan ke-reset tiap simpan
+    lastRekapSentDate: data.puasaPoll.lastRekapSentDate || null,
   };
   if(await saveData()) renderPuasa();
 });
 
+/* ---------- VARIAN POLL PUASA (AI) ---------- */
+function renderVariantQueue(){
+  const pending = data.puasaVariantsPending || [];
+  const custom = data.puasaVariantsCustom || [];
+  const badge = document.getElementById("variantBadge");
+  badge.textContent = pending.length ? pending.length + " menunggu review" : "Tidak ada antrian";
+  badge.className = "badge " + (pending.length ? "off" : "on");
+  document.getElementById("variantCustomCount").textContent =
+    `150 varian bawaan + ${custom.length} varian tambahan yang sudah di-approve, aktif dipakai bergantian.`;
+
+  const tbody = document.querySelector("#variantTable tbody");
+  tbody.innerHTML = pending.length ? "" : `<tr><td colspan="4" class="empty">Antrian kosong. Minta AI bikin baru lewat <code>/puasa_variant_generate &lt;jumlah&gt;</code> di Telegram.</td></tr>`;
+  pending.forEach(v=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${v.q}</td>
+      <td>${v.opts[0]}</td>
+      <td>${v.opts[1]}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn small primary" data-approve-variant="${v.id}">Approve</button>
+        <button class="btn small danger" data-reject-variant="${v.id}">Tolak</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll("[data-approve-variant]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = Number(btn.dataset.approveVariant);
+      const idx = (data.puasaVariantsPending||[]).findIndex(v=>v.id===id);
+      if(idx===-1) return;
+      const [v] = data.puasaVariantsPending.splice(idx,1);
+      data.puasaVariantsCustom = data.puasaVariantsCustom || [];
+      data.puasaVariantsCustom.push({ q:v.q, opts:v.opts });
+      if(await saveData()) renderVariantQueue();
+    });
+  });
+  tbody.querySelectorAll("[data-reject-variant]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = Number(btn.dataset.rejectVariant);
+      data.puasaVariantsPending = (data.puasaVariantsPending||[]).filter(v=>v.id!==id);
+      if(await saveData()) renderVariantQueue();
+    });
+  });
+}
+
 function renderRekap(){
-  const key = new Date().toLocaleDateString("sv-SE"); // format YYYY-MM-DD, sesuai jakartaDateStr worker (perkiraan wall-clock lokal)
+  const key = getTodayKey();
   const log = (data.puasaLog || {})[key];
   const box = document.getElementById("puasaRekap");
   if(!log || Object.keys(log.answers||{}).length === 0){
@@ -605,8 +1079,7 @@ function renderKajian(){
   document.getElementById("kajianCatatan").value = ks.catatan || "";
   document.getElementById("kajianTopic").value = ks.topicKey || "";
   const tbody = document.querySelector("#kajianTable tbody");
-  const today = new Date().toLocaleDateString("sv-SE");
-  const list = (data.kajian || []).filter(k=>k.tanggal >= today).sort((a,b)=>a.tanggal.localeCompare(b.tanggal));
+  const list = getUpcomingKajian();
   tbody.innerHTML = list.length ? "" : `<tr><td colspan="4" class="empty">Belum ada jadwal kajian mendatang.</td></tr>`;
   list.forEach(k=>{
     const tr = document.createElement("tr");
@@ -688,10 +1161,6 @@ function populateTopicSelect(){
     liburSel.innerHTML = `<option value="">(percakapan umum grup)</option>` + keys.map(k=>`<option value="${k}">${k}</option>`).join("");
     liburSel.value = current;
   }
-  // dropdown yang defaultnya fallback ke nama topik lama ("puasa"/"kajian"/
-  // "kalender") kalau dikosongkan -- placeholder optionnya beda per card
-  // (sudah ditulis di HTML), jadi cukup TAMBAHKAN opsi topik terdaftar di
-  // bawah placeholder, tanpa menimpa opsi pertama.
   [["puasaTopic", '(topik bernama "puasa", kalau ada)'],
    ["kajianTopic", '(topik bernama "kajian", kalau ada)'],
    ["calReminderTopic", '(topik bernama "kalender", kalau ada)']
@@ -812,6 +1281,12 @@ document.getElementById("addRemBtn").addEventListener("click", async ()=>{
 });
 
 /* ---------- Gate / koneksi ---------- */
+function doDisconnect(){
+  localStorage.removeItem("admkom_token");
+  APP_TOKEN = "";
+  document.getElementById("app").classList.add("hidden");
+  document.getElementById("gate").classList.remove("hidden");
+}
 document.getElementById("gateConnect").addEventListener("click", async ()=>{
   APP_TOKEN = document.getElementById("gateToken").value.trim();
   if(!APP_TOKEN){ toast("Isi APP_TOKEN dulu.", true); return; }
@@ -819,32 +1294,41 @@ document.getElementById("gateConnect").addEventListener("click", async ()=>{
   await boot();
 });
 document.getElementById("reloadBtn").addEventListener("click", loadData);
-document.getElementById("disconnectBtn").addEventListener("click", ()=>{
-  localStorage.removeItem("admkom_token");
-  APP_TOKEN = "";
-  document.getElementById("app").classList.add("hidden");
-  document.getElementById("gate").classList.remove("hidden");
-});
+document.getElementById("disconnectBtn").addEventListener("click", doDisconnect);
+document.getElementById("settingsDisconnectBtn").addEventListener("click", doDisconnect);
 
 async function boot(){
   document.getElementById("gate").classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
+  document.getElementById("settingsWorkerUrl").value = WORKER_URL;
+  document.getElementById("settingsTokenStatus").value = "Tersambung (token tersimpan di browser ini)";
+  const savedPage = localStorage.getItem("admkom_page");
+  if(savedPage) showPage(savedPage);
   await loadData();
   loadAiQuota();
-  // refresh rekap tiap 60 detik biar terasa hidup
   setInterval(async ()=>{
-    try{ const res = await api("GET"); data = res.data; sha = res.sha; renderRekap(); setConn("ok"); }
+    try{ const res = await api("GET"); data = res.data; sha = res.sha; renderRekap(); renderOverview(); setConn("ok"); }
     catch(e){ /* diam, jangan ganggu kalau kebetulan gagal sesaat */ }
   }, 60000);
+  setInterval(loadAiQuota, 300000);
 }
 async function loadAiQuota(){
-  const el = document.getElementById("aiQuotaLabel");
+  const chipEl = document.getElementById("aiQuotaChipVal");
   try{
     const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/ai-quota", { headers:{ "Authorization":"Bearer " + APP_TOKEN } });
     const q = await res.json();
-    if(!q.aiConfigured){ el.textContent = "AI: belum dikonfigurasi"; return; }
-    el.textContent = `AI: Groq ${q.groq.percent ?? "-"}% • Workers AI ${q.workersAi.percent}%`;
-  }catch(e){ el.textContent = ""; }
+    window.__lastAiQuota = q;
+    if(!q.aiConfigured){
+      chipEl.textContent = "Belum aktif";
+    } else if(q.groqConfigured && q.groq.budgetTokens != null){
+      chipEl.textContent = q.groq.usedTokens.toLocaleString("id-ID") + " / " + q.groq.budgetTokens.toLocaleString("id-ID");
+    } else {
+      chipEl.textContent = q.workersAi.usedNeuron.toLocaleString("id-ID") + " / " + q.workersAi.budgetNeuron.toLocaleString("id-ID");
+    }
+    if(data) renderOverview();
+  }catch(e){
+    chipEl.textContent = "-";
+  }
 }
 
 if(APP_TOKEN){
