@@ -117,7 +117,7 @@
     <!-- POLLING PUASA -->
     <div class="card">
       <h2>🌙 Absensi puasa <span class="badge" id="puasaBadge"></span></h2>
-      <div class="desc">Sama dengan <code>/puasa_jadwal</code>. Poll dikirim otomatis ke topik "puasa" pada hari &amp; jam yang dipilih.</div>
+      <div class="desc">Sama dengan <code>/puasa_jadwal</code>. Poll dikirim otomatis ke topik "puasa" pada hari &amp; jam yang dipilih. <b>Baru:</b> isi "Jam rekap otomatis" (sama dengan <code>/puasa_rekap_jadwal</code>) supaya bot otomatis kirim rekap siapa saja yang sudah menjawab (mis. jam 11:00) — kosongkan untuk mematikan, tetap bisa cek manual kapan saja lewat <code>/puasa_rekap</code> di Telegram.</div>
       <div class="row">
         <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
           <input type="checkbox" id="puasaEnabled" style="width:auto;"> Aktifkan polling otomatis
@@ -137,6 +137,7 @@
       </div>
       <div class="row">
         <div class="field"><label>Kirim ke topik</label><select id="puasaTopic"><option value="">(topik bernama "puasa", kalau ada)</option></select></div>
+        <div class="field"><label>Jam rekap otomatis (WIB)</label><input type="time" id="puasaRekapTime" placeholder="mis. 11:00"></div>
       </div>
       <button class="btn primary" id="savePuasaBtn">Simpan pengaturan puasa</button>
       <hr style="border:none; border-top:1px solid var(--line); margin:18px 0;">
@@ -184,7 +185,7 @@
     <!-- LIBUR NASIONAL -->
     <div class="card">
       <h2>🕋 Pengingat H-1 libur nasional</h2>
-      <div class="desc">Sama dengan <code>/libur_reminder</code>. Dicek otomatis dari kalender publik Google tiap hari jam yang dipilih -- kalau BESOK libur nasional, pesan dikirim; kalau bukan, diam saja.</div>
+      <div class="desc">Sama dengan <code>/libur_reminder</code>. Dicek otomatis dari kalender publik Google tiap hari jam yang dipilih -- kalau BESOK libur nasional, pesan dikirim; kalau bukan, diam saja. <b>Fitur terkait (otomatis, tanpa perlu diatur di sini):</b> "Libur Internal" — bikin event sepanjang hari (all-day) di Google Calendar bot dengan judul diawali kata "LIBUR" (mis. "LIBUR: Cuti Bersama"). Di hari libur (nasional ATAU internal): polling &amp; rekap puasa dimatikan total, digest kalender tidak dikirim, reminder kajian ditunda ke hari kerja berikutnya.</div>
       <div class="row">
         <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
           <input type="checkbox" id="liburEnabled" style="width:auto;"> Aktifkan pengingat H-1
@@ -424,6 +425,7 @@ function renderPuasa(){
   document.getElementById("puasaOpt1").value = (p.options && p.options[0]) || "";
   document.getElementById("puasaOpt2").value = (p.options && p.options[1]) || "";
   document.getElementById("puasaTopic").value = p.topicKey || "";
+  document.getElementById("puasaRekapTime").value = p.rekapTime || "";
   const badge = document.getElementById("puasaBadge");
   badge.textContent = p.enabled ? "Aktif" : "Nonaktif";
   badge.className = "badge " + (p.enabled ? "on" : "off");
@@ -443,6 +445,7 @@ document.getElementById("savePuasaBtn").addEventListener("click", async ()=>{
   const opt1 = document.getElementById("puasaOpt1").value.trim();
   const opt2 = document.getElementById("puasaOpt2").value.trim();
   const topicKey = document.getElementById("puasaTopic").value || null;
+  const rekapTime = document.getElementById("puasaRekapTime").value || null;
   data.puasaPoll = {
     enabled: document.getElementById("puasaEnabled").checked,
     days,
@@ -450,6 +453,8 @@ document.getElementById("savePuasaBtn").addEventListener("click", async ()=>{
     question: question || null,
     options: (opt1 && opt2) ? [opt1, opt2] : [],
     topicKey,
+    rekapTime,
+    lastRekapSentDate: data.puasaPoll.lastRekapSentDate || null, // state internal, jangan ke-reset tiap simpan
   };
   if(await saveData()) renderPuasa();
 });
