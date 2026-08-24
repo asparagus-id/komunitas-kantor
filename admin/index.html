@@ -552,9 +552,18 @@
 <script>
 const HARI = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
 
+// Dipindah ke PALING ATAS dgn sengaja -- applyTheme() di bawah memakai
+// variabel `data` (dipanggil begitu halaman dibuka, sebelum login), jadi
+// `data` WAJIB sudah dideklarasikan lebih dulu di sini, bukan di bagian
+// bawah skrip spt sebelumnya (itu menyebabkan bug "Cannot access 'data'
+// before initialization" yang bikin SELURUH skrip berhenti di tengah
+// jalan -- akibatnya semua addEventListener di bawahnya, termasuk tombol
+// "Hubungkan", tidak pernah terpasang sama sekali).
+let data = null, sha = null;
+
 // Versi panel ini -- naikkan tiap kali ada perubahan berarti, cocokkan
 // dengan entri di CHANGELOG.md & WORKER_VERSION di worker-komunitas.js.
-const APP_VERSION = "2.0.2";
+const APP_VERSION = "2.0.3";
 const WORKER_URL_FOR_VERSION_CHECK = "https://gus-asisten.rempahecho.workers.dev";
 
 /* Cek versi worker LANGSUNG saat halaman dibuka, SEBELUM login (endpoint
@@ -657,7 +666,6 @@ setInterval(tickClock, 1000);
 
 const WORKER_URL = "https://gus-asisten.rempahecho.workers.dev";
 let APP_TOKEN = localStorage.getItem("admkom_token") || "";
-let data = null, sha = null;
 
 function toast(msg, isError){
   const t = document.getElementById("toast");
