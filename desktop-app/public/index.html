@@ -262,11 +262,40 @@
     -webkit-app-region: no-drag; /* biar tombolnya tetap bisa diklik, area drag ada di sekitarnya */
   }
   html.is-widget #widgetCloseBtn:hover{ background:rgba(201,162,39,.25); color:#fff; }
+
+  /* ====== Toast / notifikasi popup -- JELAS terlihat, bukan teks kecil ====== */
+  #toastWrap{
+    position:fixed; top:24px; left:50%; transform:translateX(-50%);
+    z-index:9999; display:flex; flex-direction:column; gap:10px;
+    align-items:center; pointer-events:none; width:min(92vw, 480px);
+  }
+  .toast{
+    pointer-events:auto;
+    display:flex; align-items:flex-start; gap:12px;
+    width:100%; padding:14px 16px; border-radius:12px;
+    background:linear-gradient(180deg, rgba(15,43,48,.98), rgba(8,22,25,.98));
+    border:1.5px solid var(--panel-line);
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
+    color:var(--text); font-size:14px; line-height:1.45;
+    animation:toastMasuk .25s ease-out;
+  }
+  .toast.ok{ border-color:var(--ok); }
+  .toast.err{ border-color:#e0723c; }
+  .toast .toast-ikon{ font-size:20px; flex-shrink:0; line-height:1.3; }
+  .toast .toast-teks{ flex:1; }
+  .toast .toast-tutup{
+    flex-shrink:0; cursor:pointer; color:var(--muted); font-size:18px;
+    line-height:1; background:none; border:none; padding:2px 4px;
+  }
+  .toast .toast-tutup:hover{ color:var(--text); }
+  @keyframes toastMasuk{ from{opacity:0; transform:translateY(-12px);} to{opacity:1; transform:translateY(0);} }
+  @keyframes toastKeluar{ from{opacity:1;} to{opacity:0; transform:translateY(-8px);} }
 </style>
 </head>
 <body>
 <div class="widget-frame"></div>
 <button id="widgetCloseBtn" style="display:none;" title="Sembunyikan widget">&times;</button>
+<div id="toastWrap" aria-live="polite"></div>
 <script>
   // Deteksi mode widget SEBELUM apa pun lain dirender, supaya tidak sempat
   // "kelap-kelip" tampilan penuh lalu baru mengecil.
@@ -446,7 +475,7 @@
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.5.1"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
+const APP_VERSION = "1.5.4"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -490,6 +519,38 @@ function loadSettings(){
 function saveSettings(){
   localStorage.setItem("adzan_settings", JSON.stringify(settings));
 }
+
+/* ---------------- Sinkron Pengaturan ANTAR JENDELA (khusus versi desktop) ----------------
+   Jendela utama & widget itu 2 WINDOW TERPISAH (walau berbagi localStorage
+   yang sama) -- masing-masing cuma baca `settings` SEKALI waktu pertama
+   dimuat. Jadi kalau widget sudah lebih dulu terbuka SEBELUM lokasi diatur
+   di jendela utama, widget tidak akan tahu ada perubahan kecuali di-refresh
+   manual. Ini bikin dia otomatis update sendiri begitu ada perubahan. */
+let terakhirDiketahuiSettingsRaw = localStorage.getItem("adzan_settings");
+function terapkanSettingsTerbaru(){
+  settings = loadSettings();
+  const cityEl = document.getElementById("cityLabel");
+  if (cityEl) cityEl.textContent = settings.city || "Lokasi belum diatur";
+  // paksa jadwal diambil ulang -- lat/lng bisa saja sudah berubah, jadi
+  // jadwal lama (kalau ada) tidak boleh dipakai lagi begitu saja.
+  todaySchedule = null; tomorrowSchedule = null; scheduleDateStr = null;
+  ensureScheduleForToday();
+}
+// Cara 1: event "storage" bawaan browser -- otomatis terpicu di jendela
+// LAIN begitu localStorage diubah oleh salah satu jendela.
+window.addEventListener("storage", function(e){
+  if (e.key === "adzan_settings") terapkanSettingsTerbaru();
+});
+// Cara 2: polling tiap 5 detik sbg jaring pengaman -- beberapa webview
+// window Tauri yang terpisah kadang tidak konsisten memicu event
+// "storage" spt tab browser biasa, jadi dicek manual juga.
+setInterval(function(){
+  const raw = localStorage.getItem("adzan_settings");
+  if (raw !== terakhirDiketahuiSettingsRaw){
+    terakhirDiketahuiSettingsRaw = raw;
+    terapkanSettingsTerbaru();
+  }
+}, 5000);
 function loadTriggerLog(){
   try{ return JSON.parse(localStorage.getItem("adzan_trigger_log")||"{}"); }
   catch(e){ return {}; }
@@ -561,6 +622,45 @@ function playChime(kind){
   });
 }
 
+/* ---------------- Toast / popup notifikasi ---------------- */
+function showToast(pesan, tipe){ // tipe: "ok" | "err" | undefined(netral)
+  const wrap = document.getElementById("toastWrap");
+  const el = document.createElement("div");
+  el.className = "toast" + (tipe ? " " + tipe : "");
+  const ikon = tipe === "ok" ? "✅" : tipe === "err" ? "⚠️" : "ℹ️";
+  el.innerHTML = `<span class="toast-ikon">${ikon}</span><span class="toast-teks"></span><button class="toast-tutup" aria-label="Tutup">&times;</button>`;
+  el.querySelector(".toast-teks").textContent = pesan; // textContent -- aman dari HTML injection
+  wrap.appendChild(el);
+  const hapus = () => {
+    el.style.animation = "toastKeluar .2s ease-in forwards";
+    setTimeout(() => el.remove(), 200);
+  };
+  el.querySelector(".toast-tutup").addEventListener("click", hapus);
+  setTimeout(hapus, 4500);
+}
+
+/* ---------------- Uji coba suara -- bisa di-BERHENTI-kan, bukan cuma play ---------------- */
+let sedangUjiCoba = null; // null | "reminder" | "azan" -- kind yg lagi diputar lewat tombol Uji coba
+function updateTombolUjiCoba(){
+  const btnReminder = document.getElementById("testReminder");
+  const btnAzan = document.getElementById("testAzan");
+  btnReminder.textContent = sedangUjiCoba === "reminder" ? "⏸ Berhenti" : "▶ Uji coba";
+  btnAzan.textContent = sedangUjiCoba === "azan" ? "⏸ Berhenti" : "▶ Uji coba";
+}
+function berhentiUjiCoba(){
+  const audioEl = document.getElementById("audioEl");
+  audioEl.pause();
+  sedangUjiCoba = null;
+  updateTombolUjiCoba();
+}
+async function toggleUjiCoba(kind){
+  if (sedangUjiCoba === kind){ berhentiUjiCoba(); return; }
+  sedangUjiCoba = kind;
+  updateTombolUjiCoba();
+  await playSound(kind);
+}
+document.getElementById("audioEl").addEventListener("ended", () => { sedangUjiCoba = null; updateTombolUjiCoba(); });
+
 async function playSound(kind){ // kind: "reminder" | "azan"
   const key = kind === "reminder" ? "reminderAudio" : "azanAudio";
   const urlKey = kind === "reminder" ? "reminderAudioUrl" : "azanAudioUrl";
@@ -599,6 +699,7 @@ async function fetchAudioFromUrl(kind, url, statusEl){
     localStorage.removeItem(urlKey); // sudah tersimpan sbg file, tak perlu simpan url lagi
     statusEl.textContent = "✓ Berhasil diunduh & disimpan offline.";
     statusEl.className = "link-status ok";
+    showToast((kind === "reminder" ? "Suara pengingat" : "Suara adzan/takbir") + " berhasil diunduh dari link & disimpan offline.", "ok");
   }catch(e){
     // biasanya gagal karena CORS diblokir server sumbernya -- simpan URL
     // saja, tetap bisa diputar langsung (streaming) walau tidak bisa
@@ -607,6 +708,7 @@ async function fetchAudioFromUrl(kind, url, statusEl){
     await idbDelete(idbKey).catch(()=>{});
     statusEl.textContent = "⚠ Tidak bisa diunduh untuk offline (kemungkinan dibatasi CORS oleh sumbernya), tapi link disimpan & tetap bisa diputar selama online.";
     statusEl.className = "link-status err";
+    showToast("Tidak bisa mengunduh file dari link itu (kemungkinan dibatasi CORS oleh server sumbernya). Link tetap disimpan & bisa diputar selama online.", "err");
   }
   refreshAudioStatus();
 }
@@ -1028,21 +1130,43 @@ function refreshAudioStatus(){
 }
 document.getElementById("fileReminder").addEventListener("change", async (e)=>{
   const f = e.target.files[0]; if(!f) return;
-  await idbSet("reminderAudio", f); localStorage.removeItem("reminderAudioUrl"); refreshAudioStatus();
+  if (!f.type.startsWith("audio")){
+    showToast("File yang dipilih bukan berkas audio (" + (f.type || "tipe tidak dikenali") + "). Coba pilih file .mp3 yang lain.", "err");
+    e.target.value = "";
+    return;
+  }
+  try{
+    await idbSet("reminderAudio", f); localStorage.removeItem("reminderAudioUrl"); refreshAudioStatus();
+    showToast("Suara pengingat berhasil diunggah: " + f.name, "ok");
+  }catch(err){
+    showToast("Gagal menyimpan file: " + String(err.message || err), "err");
+  }
 });
 document.getElementById("fileAzan").addEventListener("change", async (e)=>{
   const f = e.target.files[0]; if(!f) return;
-  await idbSet("azanAudio", f); localStorage.removeItem("azanAudioUrl"); refreshAudioStatus();
+  if (!f.type.startsWith("audio")){
+    showToast("File yang dipilih bukan berkas audio (" + (f.type || "tipe tidak dikenali") + "). Coba pilih file .mp3 yang lain.", "err");
+    e.target.value = "";
+    return;
+  }
+  try{
+    await idbSet("azanAudio", f); localStorage.removeItem("azanAudioUrl"); refreshAudioStatus();
+    showToast("Suara adzan/takbir berhasil diunggah: " + f.name, "ok");
+  }catch(err){
+    showToast("Gagal menyimpan file: " + String(err.message || err), "err");
+  }
 });
 document.getElementById("clearReminder").addEventListener("click", async ()=>{
   await idbDelete("reminderAudio"); localStorage.removeItem("reminderAudioUrl");
   document.getElementById("urlReminder").value = ""; document.getElementById("linkStatusReminder").textContent = "";
   refreshAudioStatus();
+  showToast("Suara pengingat dihapus, kembali ke nada default.", "ok");
 });
 document.getElementById("clearAzan").addEventListener("click", async ()=>{
   await idbDelete("azanAudio"); localStorage.removeItem("azanAudioUrl");
   document.getElementById("urlAzan").value = ""; document.getElementById("linkStatusAzan").textContent = "";
   refreshAudioStatus();
+  showToast("Suara adzan/takbir dihapus, kembali ke nada default.", "ok");
 });
 document.getElementById("fetchReminder").addEventListener("click", ()=>{
   const url = document.getElementById("urlReminder").value.trim();
@@ -1118,11 +1242,11 @@ document.getElementById("syncNowBtn").addEventListener("click", async ()=>{
   btn.disabled = false;
   btn.textContent = "Sinkronkan jadwal sekarang";
   refreshOfflineCoverage();
-  if(!navigator.onLine) alert("Tidak ada koneksi internet saat ini.");
-  else if(!ok) alert("Cadangan sudah lengkap, tidak ada yang perlu diunduh ulang.");
+  if(!navigator.onLine) showToast("Tidak ada koneksi internet saat ini.", "err");
+  else if(!ok) showToast("Cadangan sudah lengkap, tidak ada yang perlu diunduh ulang.");
 });
-document.getElementById("testReminder").addEventListener("click", ()=>playSound("reminder"));
-document.getElementById("testAzan").addEventListener("click", ()=>playSound("azan"));
+document.getElementById("testReminder").addEventListener("click", ()=>toggleUjiCoba("reminder"));
+document.getElementById("testAzan").addEventListener("click", ()=>toggleUjiCoba("azan"));
 document.getElementById("inVolume").addEventListener("input", (e)=>{
   document.getElementById("volumeVal").textContent = e.target.value+"%";
 });

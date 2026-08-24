@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "Pengingat Sholat",
-    "version": "1.5.2"
+    "version": "1.5.4"
   },
   "tauri": {
     "allowlist": {
@@ -39,7 +39,7 @@
         "https://github.com/asparagus-id/komunitas-kantor/releases/latest/download/latest.json"
       ],
       "dialog": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IGpbmlzaWduIHB1YmxpYyBrZXk6IDc2MEFDQ0JFOEUyMjE1RjAKU1dUd0ZTS092c3dLZGt3STE2czJsSU9OM01kZUFndC94NjVTRGJFZm1hZ31xcFBDam9uQ1RGWGUK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk3OUQ0NEQxRDc0REZDNjMKUldSai9FM1gwVVNkbC91bnNZTzhyN0FhS1ZjMmd6SkN4TldDUG5VTHRicm1TV1Q4M21Pay9YNjMK"
     },
     "systemTray": {
       "iconPath": "icons/icon.ico",
@@ -47,7 +47,7 @@
     },
     "bundle": {
       "active": true,
-      "targets": ["msi", "nsis"],
+      "targets": ["msi", "nsis", "updater"],
       "identifier": "com.rempahecho.pengingatsholat",
       "icon": [
         "icons/32x32.png",
