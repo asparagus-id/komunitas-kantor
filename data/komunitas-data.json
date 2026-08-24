@@ -40,50 +40,6 @@
   "puasaVariantQueuePoolSize": 0,
   "kajian": [
     {
-      "id": 1787504664944,
-      "tanggal": "2026-06-19",
-      "pengisi": "Tangguh",
-      "tema": "Kajian Hadist Arbain Nawawi",
-      "remindersSent": [
-        7,
-        0
-      ],
-      "googleEventId": "2thdcp16va8dtaf0da06l9acp0"
-    },
-    {
-      "id": 1787504813256,
-      "tanggal": "2026-06-19",
-      "pengisi": "Tangguh",
-      "tema": "Hadist Arbain Nawawi 1",
-      "remindersSent": [
-        7,
-        0
-      ],
-      "googleEventId": "sdmahtqp3r76bujp1b71qs9js4"
-    },
-    {
-      "id": 1787504665603,
-      "tanggal": "2026-07-24",
-      "pengisi": "Mila",
-      "tema": "Kajian Hadist Arbain Nawawi",
-      "remindersSent": [
-        7,
-        0
-      ],
-      "googleEventId": "vu5airaboaa3fnaunrsgcldd1k"
-    },
-    {
-      "id": 1787504813847,
-      "tanggal": "2026-07-24",
-      "pengisi": "Mila",
-      "tema": "Hadist Arbain Nawawi 2",
-      "remindersSent": [
-        7,
-        0
-      ],
-      "googleEventId": "mupio08m9lerd3chiq4phatdos"
-    },
-    {
       "id": 1787504666164,
       "tanggal": "2026-08-20",
       "pengisi": "Edwin",
@@ -189,5 +145,5 @@
     }
   },
   "lastPuasaPollSentDate": "2026-08-24",
-  "lastKajianCheckDate": "2026-08-24"
+  "lastKajianCheckDate": "2026-08-25"
 }
