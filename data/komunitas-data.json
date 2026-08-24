@@ -149,7 +149,12 @@
     "2026-08-24": {
       "pollId": "6080341675748623395",
       "threadId": 9028,
-      "answers": {}
+      "answers": {
+        "1244930074": {
+          "name": "Mila Paramita",
+          "choice": 1
+        }
+      }
     }
   },
   "lastPuasaPollSentDate": "2026-08-24",
