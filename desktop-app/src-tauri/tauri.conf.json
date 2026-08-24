@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "Pengingat Sholat",
-    "version": "1.6.0"
+    "version": "1.8.1"
   },
   "tauri": {
     "allowlist": {
@@ -87,6 +87,22 @@
         "fileDropEnabled": false,
         "visible": false,
         "url": "index.html?widget=1"
+      },
+      {
+        "label": "reminder",
+        "title": "Pengingat Sholat",
+        "width": 440,
+        "height": 60,
+        "x": 740,
+        "y": 16,
+        "resizable": false,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "transparent": true,
+        "fileDropEnabled": false,
+        "visible": false,
+        "url": "index.html?popup=1"
       }
     ]
   }
