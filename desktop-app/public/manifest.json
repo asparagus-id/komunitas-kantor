@@ -4,7 +4,7 @@
   "start_url": "./index.html",
   "display": "fullscreen",
   "orientation": "any",
-  "background_color": "#081619",
-  "theme_color": "#0f2b30",
+  "background_color": "#f5f6f8",
+  "theme_color": "#0f7666",
   "description": "Pengingat waktu adzan untuk layar kantor, dengan suara pengingat & takbir otomatis."
 }

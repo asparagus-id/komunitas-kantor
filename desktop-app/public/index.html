@@ -7,44 +7,54 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="manifest" href="./manifest.json">
-<meta name="theme-color" content="#0f2b30">
+<meta name="theme-color" content="#0f7666">
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700;800&family=Inter+Tight:wght@600;700;800&display=swap" rel="stylesheet">
+<script>
+// Anti-kedip tema: diterapkan SEBELUM CSS/halaman sempat dirender.
+(function(){
+  try{
+    var pref = localStorage.getItem("adzan_theme") || "auto";
+    var eff = (pref === "light" || pref === "dark") ? pref
+      : (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    document.documentElement.setAttribute("data-theme", eff);
+  }catch(e){}
+})();
+</script>
 <style>
-  :root{
-    --bg-1:#081619;
-    --bg-2:#0f2b30;
-    --panel:#12363d;
-    --panel-line:#1e4a52;
-    --gold:#c9a227;
-    --gold-soft:#e0c368;
-    --ember:#e0723c;
-    --text:#f5f1e6;
-    --muted:#7fa5a3;
-    --muted-dim:#4c6c6a;
-    --ok:#6fbf8b;
+  /* ================= TEMA ================= */
+  :root, [data-theme="light"]{
+    --primary:#0f7666; --primary-dark:#0b5c50; --primary-50:#e6f4f1;
+    --gold:#c9a227; --gold-soft:#a5760b; --gold-light:#fff4d6;
+    --bg:#f5f6f8; --surface:#ffffff; --surface-2:#f8f9fb;
+    --text:#0f172a; --muted:#64748b; --muted-dim:#94a3b8;
+    --line:#e2e8f0; --success:#16a34a; --warning:#dc2626;
+    --radius:14px; --shadow:0 4px 16px rgba(15,23,42,.06);
+    --shadow-lg:0 20px 50px -12px rgba(15,23,42,.18);
+    --on-primary:#ffffff; --on-gold:#ffffff;
+    color-scheme: light;
+  }
+  [data-theme="dark"]{
+    --primary:#34d0b6; --primary-dark:#1fa88f; --primary-50:#123230;
+    --gold:#e0c368; --gold-soft:#c9a227; --gold-light:#3a3116;
+    --bg:#0a1413; --surface:#12211f; --surface-2:#0e1a19;
+    --text:#eef6f4; --muted:#8fa8a3; --muted-dim:#5c7671;
+    --line:#204340; --success:#4ade80; --warning:#f87171;
+    --radius:14px; --shadow:0 4px 20px rgba(0,0,0,.35);
+    --shadow-lg:0 24px 60px -14px rgba(0,0,0,.6);
+    --on-primary:#062825; --on-gold:#2a2205;
+    color-scheme: dark;
   }
   *{box-sizing:border-box;}
-  html,body{height:100%;}
+  html,body{height:100%; margin:0;}
   body{
-    margin:0;
-    min-height:100vh;
-    background:
-      radial-gradient(ellipse 120% 80% at 50% -10%, var(--bg-2), var(--bg-1) 60%);
-    color:var(--text);
-    font-family:'Inter',system-ui,sans-serif;
-    overflow-x:hidden;
-    -webkit-font-smoothing:antialiased;
-    transition:background-color 3s ease;
+    min-height:100vh; background:var(--bg); color:var(--text);
+    font-family:'Inter',system-ui,sans-serif; overflow-x:hidden;
+    -webkit-font-smoothing:antialiased; transition:background-color .3s, color .3s;
   }
-  /* ---------- lapisan langit ambient, bergeser lembut sesuai waktu ---------- */
-  #sky{
-    position:fixed; inset:0; z-index:0; pointer-events:none;
-    background:linear-gradient(180deg, var(--sky-top,#0f2b30) 0%, transparent 55%);
-    opacity:.6;
-    transition:background 8s ease;
-  }
-  #stars{
-    position:fixed; inset:0; z-index:0; pointer-events:none; opacity:var(--star-op,0);
+  /* ---------- ambient sky (cuma aktif nuansa gelap; disembunyikan total di tema terang) ---------- */
+  #sky{position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.5; transition:background 8s ease;
+    background:linear-gradient(180deg, var(--sky-top,#123139) 0%, transparent 55%);}
+  #stars{position:fixed; inset:0; z-index:0; pointer-events:none; opacity:var(--star-op,0); transition:opacity 8s ease;
     background-image:
       radial-gradient(1.5px 1.5px at 20% 30%, #fff, transparent),
       radial-gradient(1px 1px at 70% 15%, #fff, transparent),
@@ -52,295 +62,304 @@
       radial-gradient(1.5px 1.5px at 85% 45%, #fff, transparent),
       radial-gradient(1px 1px at 10% 75%, #fff, transparent),
       radial-gradient(1px 1px at 55% 85%, #fff, transparent),
-      radial-gradient(1.5px 1.5px at 90% 80%, #fff, transparent);
-    transition:opacity 8s ease;
+      radial-gradient(1.5px 1.5px at 90% 80%, #fff, transparent);}
+  [data-theme="light"] #sky, [data-theme="light"] #stars{display:none;}
+
+  .app{position:relative; z-index:1; min-height:100vh; display:flex; flex-direction:column;}
+
+  /* ================= HEADER ================= */
+  .header{
+    display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+    padding:16px 26px; background:var(--surface); border-bottom:1px solid var(--line);
   }
-
-  .wrap{position:relative; z-index:1; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:28px 20px 40px;}
-
-  /* ---------- top bar ---------- */
-  .topbar{width:100%; max-width:980px; display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:28px; flex-wrap:wrap;}
-  .place{display:flex; flex-direction:column; gap:2px;}
-  .place .city{font-family:'Inter Tight',sans-serif; font-weight:700; font-size:15px; letter-spacing:.02em;}
-  .place .date{font-size:12.5px; color:var(--muted);}
-  .status{display:flex; align-items:center; gap:14px;}
-  .dot-status{display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted);}
-  .dot{width:7px;height:7px;border-radius:50%; background:var(--muted-dim);}
-  .dot.on{background:var(--ok); box-shadow:0 0 6px var(--ok);}
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand .mark{width:42px; height:42px; border-radius:12px; background:var(--primary-50); color:var(--primary);
+    display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0;}
+  .brand b{display:block; font-family:'Inter Tight',sans-serif; font-size:16px;}
+  .brand span{display:block; font-size:11.5px; color:var(--muted);}
+  .header-mid{display:flex; align-items:center; gap:22px; flex-wrap:wrap;}
+  .head-stat{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted);}
+  .head-stat .stv{color:var(--text); font-weight:600; display:block; font-size:13px;}
+  .head-stat .icn{width:16px; height:16px; flex-shrink:0; opacity:.7;}
+  .dot{width:7px;height:7px;border-radius:50%; background:var(--muted-dim); flex-shrink:0;}
+  .dot.on{background:var(--success); box-shadow:0 0 6px var(--success);}
+  .header-actions{display:flex; align-items:center; gap:8px;}
   .icon-btn{
-    width:38px;height:38px; border-radius:50%; border:1px solid var(--panel-line);
-    background:rgba(255,255,255,.03); color:var(--muted); cursor:pointer;
-    display:flex; align-items:center; justify-content:center; transition:.2s;
+    width:38px;height:38px; border-radius:10px; border:1px solid var(--line);
+    background:var(--surface-2); color:var(--muted); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; transition:.15s;
   }
-  .icon-btn:hover{color:var(--text); border-color:var(--gold); background:rgba(201,162,39,.08);}
+  .icon-btn:hover{color:var(--primary); border-color:var(--primary);}
   .icon-btn svg{width:17px;height:17px;}
+  .theme-toggle{display:flex; gap:2px; background:var(--surface-2); border:1px solid var(--line); border-radius:999px; padding:3px;}
+  .theme-toggle button{border:none; background:transparent; color:var(--muted); font-size:13px; width:28px; height:28px;
+    border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:.15s;}
+  .theme-toggle button:hover{color:var(--text);}
+  .theme-toggle button.active{background:var(--primary); color:var(--on-primary);}
 
-  /* ---------- kartu utama: lengkung mihrab ---------- */
-  .mihrab{
-    position:relative;
-    width:min(92vw,460px);
-    padding:44px 30px 34px;
-    text-align:center;
-    background:linear-gradient(180deg, rgba(201,162,39,.06), rgba(255,255,255,.015));
-    border:1px solid var(--panel-line);
-    border-top:1px solid rgba(201,162,39,.35);
-    border-radius:230px 230px 18px 18px;
-    box-shadow:0 30px 60px -20px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.02);
+  /* ================= LAYOUT UTAMA ================= */
+  .content{flex:1; display:flex; gap:22px; padding:22px 26px 34px; max-width:1400px; margin:0 auto; width:100%; align-items:flex-start;}
+  .main-col{flex:1; min-width:0;}
+
+  /* ---------- kartu sholat berikutnya ---------- */
+  .prayer-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:20px;
+    box-shadow:var(--shadow); padding:30px 32px; display:flex; align-items:center; gap:32px; flex-wrap:wrap;
   }
-  .mihrab::before{
-    content:"";
-    position:absolute; left:14px; right:14px; top:14px; bottom:14px;
-    border:1px solid rgba(201,162,39,.22);
-    border-top-color:rgba(201,162,39,.5);
-    border-radius:200px 200px 8px 8px;
-    pointer-events:none;
+  .prayer-illustration{width:190px; flex-shrink:0; position:relative;}
+  .prayer-illustration img{width:100%; display:block; filter:drop-shadow(0 12px 20px rgba(15,23,42,.12));}
+  [data-theme="dark"] .prayer-illustration img{filter:drop-shadow(0 12px 24px rgba(0,0,0,.5)) brightness(.92);}
+  .prayer-info{flex:1; min-width:220px;}
+  .label-next{font-size:11.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold-soft); font-weight:700;}
+  .prayer-name{font-family:'Amiri',serif; font-weight:700; font-size:42px; line-height:1.1; margin:8px 0 2px; color:var(--primary);}
+  [data-theme="dark"] .prayer-name{color:var(--primary);}
+  .prayer-clock{font-size:14px; color:var(--muted); margin-bottom:16px;}
+  .prayer-clock b{color:var(--text); font-size:16px;}
+  .countdown-box{
+    display:inline-flex; align-items:center; gap:14px; background:var(--gold-light);
+    border:1px solid rgba(201,162,39,.35); border-radius:14px; padding:14px 22px;
   }
-  .label-next{font-size:11.5px; letter-spacing:.22em; text-transform:uppercase; color:var(--gold-soft); font-weight:600;}
-  .prayer-name{
-    font-family:'Amiri',serif; font-weight:700; font-size:44px; line-height:1.1;
-    margin:10px 0 2px; color:var(--text);
-  }
-  .prayer-clock{font-size:13px; color:var(--muted); margin-bottom:20px;}
+  .countdown-box .icn{width:26px; height:26px; color:var(--gold-soft); flex-shrink:0;}
   .countdown{
     font-variant-numeric:tabular-nums; font-feature-settings:"tnum";
-    font-family:'Inter Tight',sans-serif; font-weight:800;
-    font-size:clamp(38px,9vw,56px); letter-spacing:.01em; color:var(--gold);
-    text-shadow:0 0 30px rgba(201,162,39,.25);
+    font-family:'Inter Tight',sans-serif; font-weight:800; font-size:clamp(26px,4vw,34px);
+    color:var(--gold-soft); line-height:1;
   }
-  .countdown.urgent{color:var(--ember); text-shadow:0 0 30px rgba(224,114,60,.35);}
-  .countdown-label{font-size:11px; color:var(--muted); letter-spacing:.12em; text-transform:uppercase; margin-top:6px;}
-  .now-badge{
-    display:inline-block; margin-top:14px; padding:6px 16px; border-radius:999px;
-    background:rgba(111,191,139,.12); border:1px solid rgba(111,191,139,.35);
-    color:var(--ok); font-size:12.5px; font-weight:600; letter-spacing:.03em;
-  }
+  .countdown.urgent{color:var(--warning);}
+  .countdown-label{font-size:11px; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; margin-top:3px;}
+  .now-badge{display:inline-block; margin-top:12px; padding:6px 16px; border-radius:999px;
+    background:rgba(22,163,74,.12); border:1px solid rgba(22,163,74,.35); color:var(--success);
+    font-size:12.5px; font-weight:600;}
 
-  /* ---------- daftar waktu hari ini ---------- */
-  .schedule{
-    width:100%; max-width:980px; margin-top:34px;
-    display:grid; grid-template-columns:repeat(6,1fr); gap:10px;
-  }
-  @media (max-width:760px){ .schedule{grid-template-columns:repeat(3,1fr);} }
-  .slot{
-    background:var(--panel); border:1px solid var(--panel-line); border-radius:14px;
-    padding:14px 10px; text-align:center; transition:.25s;
-  }
-  .slot .sname{font-size:11.5px; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; margin-bottom:6px;}
-  .slot .stime{font-family:'Inter Tight',sans-serif; font-weight:700; font-size:18px;}
-  .slot.done{opacity:.4;}
-  .slot.next{border-color:var(--gold); background:linear-gradient(180deg, rgba(201,162,39,.14), rgba(201,162,39,.03));}
-  .slot.next .stime{color:var(--gold-soft);}
-  .slot.muted{opacity:.55;}
-  .slot .rem{font-size:10px; color:var(--muted-dim); margin-top:4px;}
+  /* ---------- tabel jadwal ---------- */
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:20px; box-shadow:var(--shadow); padding:22px 24px; margin-top:18px;}
+  .card h3{font-family:'Inter Tight',sans-serif; font-size:15px; margin:0 0 14px; letter-spacing:.02em;}
+  table.sched{width:100%; border-collapse:collapse; font-size:14px;}
+  table.sched th{text-align:left; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em;
+    padding:8px 10px; border-bottom:1px solid var(--line); font-weight:600;}
+  table.sched td{padding:12px 10px; border-bottom:1px solid var(--line); vertical-align:middle;}
+  table.sched tr:last-child td{border-bottom:none;}
+  table.sched tr.next td{background:var(--gold-light);}
+  table.sched tr.next td:first-child{border-left:3px solid var(--gold); border-radius:6px 0 0 6px;}
+  .sname-cell{display:flex; align-items:center; gap:10px; font-weight:600;}
+  .sname-cell .semoji{font-size:16px;}
+  .stime{font-family:'Inter Tight',sans-serif; font-weight:700; font-size:14.5px;}
+  .sstatus{display:inline-flex; align-items:center; gap:6px; font-size:12.5px;}
+  .sstatus.done{color:var(--success);}
+  .sstatus.next{color:var(--gold-soft); font-weight:700;}
+  .sstatus.wait{color:var(--muted);}
+  tr.row-muted{opacity:.5;}
+  .rem-note{font-size:10.5px; color:var(--muted-dim); margin-top:2px;}
 
-  .footnote{margin-top:22px; font-size:11.5px; color:var(--muted-dim); text-align:center; max-width:560px;}
-  .version-tag{margin-top:8px; font-size:10.5px; color:var(--muted-dim); opacity:.6; letter-spacing:.04em;}
-  .version-tag.update-available{color:var(--gold-soft); opacity:1; cursor:pointer; text-decoration:underline;}
+  /* ---------- kartu info bawah ---------- */
+  .info-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:18px;}
+  @media (max-width:820px){.info-grid{grid-template-columns:1fr;}}
+  .info-card{background:var(--surface); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow);
+    padding:16px 18px; display:flex; align-items:flex-start; gap:12px;}
+  .info-card .iicn{width:36px; height:36px; border-radius:10px; background:var(--primary-50); color:var(--primary);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .info-card .iicn svg{width:18px; height:18px;}
+  .info-card .ititle{font-size:11.5px; color:var(--muted); margin-bottom:2px;}
+  .info-card .ival{font-family:'Inter Tight',sans-serif; font-weight:700; font-size:14.5px;}
+  .info-card .isub{font-size:11px; color:var(--muted-dim); margin-top:2px;}
+  .status-on{color:var(--success) !important;}
+  .status-off{color:var(--warning) !important;}
 
-  /* ---------- modal pengaturan ---------- */
-  .overlay{position:fixed; inset:0; background:rgba(4,10,11,.72); backdrop-filter:blur(3px); z-index:20; display:none; align-items:flex-start; justify-content:center; padding:5vh 16px; overflow-y:auto;}
-  .overlay.open{display:flex;}
+  .quote-box{margin-top:18px; padding:16px 20px; background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    display:flex; gap:12px; align-items:flex-start; font-size:13px; color:var(--muted); line-height:1.6;}
+  .quote-box .qmark{font-size:22px; color:var(--gold); flex-shrink:0; line-height:1;}
+  .quote-box b{color:var(--text); display:block;}
+
+  .version-tag{margin-top:16px; font-size:10.5px; color:var(--muted-dim); text-align:center;}
+  .version-tag.update-available{color:var(--gold-soft); cursor:pointer; text-decoration:underline;}
+
+  /* ================= PANEL PENGATURAN (drawer kanan, bertab) ================= */
+  .overlay{position:fixed; inset:0; background:rgba(15,23,42,.35); z-index:20; display:none;}
+  .overlay.open{display:block;}
+  [data-theme="dark"] .overlay{background:rgba(0,0,0,.55);}
   .panel{
-    width:100%; max-width:560px; background:#0e2a2f; border:1px solid var(--panel-line);
-    border-radius:20px; padding:26px 24px 24px; margin-bottom:5vh;
+    position:fixed; top:0; right:0; height:100vh; width:min(420px,92vw);
+    background:var(--surface); border-left:1px solid var(--line); box-shadow:var(--shadow-lg);
+    display:flex; flex-direction:column; transform:translateX(100%); transition:transform .25s ease;
   }
-  .panel h2{font-family:'Inter Tight',sans-serif; font-size:19px; margin:0 0 4px;}
-  .panel .sub{font-size:12.5px; color:var(--muted); margin-bottom:22px;}
+  .overlay.open .panel{transform:translateX(0);}
+  .panel-head{display:flex; align-items:center; justify-content:space-between; padding:20px 22px 14px; border-bottom:1px solid var(--line);}
+  .panel-head h2{font-family:'Inter Tight',sans-serif; font-size:15px; margin:0; letter-spacing:.06em; text-transform:uppercase;}
+  .panel-close{width:30px; height:30px; border-radius:50%; border:none; background:var(--surface-2); color:var(--muted);
+    cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px;}
+  .panel-close:hover{color:var(--text);}
+  .tabs{display:flex; gap:6px; padding:14px 18px 0;}
+  .tab-btn{flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; padding:10px 4px;
+    border:1px solid var(--line); background:var(--surface-2); border-radius:12px; cursor:pointer; color:var(--muted);
+    font-size:11px; transition:.15s;}
+  .tab-btn svg{width:16px; height:16px;}
+  .tab-btn.active{border-color:var(--primary); color:var(--primary); background:var(--primary-50); font-weight:700;}
+  .tab-panes{flex:1; overflow-y:auto; padding:18px 22px 10px;}
+  .tab-pane{display:none;}
+  .tab-pane.active{display:block;}
+  .panel .sub{font-size:12px; color:var(--muted); margin-bottom:16px;}
   .field-row{display:flex; gap:10px; margin-bottom:14px;}
   .field{flex:1; display:flex; flex-direction:column; gap:6px;}
-  .field label{font-size:11.5px; color:var(--muted); letter-spacing:.03em;}
+  .field label{font-size:11.5px; color:var(--muted); letter-spacing:.02em;}
   .field input, .field select{
-    background:#0a1f23; border:1px solid var(--panel-line); color:var(--text);
+    background:var(--surface-2); border:1px solid var(--line); color:var(--text);
     border-radius:9px; padding:9px 11px; font-size:13.5px; font-family:inherit;
   }
-  .field input:focus, .field select:focus{outline:none; border-color:var(--gold);}
-  .section-title{font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--gold-soft); margin:22px 0 10px; font-weight:600;}
+  .field input:focus, .field select:focus{outline:none; border-color:var(--primary);}
+  .section-title{font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--gold-soft); margin:18px 0 10px; font-weight:700;}
   .day-grid{display:flex; flex-direction:column; gap:7px;}
-  .day-row{display:flex; align-items:center; gap:10px; background:#0a1f23; border:1px solid var(--panel-line); border-radius:10px; padding:8px 12px;}
-  .day-row .dname{width:56px; font-size:12.5px; color:var(--text);}
-  .day-row input[type=number]{width:56px; padding:6px 8px; font-size:13px;}
-  .day-row .unit{font-size:11.5px; color:var(--muted);}
-  .day-row.special{border-color:rgba(201,162,39,.4); background:rgba(201,162,39,.06);}
-  .prayer-row{background:#0a1f23; border:1px solid var(--panel-line); border-radius:12px; padding:12px 14px; margin-bottom:8px; transition:.15s;}
+  .day-row{display:flex; align-items:center; gap:10px; background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:8px 12px;}
+  .prayer-row{background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:8px; transition:.15s;}
   .prayer-row.off{opacity:.5;}
   .prayer-row-top{display:flex; align-items:center; justify-content:space-between; gap:10px;}
-  .prayer-row-name{font-family:'Inter Tight',sans-serif; font-weight:700; font-size:14.5px;}
+  .prayer-row-name{font-family:'Inter Tight',sans-serif; font-weight:700; font-size:14px;}
   .switch{position:relative; width:40px; height:22px; flex-shrink:0;}
   .switch input{opacity:0; width:0; height:0;}
-  .switch-track{position:absolute; inset:0; background:#1e4a52; border-radius:999px; cursor:pointer; transition:.2s;}
-  .switch-track::before{content:""; position:absolute; width:16px; height:16px; left:3px; top:3px; background:#7fa5a3; border-radius:50%; transition:.2s;}
+  .switch-track{position:absolute; inset:0; background:var(--line); border-radius:999px; cursor:pointer; transition:.2s;}
+  .switch-track::before{content:""; position:absolute; width:16px; height:16px; left:3px; top:3px; background:var(--muted); border-radius:50%; transition:.2s;}
   .switch input:checked + .switch-track{background:rgba(201,162,39,.35);}
   .switch input:checked + .switch-track::before{transform:translateX(18px); background:var(--gold);}
   .prayer-row-sub{display:flex; align-items:center; gap:8px; margin-top:10px; font-size:12.5px; color:var(--muted);}
-  .prayer-row-sub input{width:56px; padding:6px 8px; font-size:13px; background:#08181b; border:1px solid var(--panel-line); border-radius:8px; color:var(--text);}
-  .friday-override{display:flex; align-items:center; gap:8px; margin-top:8px; padding-top:8px; border-top:1px dashed var(--panel-line); font-size:12px; color:var(--gold-soft);}
-  .friday-override input{width:50px; padding:5px 7px; font-size:12.5px; background:#08181b; border:1px solid rgba(201,162,39,.35); border-radius:8px; color:var(--text);}
-  .audio-block{background:#0a1f23; border:1px solid var(--panel-line); border-radius:12px; padding:14px; margin-bottom:10px;}
+  .prayer-row-sub input{width:56px; padding:6px 8px; font-size:13px; background:var(--surface); border:1px solid var(--line); border-radius:8px; color:var(--text);}
+  .friday-override{display:flex; align-items:center; gap:8px; margin-top:8px; padding-top:8px; border-top:1px dashed var(--line); font-size:12px; color:var(--gold-soft);}
+  .friday-override input{width:50px; padding:5px 7px; font-size:12.5px; background:var(--surface); border:1px solid rgba(201,162,39,.35); border-radius:8px; color:var(--text);}
+  .audio-block{background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:10px;}
   .audio-block .atitle{font-size:13px; font-weight:600; margin-bottom:2px;}
   .audio-block .astat{font-size:11.5px; color:var(--muted); margin-bottom:10px;}
   .audio-controls{display:flex; gap:8px; flex-wrap:wrap;}
-  .link-row{display:flex; gap:8px; margin-top:10px; padding-top:10px; border-top:1px dashed var(--panel-line);}
-  .link-row input[type=url]{
-    flex:1; min-width:0; background:#08181b; border:1px solid var(--panel-line); color:var(--text);
-    border-radius:9px; padding:8px 11px; font-size:12.5px; font-family:inherit;
-  }
-  .link-row input[type=url]:focus{outline:none; border-color:var(--gold);}
+  .link-row{display:flex; gap:8px; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);}
+  .link-row input[type=url]{flex:1; min-width:0; background:var(--surface); border:1px solid var(--line); color:var(--text);
+    border-radius:9px; padding:8px 11px; font-size:12.5px; font-family:inherit;}
+  .link-row input[type=url]:focus{outline:none; border-color:var(--primary);}
   .link-status{font-size:11px; margin-top:6px; color:var(--muted-dim);}
-  .link-status.err{color:var(--ember);}
-  .link-status.ok{color:var(--ok);}
-  .btn{
-    border:1px solid var(--panel-line); background:#123139; color:var(--text);
-    border-radius:9px; padding:8px 14px; font-size:12.5px; cursor:pointer; font-family:inherit; transition:.15s;
-  }
-  .btn:hover{border-color:var(--gold);}
-  .btn.primary{background:var(--gold); color:#0e2a2f; border-color:var(--gold); font-weight:700;}
-  .btn.primary:hover{background:var(--gold-soft);}
+  .link-status.err{color:var(--warning);}
+  .link-status.ok{color:var(--success);}
+  .btn{border:1px solid var(--line); background:var(--surface-2); color:var(--text);
+    border-radius:9px; padding:8px 14px; font-size:12.5px; cursor:pointer; font-family:inherit; transition:.15s;}
+  .btn:hover{border-color:var(--primary);}
+  .btn.primary{background:var(--primary); color:var(--on-primary); border-color:var(--primary); font-weight:700;}
+  .btn.primary:hover{background:var(--primary-dark);}
   .btn.ghost{background:transparent;}
-  .btn.danger{color:var(--ember); border-color:rgba(224,114,60,.4);}
+  .btn.danger{color:var(--warning); border-color:rgba(220,38,38,.4);}
   input[type=file]{display:none;}
-  .panel-actions{display:flex; justify-content:space-between; gap:10px; margin-top:24px;}
+  .panel-actions{display:flex; justify-content:space-between; gap:10px; margin:20px 0 4px;}
   .slider-row{display:flex; align-items:center; gap:12px;}
   .slider-row input[type=range]{flex:1;}
   .hint{font-size:11px; color:var(--muted-dim); margin-top:6px; line-height:1.5;}
   .city-results{display:flex; flex-direction:column; gap:6px; margin-bottom:10px;}
-  .city-result-item{
-    text-align:left; background:#0a1f23; border:1px solid var(--panel-line); border-radius:9px;
-    padding:9px 12px; font-size:12.5px; color:var(--text); cursor:pointer; transition:.15s;
-  }
-  .city-result-item:hover{border-color:var(--gold); background:rgba(201,162,39,.08);}
+  .city-result-item{text-align:left; background:var(--surface-2); border:1px solid var(--line); border-radius:9px;
+    padding:9px 12px; font-size:12.5px; color:var(--text); cursor:pointer; transition:.15s; width:100%;}
+  .city-result-item:hover{border-color:var(--primary); background:var(--primary-50);}
   .city-result-item .coord{display:block; font-size:10.5px; color:var(--muted-dim); margin-top:2px;}
   .city-search-status{font-size:11.5px; color:var(--muted); margin-bottom:8px;}
 
-  @media (prefers-reduced-motion: reduce){
-    *{transition:none !important; animation:none !important;}
-  }
+  .quick-actions{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:8px;}
+  .quick-btn{display:flex; flex-direction:column; align-items:center; gap:6px; padding:14px 6px;
+    background:var(--surface-2); border:1px solid var(--line); border-radius:12px; cursor:pointer; color:var(--text);
+    font-size:11.5px; text-align:center; transition:.15s;}
+  .quick-btn:hover{border-color:var(--primary); color:var(--primary);}
+  .quick-btn svg{width:20px; height:20px;}
+  .panel-footer{padding:16px 22px 20px; border-top:1px solid var(--line);}
+  .panel-footer .btn{width:100%;}
 
-  /* ====== Mode WIDGET (dipakai kalau URL ?widget=1, khusus versi desktop) ======
-     Jendela kecil always-on-top di pojok layar -- cuma tampilkan nama sholat
-     berikutnya + hitung mundur, tanpa jadwal lengkap/tombol pengaturan.
-     Class "is-widget" ditambahkan via JS di bawah, deteksi dari query string. */
-  html.is-widget, html.is-widget body{
-    background:transparent !important; overflow:hidden;
-  }
+  @media (prefers-reduced-motion: reduce){*{transition:none !important; animation:none !important;}}
+
+  /* ====== Mode WIDGET ====== */
+  html.is-widget, html.is-widget body{background:transparent !important; overflow:hidden;}
   html.is-widget #sky, html.is-widget #stars,
-  html.is-widget .schedule, html.is-widget .footnote,
-  html.is-widget #settingsBtn, html.is-widget #fsBtn, html.is-widget #widgetBtn,
-  html.is-widget .dot-status,
-  html.is-widget .overlay{
-    display:none !important;
+  html.is-widget .card, html.is-widget .info-grid, html.is-widget .quote-box, html.is-widget .version-tag,
+  html.is-widget .header, html.is-widget .overlay{display:none !important;}
+  html.is-widget .content{padding:0; align-items:stretch;}
+  html.is-widget .prayer-card{
+    border-radius:16px; box-shadow:none; padding:10px 16px 14px; background:linear-gradient(180deg, rgba(18,33,31,.95), rgba(10,20,19,.95));
+    border:1px solid rgba(201,162,39,.35); -webkit-app-region:drag; height:100vh; align-content:center;
   }
-  html.is-widget .topbar{
-    padding:10px 14px 4px !important;
-  }
-  html.is-widget .city{ font-size:12px !important; }
-  html.is-widget .date{ font-size:10px !important; }
-  html.is-widget .mihrab{
-    padding:6px 14px 14px !important;
-    -webkit-app-region: drag; /* jendela ditarik-geser lewat area ini krn tanpa title bar */
-  }
-  html.is-widget .label-next{ font-size:9px !important; }
-  html.is-widget .prayer-name{ font-size:22px !important; }
-  html.is-widget .prayer-clock{ font-size:15px !important; }
-  html.is-widget .countdown{ font-size:20px !important; }
-  html.is-widget .countdown-label{ font-size:9px !important; }
-  html.is-widget .widget-frame{
-    position:fixed; inset:0; border-radius:16px;
-    background:linear-gradient(180deg, rgba(8,22,25,.92), rgba(15,43,48,.92));
-    border:1px solid rgba(201,162,39,.35);
-    box-shadow:0 8px 24px rgba(0,0,0,.35);
-    -webkit-app-region: drag;
-    z-index:-1;
-  }
-  html:not(.is-widget) .widget-frame{ display:none; }
+  html.is-widget .prayer-illustration{display:none;}
+  html.is-widget .prayer-name{font-size:22px; color:#fff;}
+  html.is-widget .label-next{font-size:9px; color:#e0c368;}
+  html.is-widget .prayer-clock{font-size:13px; color:#9db3b6;}
+  html.is-widget .countdown-box{padding:8px 14px;}
+  html.is-widget .countdown{font-size:20px; color:#e0c368;}
+  html.is-widget .countdown-label{font-size:9px; color:#9db3b6;}
   html.is-widget #widgetCloseBtn{
-    display:flex !important;
-    position:fixed; top:8px; right:8px; z-index:10;
+    display:flex !important; position:fixed; top:8px; right:8px; z-index:10;
     width:22px; height:22px; align-items:center; justify-content:center;
     border-radius:50%; border:1px solid rgba(201,162,39,.35);
-    background:rgba(8,22,25,.6); color:var(--muted, #9db3b6);
-    font-size:15px; line-height:1; cursor:pointer;
-    -webkit-app-region: no-drag; /* biar tombolnya tetap bisa diklik, area drag ada di sekitarnya */
+    background:rgba(8,22,25,.6); color:#9db3b6; font-size:15px; line-height:1; cursor:pointer;
+    -webkit-app-region:no-drag;
   }
-  html.is-widget #widgetCloseBtn:hover{ background:rgba(201,162,39,.25); color:#fff; }
+  html.is-widget #widgetCloseBtn:hover{background:rgba(201,162,39,.25); color:#fff;}
 
-  /* ====== Toast / notifikasi popup -- JELAS terlihat, bukan teks kecil ====== */
-  #toastWrap{
-    position:fixed; top:24px; left:50%; transform:translateX(-50%);
-    z-index:9999; display:flex; flex-direction:column; gap:10px;
-    align-items:center; pointer-events:none; width:min(92vw, 480px);
+  /* ====== Toast ====== */
+  #toastWrap{position:fixed; top:24px; left:50%; transform:translateX(-50%); z-index:9999;
+    display:flex; flex-direction:column; gap:10px; align-items:center; pointer-events:none; width:min(92vw, 480px);}
+  .toast{pointer-events:auto; display:flex; align-items:flex-start; gap:12px; width:100%; padding:14px 16px; border-radius:12px;
+    background:var(--surface); border:1.5px solid var(--line); box-shadow:var(--shadow-lg);
+    color:var(--text); font-size:14px; line-height:1.45; animation:toastMasuk .25s ease-out;}
+  .toast.ok{border-color:var(--success);}
+  .toast.err{border-color:var(--warning);}
+  .toast .toast-ikon{font-size:20px; flex-shrink:0; line-height:1.3;}
+  .toast .toast-teks{flex:1;}
+  .toast .toast-tutup{flex-shrink:0; cursor:pointer; color:var(--muted); font-size:18px; line-height:1; background:none; border:none; padding:2px 4px;}
+  .toast .toast-tutup:hover{color:var(--text);}
+  @keyframes toastMasuk{from{opacity:0; transform:translateY(-12px);} to{opacity:1; transform:translateY(0);}}
+  @keyframes toastKeluar{from{opacity:1;} to{opacity:0; transform:translateY(-8px);}}
+
+  @media (max-width:900px){
+    .header{padding:14px 16px;}
+    .header-mid{gap:12px;}
+    .content{padding:16px; flex-direction:column;}
+    .prayer-card{padding:22px 18px; flex-direction:column; text-align:center;}
+    .prayer-illustration{width:140px;}
   }
-  .toast{
-    pointer-events:auto;
-    display:flex; align-items:flex-start; gap:12px;
-    width:100%; padding:14px 16px; border-radius:12px;
-    background:linear-gradient(180deg, rgba(15,43,48,.98), rgba(8,22,25,.98));
-    border:1.5px solid var(--panel-line);
-    box-shadow:0 10px 30px rgba(0,0,0,.45);
-    color:var(--text); font-size:14px; line-height:1.45;
-    animation:toastMasuk .25s ease-out;
-  }
-  .toast.ok{ border-color:var(--ok); }
-  .toast.err{ border-color:#e0723c; }
-  .toast .toast-ikon{ font-size:20px; flex-shrink:0; line-height:1.3; }
-  .toast .toast-teks{ flex:1; }
-  .toast .toast-tutup{
-    flex-shrink:0; cursor:pointer; color:var(--muted); font-size:18px;
-    line-height:1; background:none; border:none; padding:2px 4px;
-  }
-  .toast .toast-tutup:hover{ color:var(--text); }
-  @keyframes toastMasuk{ from{opacity:0; transform:translateY(-12px);} to{opacity:1; transform:translateY(0);} }
-  @keyframes toastKeluar{ from{opacity:1;} to{opacity:0; transform:translateY(-8px);} }
 </style>
 </head>
 <body>
-<div class="widget-frame"></div>
+<div class="widget-frame" style="display:none;"></div>
 <button id="widgetCloseBtn" style="display:none;" title="Sembunyikan widget">&times;</button>
 <div id="toastWrap" aria-live="polite"></div>
 <script>
-  // Deteksi mode widget SEBELUM apa pun lain dirender, supaya tidak sempat
-  // "kelap-kelip" tampilan penuh lalu baru mengecil.
-  // 2 cara dicoba (mana yang berhasil duluan dipakai):
-  //   1) query string ?widget=1 di URL -- cara paling sederhana
-  //   2) nama/label jendela Tauri === "widget" -- fallback lebih diandalkan,
-  //      krn di webview lokal (bukan browser biasa) kadang query string di
-  //      URL asset lokal tidak konsisten terbaca lewat location.search.
   function aktifkanModeWidget(){ document.documentElement.classList.add("is-widget"); }
-  if (new URLSearchParams(location.search).get("widget") === "1") {
-    aktifkanModeWidget();
-  }
+  if (new URLSearchParams(location.search).get("widget") === "1") aktifkanModeWidget();
   try {
     if (window.__TAURI__ && window.__TAURI__.window) {
       var jendelaSaatIni = window.__TAURI__.window.getCurrent();
       if (jendelaSaatIni && jendelaSaatIni.label === "widget") {
         aktifkanModeWidget();
-        // Tombol X kecil di widget -> sembunyikan widget ini. Karena
-        // widget tidak punya bingkai/tombol OS sama sekali (biar ringkas),
-        // ini satu-satunya cara menutupnya selain lewat menu system tray.
-        // Setelah disembunyikan, panggil lagi lewat klik kanan ikon tray
-        // (pojok kanan bawah Windows) > "Tampilkan Widget".
-        document.getElementById("widgetCloseBtn").addEventListener("click", function(){
-          jendelaSaatIni.hide();
-        });
+        document.getElementById("widgetCloseBtn").addEventListener("click", function(){ jendelaSaatIni.hide(); });
       }
-      // CATATAN: minimize (_) jendela "main" SENGAJA dibiarkan perilaku
-      // NORMAL bawaan Windows (masuk ke taskbar bawah spt app pada
-      // umumnya) -- sempat dicoba dibuat "sembunyi ke tray" tapi malah
-      // bikin bingung krn kelihatan kayak app hilang. Yang sembunyi ke
-      // tray cukup tombol X (close) saja, itu di sisi Rust (main.rs).
     }
-  } catch (e) { /* bukan di dalam Tauri (mis. dibuka di browser biasa) -- abaikan */ }
+  } catch (e) { /* bukan di dalam Tauri -- abaikan */ }
 </script>
 <div id="sky"></div>
 <div id="stars"></div>
 
-<div class="wrap">
-  <div class="topbar">
-    <div class="place">
-      <div class="city" id="cityLabel">Lokasi belum diatur</div>
-      <div class="date" id="dateLabel">—</div>
+<div class="app">
+  <!-- ============ HEADER ============ -->
+  <div class="header">
+    <div class="brand">
+      <div class="mark">🕌</div>
+      <div>
+        <b>Pengingat Sholat — Kantor</b>
+        <span>Simple, Elegant, Professional</span>
+      </div>
     </div>
-    <div class="status">
-      <div class="dot-status"><span class="dot" id="onlineDot"></span><span id="onlineLabel">memeriksa…</span></div>
+    <div class="header-mid">
+      <div class="head-stat">
+        <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <div><span class="stv" id="cityLabel">Lokasi belum diatur</span><span id="dateLabel">—</span></div>
+      </div>
+      <div class="head-stat">
+        <span class="dot" id="onlineDot"></span>
+        <div><span class="stv" id="onlineLabel" style="text-transform:capitalize;">memeriksa…</span><span>Status</span></div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="theme-toggle" id="themeToggle">
+        <button type="button" data-theme-choice="light" title="Terang">☀️</button>
+        <button type="button" data-theme-choice="dark" title="Gelap">🌙</button>
+        <button type="button" data-theme-choice="auto" title="Otomatis">🖥️</button>
+      </div>
       <button class="icon-btn" id="widgetBtn" title="Tambah Widget" style="display:none;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
       </button>
@@ -353,117 +372,212 @@
     </div>
   </div>
 
-  <div class="mihrab">
-    <div class="label-next" id="nextLabel">SHOLAT BERIKUTNYA</div>
-    <div class="prayer-name" id="nextName">—</div>
-    <div class="prayer-clock" id="nextClock">—</div>
-    <div class="countdown" id="countdown">--:--:--</div>
-    <div class="countdown-label" id="countdownSub">menuju waktu adzan</div>
-  </div>
-
-  <div class="schedule" id="scheduleGrid"></div>
-
-  <div class="footnote" id="footnote">Memuat jadwal…</div>
-  <div class="version-tag" id="versionTag"></div>
-</div>
-
-<!-- ============ MODAL PENGATURAN ============ -->
-<div class="overlay" id="overlay">
-  <div class="panel">
-    <h2>Pengaturan</h2>
-    <div class="sub">Tersimpan otomatis di komputer ini saja (tidak terhubung ke server lain).</div>
-
-    <div class="section-title">Lokasi</div>
-    <div class="field-row">
-      <div class="field">
-        <label>Cari kota</label>
-        <div style="display:flex; gap:8px;">
-          <input type="text" id="citySearchInput" placeholder="Ketik nama kota, mis. Sidoarjo">
-          <button class="btn primary" id="citySearchBtn" style="white-space:nowrap;">Cari</button>
+  <!-- ============ KONTEN UTAMA ============ -->
+  <div class="content">
+    <div class="main-col">
+      <div class="prayer-card">
+        <div class="prayer-illustration"><img src="./masjid.png" alt="Ilustrasi masjid"></div>
+        <div class="prayer-info">
+          <div class="label-next" id="nextLabel">SHOLAT BERIKUTNYA</div>
+          <div class="prayer-name" id="nextName">—</div>
+          <div class="prayer-clock" id="nextClock">—</div>
+          <div class="countdown-box">
+            <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <div>
+              <div class="countdown" id="countdown">--:--:--</div>
+              <div class="countdown-label" id="countdownSub">menuju waktu adzan</div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-    <div id="citySearchResults"></div>
-    <div class="hint" style="margin-top:-4px; margin-bottom:14px;">Ketik nama kota lalu klik Cari — sistem otomatis mencari koordinatnya (pakai data peta OpenStreetMap, gratis). Kalau muncul beberapa pilihan, klik yang sesuai. Latitude/Longitude di bawah otomatis terisi, tapi tetap bisa diedit manual kalau perlu.</div>
 
-    <div class="field-row">
-      <div class="field">
-        <label>Nama kota (tersimpan)</label>
-        <input type="text" id="inCity" placeholder="Sidoarjo">
+      <div class="card">
+        <h3>Jadwal Hari Ini</h3>
+        <table class="sched">
+          <thead><tr><th></th><th>Waktu</th><th>Status</th></tr></thead>
+          <tbody id="scheduleGrid"></tbody>
+        </table>
       </div>
-    </div>
-    <div class="field-row">
-      <div class="field">
-        <label>Latitude</label>
-        <input type="text" id="inLat" placeholder="-7.4496">
-      </div>
-      <div class="field">
-        <label>Longitude</label>
-        <input type="text" id="inLng" placeholder="112.7183">
-      </div>
-    </div>
-    <div class="hint">Metode perhitungan: Kemenag RI (baku dipakai di Indonesia).</div>
 
-    <div class="section-title">Mode offline</div>
-    <div class="audio-block">
-      <div class="atitle" id="offlineCoverageText">Cadangan offline: memeriksa…</div>
-      <div class="astat">Jadwal sebulan penuh diunduh &amp; disimpan tiap kali online, jadi app tetap akurat walau internet mati berminggu-minggu.</div>
-      <div class="audio-controls">
-        <button class="btn primary" id="syncNowBtn">Sinkronkan jadwal sekarang</button>
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="iicn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg></div>
+          <div><div class="ititle">Cadangan Offline</div><div class="ival" id="cardOfflineDays">—</div><div class="isub" id="cardOfflineSub"></div></div>
+        </div>
+        <div class="info-card">
+          <div class="iicn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+          <div><div class="ititle">Terakhir Sinkron</div><div class="ival" id="cardLastSync">—</div><div class="isub">Berikutnya otomatis</div></div>
+        </div>
+        <div class="info-card">
+          <div class="iicn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg></div>
+          <div><div class="ititle">Status</div><div class="ival" id="cardStatusVal">—</div><div class="isub" id="footnote">Memuat jadwal…</div></div>
+        </div>
       </div>
-    </div>
 
-    <div class="section-title">Sholat &amp; pengingat</div>
-    <div class="hint" style="margin-top:-4px;margin-bottom:12px;">Aktifkan/nonaktifkan tiap sholat, dan atur berapa menit sebelum adzan pengingat dibunyikan — sama seperti pengaturan per-sholat di aplikasi Muslim Pro.</div>
-    <div id="prayerRows"></div>
+      <div class="quote-box">
+        <span class="qmark">"</span>
+        <div><b>Dirikanlah shalat, sesungguhnya shalat itu mencegah dari (perbuatan) keji dan mungkar.</b>QS. Al-'Ankabut: 45</div>
+      </div>
 
-    <div class="section-title">Suara</div>
-    <div class="audio-block">
-      <div class="atitle">Suara pengingat (sebelum adzan)</div>
-      <div class="astat" id="statReminder">Belum ada file — memakai nada default.</div>
-      <div class="audio-controls">
-        <label class="btn primary" for="fileReminder">Unggah MP3</label>
-        <input type="file" id="fileReminder" accept="audio/*">
-        <button class="btn" id="testReminder">Uji coba</button>
-        <button class="btn danger ghost" id="clearReminder">Hapus</button>
-      </div>
-      <div class="link-row">
-        <input type="url" id="urlReminder" placeholder="https://contoh.com/pengingat.mp3">
-        <button class="btn" id="fetchReminder">Ambil dari link</button>
-      </div>
-      <div class="link-status" id="linkStatusReminder"></div>
+      <div class="version-tag" id="versionTag"></div>
     </div>
-    <div class="audio-block">
-      <div class="atitle">Suara adzan / takbir (saat waktu tiba)</div>
-      <div class="astat" id="statAzan">Belum ada file — memakai nada default.</div>
-      <div class="audio-controls">
-        <label class="btn primary" for="fileAzan">Unggah MP3</label>
-        <input type="file" id="fileAzan" accept="audio/*">
-        <button class="btn" id="testAzan">Uji coba</button>
-        <button class="btn danger ghost" id="clearAzan">Hapus</button>
-      </div>
-      <div class="link-row">
-        <input type="url" id="urlAzan" placeholder="https://contoh.com/adzan.mp3">
-        <button class="btn" id="fetchAzan">Ambil dari link</button>
-      </div>
-      <div class="link-status" id="linkStatusAzan"></div>
+  </div>
+</div>
+
+<!-- ============ PANEL PENGATURAN (drawer bertab) ============ -->
+<div class="overlay" id="overlay">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Pengaturan</h2>
+      <button class="panel-close" id="panelCloseX">&times;</button>
     </div>
-    <div class="field">
-      <label>Volume</label>
-      <div class="slider-row">
-        <input type="range" id="inVolume" min="0" max="100" value="80">
-        <span id="volumeVal" style="font-size:12.5px;color:var(--muted);width:36px;">80%</span>
-      </div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="lokasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Lokasi</button>
+      <button class="tab-btn" data-tab="jadwal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Jadwal</button>
+      <button class="tab-btn" data-tab="audio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>Audio</button>
+      <button class="tab-btn" data-tab="lainnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>Lainnya</button>
     </div>
 
-    <div class="panel-actions">
-      <button class="btn ghost" id="resetBtn">Kembalikan default</button>
-      <button class="btn primary" id="saveBtn">Simpan &amp; tutup</button>
+    <div class="tab-panes">
+      <!-- ---- TAB: LOKASI ---- -->
+      <div class="tab-pane active" data-pane="lokasi">
+        <div class="sub">Tersimpan otomatis di komputer ini saja (tidak terhubung ke server lain).</div>
+        <div class="field-row">
+          <div class="field">
+            <label>Cari kota</label>
+            <div style="display:flex; gap:8px;">
+              <input type="text" id="citySearchInput" placeholder="Ketik nama kota, mis. Sidoarjo">
+              <button class="btn primary" id="citySearchBtn" style="white-space:nowrap;">Cari</button>
+            </div>
+          </div>
+        </div>
+        <div id="citySearchResults"></div>
+        <div class="hint" style="margin-top:-4px; margin-bottom:14px;">Ketik nama kota lalu klik Cari — sistem otomatis mencari koordinatnya (data peta OpenStreetMap, gratis). Latitude/Longitude di bawah otomatis terisi, tapi tetap bisa diedit manual.</div>
+        <div class="field-row">
+          <div class="field"><label>Nama kota (tersimpan)</label><input type="text" id="inCity" placeholder="Sidoarjo"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Latitude</label><input type="text" id="inLat" placeholder="-7.4496"></div>
+          <div class="field"><label>Longitude</label><input type="text" id="inLng" placeholder="112.7183"></div>
+        </div>
+        <div class="hint">Metode perhitungan: Kemenag RI (baku dipakai di Indonesia).</div>
+      </div>
+
+      <!-- ---- TAB: JADWAL ---- -->
+      <div class="tab-pane" data-pane="jadwal">
+        <div class="sub">Aktifkan/nonaktifkan tiap sholat, dan atur berapa menit sebelum adzan pengingat dibunyikan.</div>
+        <div id="prayerRows"></div>
+      </div>
+
+      <!-- ---- TAB: AUDIO ---- -->
+      <div class="tab-pane" data-pane="audio">
+        <div class="sub">Unggah file MP3 sendiri, atau ambil dari link. Kosongkan untuk pakai nada default.</div>
+        <div class="audio-block">
+          <div class="atitle">Suara pengingat (sebelum adzan)</div>
+          <div class="astat" id="statReminder">Belum ada file — memakai nada default.</div>
+          <div class="audio-controls">
+            <label class="btn primary" for="fileReminder">Unggah MP3</label>
+            <input type="file" id="fileReminder" accept="audio/*">
+            <button class="btn" id="testReminder">Uji coba</button>
+            <button class="btn danger ghost" id="clearReminder">Hapus</button>
+          </div>
+          <div class="link-row">
+            <input type="url" id="urlReminder" placeholder="https://contoh.com/pengingat.mp3">
+            <button class="btn" id="fetchReminder">Ambil dari link</button>
+          </div>
+          <div class="link-status" id="linkStatusReminder"></div>
+        </div>
+        <div class="audio-block">
+          <div class="atitle">Suara adzan / takbir (saat waktu tiba)</div>
+          <div class="astat" id="statAzan">Belum ada file — memakai nada default.</div>
+          <div class="audio-controls">
+            <label class="btn primary" for="fileAzan">Unggah MP3</label>
+            <input type="file" id="fileAzan" accept="audio/*">
+            <button class="btn" id="testAzan">Uji coba</button>
+            <button class="btn danger ghost" id="clearAzan">Hapus</button>
+          </div>
+          <div class="link-row">
+            <input type="url" id="urlAzan" placeholder="https://contoh.com/adzan.mp3">
+            <button class="btn" id="fetchAzan">Ambil dari link</button>
+          </div>
+          <div class="link-status" id="linkStatusAzan"></div>
+        </div>
+        <div class="field">
+          <label>Volume</label>
+          <div class="slider-row">
+            <input type="range" id="inVolume" min="0" max="100" value="80">
+            <span id="volumeVal" style="font-size:12.5px;color:var(--muted);width:36px;">80%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---- TAB: LAINNYA ---- -->
+      <div class="tab-pane" data-pane="lainnya">
+        <div class="section-title" style="margin-top:0;">Mode offline</div>
+        <div class="audio-block">
+          <div class="atitle" id="offlineCoverageText">Cadangan offline: memeriksa…</div>
+          <div class="astat">Jadwal sebulan penuh diunduh &amp; disimpan tiap kali online, jadi app tetap akurat walau internet mati berminggu-minggu.</div>
+        </div>
+        <div class="section-title">Tindakan cepat</div>
+        <div class="quick-actions">
+          <div class="quick-btn" id="quickSyncBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>Sinkronkan</div>
+          <div class="quick-btn" id="quickCalendarBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Kalender</div>
+          <div class="quick-btn" id="quickAudioBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>Tes Audio</div>
+        </div>
+        <button class="btn primary" id="syncNowBtn" style="width:100%; margin-top:14px;">Sinkronkan jadwal sekarang</button>
+        <div class="section-title">Lain-lain</div>
+        <button class="btn ghost" id="resetBtn" style="width:100%;">Kembalikan default</button>
+      </div>
+    </div>
+
+    <div class="panel-footer">
+      <button class="btn primary" id="saveBtn" style="width:100%;">Simpan &amp; tutup</button>
     </div>
   </div>
 </div>
 
 <audio id="audioEl" preload="auto"></audio>
+
+<script>
+/* ---------- TEMA: terang / gelap / otomatis ---------- */
+const THEME_KEY_ADZAN = "adzan_theme";
+function effectiveThemeAdzan(pref){
+  if(pref === "light" || pref === "dark") return pref;
+  return (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) ? "light" : "dark";
+}
+function applyThemeAdzan(pref){
+  document.documentElement.setAttribute("data-theme", effectiveThemeAdzan(pref));
+  document.querySelectorAll("#themeToggle button").forEach(b=>{
+    b.classList.toggle("active", b.dataset.themeChoice === pref);
+  });
+}
+let themePrefAdzan = localStorage.getItem(THEME_KEY_ADZAN) || "auto";
+applyThemeAdzan(themePrefAdzan);
+document.querySelectorAll("#themeToggle button").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    themePrefAdzan = b.dataset.themeChoice;
+    localStorage.setItem(THEME_KEY_ADZAN, themePrefAdzan);
+    applyThemeAdzan(themePrefAdzan);
+  });
+});
+if(window.matchMedia){
+  window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", ()=>{
+    if(themePrefAdzan === "auto") applyThemeAdzan("auto");
+  });
+}
+
+/* ---------- Tab switching panel pengaturan ---------- */
+function switchTab(name){
+  document.querySelectorAll(".tab-btn").forEach(b=> b.classList.toggle("active", b.dataset.tab===name));
+  document.querySelectorAll(".tab-pane").forEach(p=> p.classList.toggle("active", p.dataset.pane===name));
+}
+document.querySelectorAll(".tab-btn").forEach(b=>{
+  b.addEventListener("click", ()=> switchTab(b.dataset.tab));
+});
+document.getElementById("quickCalendarBtn").addEventListener("click", ()=> switchTab("lokasi"));
+document.getElementById("quickAudioBtn").addEventListener("click", ()=> switchTab("audio"));
+document.getElementById("panelCloseX").addEventListener("click", ()=> closeSettings());
+</script>
 
 <script>
 /* ============================================================
@@ -475,15 +589,13 @@
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.5.5"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
+const APP_VERSION = "1.6.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
   lat: null,
   lng: null,
   method: 20, // Kemenag RI
-  // pengaturan per-sholat, gaya Muslim Pro: aktif/nonaktif + menit pengingat masing-masing.
-  // Dzuhur punya "fridayMinutes" terpisah (khusus Jumatan, biasanya lebih lama dari hari biasa).
   prayerSettings: {
     Fajr:    {enabled:true, minutes:10},
     Dhuhr:   {enabled:true, minutes:10, fridayMinutes:20},
@@ -497,6 +609,9 @@ const DEFAULTS = {
 const PRAYER_LABEL = {
   Fajr: "Subuh", Sunrise: "Terbit", Dhuhr: "Dzuhur", Asr: "Ashar",
   Maghrib: "Maghrib", Isha: "Isya"
+};
+const PRAYER_EMOJI = {
+  Fajr: "🌅", Sunrise: "🌄", Dhuhr: "☀️", Asr: "🌤️", Maghrib: "🌇", Isha: "🌙"
 };
 const REMINDABLE = ["Fajr","Dhuhr","Asr","Maghrib","Isha"];
 const DISPLAY_ORDER = ["Fajr","Sunrise","Dhuhr","Asr","Maghrib","Isha"];
@@ -520,30 +635,17 @@ function saveSettings(){
   localStorage.setItem("adzan_settings", JSON.stringify(settings));
 }
 
-/* ---------------- Sinkron Pengaturan ANTAR JENDELA (khusus versi desktop) ----------------
-   Jendela utama & widget itu 2 WINDOW TERPISAH (walau berbagi localStorage
-   yang sama) -- masing-masing cuma baca `settings` SEKALI waktu pertama
-   dimuat. Jadi kalau widget sudah lebih dulu terbuka SEBELUM lokasi diatur
-   di jendela utama, widget tidak akan tahu ada perubahan kecuali di-refresh
-   manual. Ini bikin dia otomatis update sendiri begitu ada perubahan. */
 let terakhirDiketahuiSettingsRaw = localStorage.getItem("adzan_settings");
 function terapkanSettingsTerbaru(){
   settings = loadSettings();
   const cityEl = document.getElementById("cityLabel");
   if (cityEl) cityEl.textContent = settings.city || "Lokasi belum diatur";
-  // paksa jadwal diambil ulang -- lat/lng bisa saja sudah berubah, jadi
-  // jadwal lama (kalau ada) tidak boleh dipakai lagi begitu saja.
   todaySchedule = null; tomorrowSchedule = null; scheduleDateStr = null;
   ensureScheduleForToday();
 }
-// Cara 1: event "storage" bawaan browser -- otomatis terpicu di jendela
-// LAIN begitu localStorage diubah oleh salah satu jendela.
 window.addEventListener("storage", function(e){
   if (e.key === "adzan_settings") terapkanSettingsTerbaru();
 });
-// Cara 2: polling tiap 5 detik sbg jaring pengaman -- beberapa webview
-// window Tauri yang terpisah kadang tidak konsisten memicu event
-// "storage" spt tab browser biasa, jadi dicek manual juga.
 setInterval(function(){
   const raw = localStorage.getItem("adzan_settings");
   if (raw !== terakhirDiketahuiSettingsRaw){
@@ -556,7 +658,6 @@ function loadTriggerLog(){
   catch(e){ return {}; }
 }
 function saveTriggerLog(){
-  // simpan cuma 3 hari terakhir biar tidak menumpuk
   const cutoff = Date.now() - 3*86400000;
   for(const k in triggeredLog){
     const d = k.split(":")[0];
@@ -603,7 +704,7 @@ async function idbDelete(key){
   });
 }
 
-/* ---------------- Fallback nada (Web Audio), dipakai kalau belum upload file ---------------- */
+/* ---------------- Fallback nada (Web Audio) ---------------- */
 let actx = null;
 function ctx(){ if(!actx) actx = new (window.AudioContext||window.webkitAudioContext)(); return actx; }
 function playChime(kind){
@@ -623,13 +724,13 @@ function playChime(kind){
 }
 
 /* ---------------- Toast / popup notifikasi ---------------- */
-function showToast(pesan, tipe){ // tipe: "ok" | "err" | undefined(netral)
+function showToast(pesan, tipe){
   const wrap = document.getElementById("toastWrap");
   const el = document.createElement("div");
   el.className = "toast" + (tipe ? " " + tipe : "");
   const ikon = tipe === "ok" ? "✅" : tipe === "err" ? "⚠️" : "ℹ️";
   el.innerHTML = `<span class="toast-ikon">${ikon}</span><span class="toast-teks"></span><button class="toast-tutup" aria-label="Tutup">&times;</button>`;
-  el.querySelector(".toast-teks").textContent = pesan; // textContent -- aman dari HTML injection
+  el.querySelector(".toast-teks").textContent = pesan;
   wrap.appendChild(el);
   const hapus = () => {
     el.style.animation = "toastKeluar .2s ease-in forwards";
@@ -639,8 +740,8 @@ function showToast(pesan, tipe){ // tipe: "ok" | "err" | undefined(netral)
   setTimeout(hapus, 4500);
 }
 
-/* ---------------- Uji coba suara -- bisa di-BERHENTI-kan, bukan cuma play ---------------- */
-let sedangUjiCoba = null; // null | "reminder" | "azan" -- kind yg lagi diputar lewat tombol Uji coba
+/* ---------------- Uji coba suara ---------------- */
+let sedangUjiCoba = null;
 function updateTombolUjiCoba(){
   const btnReminder = document.getElementById("testReminder");
   const btnAzan = document.getElementById("testAzan");
@@ -661,7 +762,7 @@ async function toggleUjiCoba(kind){
 }
 document.getElementById("audioEl").addEventListener("ended", () => { sedangUjiCoba = null; updateTombolUjiCoba(); });
 
-async function playSound(kind){ // kind: "reminder" | "azan"
+async function playSound(kind){
   const key = kind === "reminder" ? "reminderAudio" : "azanAudio";
   const urlKey = kind === "reminder" ? "reminderAudioUrl" : "azanAudioUrl";
   const blob = await idbGet(key).catch(()=>null);
@@ -675,7 +776,7 @@ async function playSound(kind){ // kind: "reminder" | "azan"
   }
   const savedUrl = localStorage.getItem(urlKey);
   if(savedUrl){
-    audioEl.src = savedUrl; // diputar langsung dari link (streaming), tanpa perlu CORS
+    audioEl.src = savedUrl;
     audioEl.volume = settings.volume;
     audioEl.currentTime = 0;
     try{ await audioEl.play(); return; }catch(e){ /* lanjut ke fallback nada */ }
@@ -696,14 +797,11 @@ async function fetchAudioFromUrl(kind, url, statusEl){
       throw new Error("Bukan berkas audio yang valid");
     }
     await idbSet(idbKey, blob);
-    localStorage.removeItem(urlKey); // sudah tersimpan sbg file, tak perlu simpan url lagi
+    localStorage.removeItem(urlKey);
     statusEl.textContent = "✓ Berhasil diunduh & disimpan offline.";
     statusEl.className = "link-status ok";
     showToast((kind === "reminder" ? "Suara pengingat" : "Suara adzan/takbir") + " berhasil diunduh dari link & disimpan offline.", "ok");
   }catch(e){
-    // biasanya gagal karena CORS diblokir server sumbernya -- simpan URL
-    // saja, tetap bisa diputar langsung (streaming) walau tidak bisa
-    // disimpan offline permanen.
     localStorage.setItem(urlKey, url);
     await idbDelete(idbKey).catch(()=>{});
     statusEl.textContent = "⚠ Tidak bisa diunduh untuk offline (kemungkinan dibatasi CORS oleh sumbernya), tapi link disimpan & tetap bisa diputar selama online.";
@@ -722,13 +820,7 @@ function fmtDateForApi(d){
 function dateKey(d){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
-/* ---------------- Cache kalender jangka panjang (kunci untuk offline) ----------------
-   Berbeda dari versi sebelumnya yang cuma simpan hari ini+besok, di sini
-   app mengunduh JADWAL SEBULAN PENUH sekaligus (endpoint /calendar AlAdhan)
-   lalu menyimpannya di localStorage. Selama app pernah online SEKALI dalam
-   3 bulan terakhir, dia tetap akurat walau komputer offline total
-   berminggu-minggu -- tidak butuh internet tiap hari. */
-const CALENDAR_MONTHS_AHEAD = 3; // bulan ini + 2 bulan ke depan = ~90 hari cadangan offline
+const CALENDAR_MONTHS_AHEAD = 3;
 function monthKeyOf(y,m){ return `${y}-${String(m).padStart(2,"0")}`; }
 function loadCalendarCache(){
   try{ return JSON.parse(localStorage.getItem("adzan_calendar_v1")||"{}"); }catch(e){ return {}; }
@@ -756,14 +848,11 @@ async function fetchCalendarMonth(year, month){
   return {days, lat:settings.lat, lng:settings.lng, method:settings.method, fetchedAt:new Date().toISOString()};
 }
 
-/* Diam-diam lengkapi cadangan bulan berjalan + 2 bulan ke depan kalau
-   sedang online. Tidak melempar error -- kalau offline/gagal, biarkan
-   lewat senyap supaya tidak mengganggu tampilan. */
 function locationConfigured(){
   return settings.lat != null && settings.lng != null && !Number.isNaN(settings.lat) && !Number.isNaN(settings.lng);
 }
 async function ensureCalendarBuffer(silent){
-  if(!locationConfigured()) return false; // belum diatur manual -> jangan coba tebak/pakai lokasi apa pun
+  if(!locationConfigured()) return false;
   if(!navigator.onLine) return false;
   const today = new Date();
   let anyFetched = false;
@@ -771,7 +860,7 @@ async function ensureCalendarBuffer(silent){
     const d = new Date(today.getFullYear(), today.getMonth()+i, 1);
     const y = d.getFullYear(), m = d.getMonth()+1;
     const mk = monthKeyOf(y,m);
-    if(cacheParamsMatch(calendarCache[mk])) continue; // sudah ada & lokasi/metode masih cocok
+    if(cacheParamsMatch(calendarCache[mk])) continue;
     try{
       calendarCache[mk] = await fetchCalendarMonth(y,m);
       anyFetched = true;
@@ -786,7 +875,7 @@ async function ensureCalendarBuffer(silent){
 function scheduleFromCache(dateObj){
   const mk = monthKeyOf(dateObj.getFullYear(), dateObj.getMonth()+1);
   const entry = calendarCache[mk];
-  if(!cacheParamsMatch(entry)) return null; // belum ada, atau lokasi/metode sudah berubah
+  if(!cacheParamsMatch(entry)) return null;
   const day = entry.days[dateKey(dateObj)];
   if(!day) return null;
   const out = {};
@@ -799,9 +888,6 @@ function scheduleFromCache(dateObj){
   return out;
 }
 
-// berapa hari berturut-turut ke depan (mulai hari ini) yang datanya sudah
-// tersimpan offline -- dipakai buat kasih tahu pengguna seberapa aman
-// app ini kalau internet kantor mati.
 function offlineCoverageDays(){
   let d = new Date(), count = 0;
   while(count < 400){
@@ -812,21 +898,50 @@ function offlineCoverageDays(){
   return count;
 }
 
-const AUTO_SYNC_THRESHOLD_DAYS = 7; // sesuai permintaan: sinkron otomatis kalau cadangan tinggal < 1 pekan
+const AUTO_SYNC_THRESHOLD_DAYS = 7;
 async function maybeAutoSync(){
   if(!navigator.onLine) return;
-  if(offlineCoverageDays() >= AUTO_SYNC_THRESHOLD_DAYS) return; // cadangan masih aman, tidak perlu apa-apa
+  if(offlineCoverageDays() >= AUTO_SYNC_THRESHOLD_DAYS) return;
   const fetched = await ensureCalendarBuffer(true);
   if(fetched){
-    scheduleDateStr = null; // paksa todaySchedule kebaca ulang dari cache yang baru diperbarui
+    scheduleDateStr = null;
     await ensureScheduleForToday();
     refreshOfflineCoverage();
   }
 }
 
+/* Update 3 kartu info (Cadangan Offline, Terakhir Sinkron, Status) di
+   halaman utama -- dipanggil setiap kali jadwal berhasil disinkron/dimuat,
+   supaya kartu-kartu ini selalu menampilkan info terbaru tanpa perlu buka
+   panel Pengaturan dulu. */
+function updateInfoCards(){
+  const cov = offlineCoverageDays();
+  const daysEl = document.getElementById("cardOfflineDays");
+  const subEl = document.getElementById("cardOfflineSub");
+  if(daysEl){
+    daysEl.textContent = cov + " hari";
+    if(cov === 0){ subEl.textContent = "Belum ada cadangan"; }
+    else{
+      const sampai = new Date(Date.now() + (cov-1)*86400000);
+      subEl.textContent = "Sampai " + sampai.toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"});
+    }
+  }
+  const statusEl = document.getElementById("cardStatusVal");
+  if(statusEl){
+    const isOn = navigator.onLine;
+    statusEl.textContent = isOn ? "Online" : "Offline";
+    statusEl.className = "ival " + (isOn ? "status-on" : "status-off");
+  }
+}
+function markLastSync(){
+  const el = document.getElementById("cardLastSync");
+  if(el) el.textContent = new Date().toLocaleString("id-ID",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+}
+
 async function ensureScheduleForToday(){
   if(!locationConfigured()){
     document.getElementById("footnote").textContent = "⚠️ Lokasi belum diatur. Klik ⚙️ Pengaturan, isi Latitude & Longitude dulu.";
+    updateInfoCards();
     return;
   }
   const today = new Date();
@@ -835,9 +950,6 @@ async function ensureScheduleForToday(){
 
   const tmr = new Date(today); tmr.setDate(tmr.getDate()+1);
 
-  // 1) Coba dari cache kalender lokal DULU -- inilah yang membuat app
-  //    tetap akurat walau komputer benar-benar offline, asal pernah
-  //    online sekali dalam beberapa bulan terakhir.
   let ts = scheduleFromCache(today);
   let tms = scheduleFromCache(tmr);
   if(ts){
@@ -847,12 +959,12 @@ async function ensureScheduleForToday(){
     document.getElementById("footnote").textContent = navigator.onLine
       ? `Tersinkron • cadangan offline ${cov} hari ke depan`
       : `Offline — memakai jadwal tersimpan (cadangan ${cov} hari ke depan)`;
-    // lengkapi buffer di belakang layar kalau online, tak perlu ditunggu
+    markLastSync();
+    updateInfoCards();
     ensureCalendarBuffer(true);
     return;
   }
 
-  // 2) Tidak ada di cache sama sekali -> wajib online buat ambil kalender.
   try{
     const fetched = await ensureCalendarBuffer(false);
     ts = scheduleFromCache(today); tms = scheduleFromCache(tmr);
@@ -860,9 +972,12 @@ async function ensureScheduleForToday(){
     todaySchedule = ts; tomorrowSchedule = tms; scheduleDateStr = key;
     setOnline(true);
     document.getElementById("footnote").textContent = "Jadwal tersinkron • " + new Date().toLocaleTimeString("id-ID") + ` • cadangan offline ${offlineCoverageDays()} hari ke depan`;
+    markLastSync();
+    updateInfoCards();
   }catch(e){
     setOnline(false);
     document.getElementById("footnote").textContent = "Belum ada jadwal tersimpan untuk hari ini & tidak bisa mengambil dari internet. Sambungkan internet minimal sekali untuk mengunduh jadwal 3 bulan ke depan.";
+    updateInfoCards();
   }
 }
 
@@ -873,7 +988,7 @@ function isPrayerEnabled(key){
 function reminderMinutesFor(prayerKey, dateObj){
   const ps = settings.prayerSettings[prayerKey];
   if(!ps) return 10;
-  const day = dateObj.getDay(); // 0..6, 5 = Jumat
+  const day = dateObj.getDay();
   if(day === 5 && prayerKey === "Dhuhr" && ps.fridayMinutes != null) return ps.fridayMinutes;
   return ps.minutes;
 }
@@ -881,47 +996,55 @@ function reminderMinutesFor(prayerKey, dateObj){
 /* ---------------- Render UI ---------------- */
 function setOnline(isOn){
   document.getElementById("onlineDot").classList.toggle("on", isOn);
-  document.getElementById("onlineLabel").textContent = isOn ? "tersinkron" : "offline";
+  document.getElementById("onlineLabel").textContent = isOn ? "Online" : "Offline";
+  updateInfoCards();
 }
 function updateSkyAmbience(next){
-  // gradasi lembut berdasar jam sekarang (bukan animasi cepat, cuma nuansa)
   const h = new Date().getHours();
-  let top = "#0f2b30", starOp = 0;
-  if(h>=4 && h<6){ top="#2b3a4a"; starOp=0.15; }        // subuh
-  else if(h>=6 && h<11){ top="#1c4048"; starOp=0; }      // pagi
-  else if(h>=11 && h<15){ top="#123139"; starOp=0; }     // siang
-  else if(h>=15 && h<18){ top="#2a3d2e"; starOp=0; }     // sore
-  else if(h>=18 && h<19){ top="#3a2a3d"; starOp=0.25; }  // maghrib
-  else { top="#0a1620"; starOp=0.55; }                    // malam
-  document.getElementById("sky").style.setProperty("background", `linear-gradient(180deg, ${top} 0%, transparent 55%)`);
-  document.getElementById("stars").style.setProperty("--star-op", starOp);
+  let top = "#123139", starOp = 0;
+  if(h>=4 && h<6){ top="#2b3a4a"; starOp=0.15; }
+  else if(h>=6 && h<11){ top="#1c4048"; starOp=0; }
+  else if(h>=11 && h<15){ top="#123139"; starOp=0; }
+  else if(h>=15 && h<18){ top="#2a3d2e"; starOp=0; }
+  else if(h>=18 && h<19){ top="#3a2a3d"; starOp=0.25; }
+  else { top="#0a1620"; starOp=0.55; }
+  const skyEl = document.getElementById("sky");
+  const starsEl = document.getElementById("stars");
+  if(skyEl) skyEl.style.setProperty("background", `linear-gradient(180deg, ${top} 0%, transparent 55%)`);
+  if(starsEl) starsEl.style.setProperty("--star-op", starOp);
 }
 
 function renderSchedule(now){
-  const grid = document.getElementById("scheduleGrid");
-  grid.innerHTML = "";
+  const body = document.getElementById("scheduleGrid");
+  body.innerHTML = "";
   if(!todaySchedule) return;
   const upcoming = nextPrayerInfo(now);
   for(const key of DISPLAY_ORDER){
     const t = todaySchedule[key];
-    const div = document.createElement("div");
+    const tr = document.createElement("tr");
     const isPast = t.getTime() <= now.getTime();
     const isNext = upcoming && upcoming.key === key && upcoming.date.getTime() === t.getTime();
-    div.className = "slot" + (isPast?" done":"") + (isNext?" next":"") + (key==="Sunrise"?" muted":"");
+    const isMuted = (REMINDABLE.includes(key) && !isPrayerEnabled(key));
+    tr.className = (isNext ? "next" : "") + (isMuted ? " row-muted" : "");
     const remMin = REMINDABLE.includes(key) ? reminderMinutesFor(key, todaySchedule[key]) : null;
     const showRem = remMin!=null && isPrayerEnabled(key);
-    if(REMINDABLE.includes(key) && !isPrayerEnabled(key)) div.classList.add("muted");
-    div.innerHTML = `
-      <div class="sname">${PRAYER_LABEL[key]}</div>
-      <div class="stime">${t.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"})}</div>
-      ${showRem ? `<div class="rem">−${remMin} mnt</div>` : (REMINDABLE.includes(key) ? `<div class="rem">nonaktif</div>` : "")}
+    const statusHtml = isNext
+      ? `<span class="sstatus next">🕐 Berikutnya</span>`
+      : isPast
+      ? `<span class="sstatus done">✅ Selesai</span>`
+      : `<span class="sstatus wait">⊝ Belum</span>`;
+    tr.innerHTML = `
+      <td><div class="sname-cell"><span class="semoji">${PRAYER_EMOJI[key]||""}</span>${PRAYER_LABEL[key]}</div>
+        ${showRem ? `<div class="rem-note">−${remMin} mnt pengingat</div>` : (REMINDABLE.includes(key) ? `<div class="rem-note">Pengingat nonaktif</div>` : "")}
+      </td>
+      <td class="stime">${t.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"})}</td>
+      <td>${statusHtml}</td>
     `;
-    grid.appendChild(div);
+    body.appendChild(tr);
   }
 }
 
 function nextPrayerInfo(now){
-  // cari sholat REMINDABLE berikutnya (hari ini atau besok)
   for(const key of REMINDABLE){
     if(!isPrayerEnabled(key)) continue;
     if(todaySchedule[key].getTime() > now.getTime()) return {key, date: todaySchedule[key]};
@@ -968,7 +1091,7 @@ function tick(){
   } else {
     const diff = info.date.getTime() - now.getTime();
     nameEl.textContent = PRAYER_LABEL[info.key] + (info.isTomorrow ? " (besok)" : "");
-    clockEl.textContent = info.date.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});
+    clockEl.innerHTML = "Pukul <b>" + info.date.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"}) + " WIB</b>";
     cd.textContent = fmtCountdown(diff);
     cd.classList.toggle("urgent", diff <= 5*60000);
     cdSub.textContent = diff <= 0 ? "waktu telah tiba" : "menuju waktu adzan";
@@ -1005,7 +1128,7 @@ function flashNowBadge(key){
   document.getElementById("nextLabel").innerHTML = `WAKTU ${PRAYER_LABEL[key].toUpperCase()} TELAH TIBA`;
 }
 
-/* ---------------- Wake lock (biar layar tidak mati) ---------------- */
+/* ---------------- Wake lock ---------------- */
 async function requestWakeLock(){
   try{
     if("wakeLock" in navigator){ wakeLock = await navigator.wakeLock.request("screen"); }
@@ -1015,11 +1138,7 @@ document.addEventListener("visibilitychange", ()=>{
   if(document.visibilityState === "visible") requestWakeLock();
 });
 
-/* ---------------- Fullscreen ----------------
-   Dulu cuma pakai browser Fullscreen API (document.requestFullscreen),
-   yang ternyata sering tidak berefek di dalam webview Tauri. Sekarang
-   dicoba pakai API NATIVE Tauri dulu (appWindow.setFullscreen) kalau lagi
-   jalan di app desktop -- baru fallback ke browser API kalau di web/PWA. */
+/* ---------------- Fullscreen ---------------- */
 document.getElementById("fsBtn").addEventListener("click", async ()=>{
   try {
     if (window.__TAURI__ && window.__TAURI__.window) {
@@ -1033,14 +1152,9 @@ document.getElementById("fsBtn").addEventListener("click", async ()=>{
   else document.exitFullscreen();
 });
 
-/* ---------------- Tombol "Tambah Widget" (khusus versi desktop/Tauri) ----------------
-   Tombol ini disembunyikan bawaan (style="display:none" di HTML) --
-   cuma dimunculkan kalau app ini memang jalan di dalam Tauri (bukan di
-   browser/PWA biasa, yang tidak punya jendela widget terpisah). Klik ->
-   tampilkan jendela "widget" (kecil, always-on-top, pojok layar) tanpa
-   menutup jendela utama ini -- keduanya boleh jalan bareng. */
+/* ---------------- Tombol "Tambah Widget" ---------------- */
 (function initWidgetButton(){
-  if (!(window.__TAURI__ && window.__TAURI__.window)) return; // bukan di Tauri -> biarkan tersembunyi
+  if (!(window.__TAURI__ && window.__TAURI__.window)) return;
   const btn = document.getElementById("widgetBtn");
   btn.style.display = "";
   btn.addEventListener("click", async () => {
@@ -1052,7 +1166,7 @@ document.getElementById("fsBtn").addEventListener("click", async ()=>{
   });
 })();
 
-/* ---------------- Modal pengaturan ---------------- */
+/* ---------------- Panel pengaturan ---------------- */
 const overlay = document.getElementById("overlay");
 function openSettings(){
   document.getElementById("inCity").value = settings.city;
@@ -1069,6 +1183,7 @@ function openSettings(){
   document.getElementById("linkStatusReminder").textContent = "";
   document.getElementById("linkStatusAzan").textContent = "";
   refreshOfflineCoverage();
+  switchTab("lokasi");
   overlay.classList.add("open");
 }
 function closeSettings(){ overlay.classList.remove("open"); }
@@ -1186,13 +1301,14 @@ function refreshOfflineCoverage(){
     const sampai = new Date(Date.now() + (cov-1)*86400000);
     el.textContent = `Cadangan offline: ${cov} hari ke depan (sampai ${sampai.toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric"})}).`;
   }
+  updateInfoCards();
 }
-/* ---------------- Cari kota otomatis (geocoding via OpenStreetMap Nominatim, gratis) ---------------- */
+/* ---------------- Cari kota otomatis (geocoding via OpenStreetMap Nominatim) ---------------- */
 async function searchCityCoords(query){
   const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=6&countrycodes=id&accept-language=id&q=${encodeURIComponent(query)}`;
   const res = await fetch(url);
   if(!res.ok) throw new Error("HTTP " + res.status);
-  return res.json(); // array of {display_name, lat, lon, ...}
+  return res.json();
 }
 function renderCityResults(items){
   const box = document.getElementById("citySearchResults");
@@ -1213,7 +1329,7 @@ function renderCityResults(items){
       document.getElementById("inCity").value = shortName;
       document.getElementById("inLat").value = parseFloat(item.lat).toFixed(6);
       document.getElementById("inLng").value = parseFloat(item.lon).toFixed(6);
-      box.innerHTML = `<div class="city-search-status">✓ Dipilih: ${shortName} — klik "Simpan & tutup" di bawah untuk menerapkan.</div>`;
+      box.innerHTML = `<div class="city-search-status">✓ Dipilih: ${shortName} — klik "Simpan &amp; tutup" di bawah untuk menerapkan.</div>`;
     });
     list.appendChild(btn);
   });
@@ -1245,6 +1361,7 @@ document.getElementById("syncNowBtn").addEventListener("click", async ()=>{
   if(!navigator.onLine) showToast("Tidak ada koneksi internet saat ini.", "err");
   else if(!ok) showToast("Cadangan sudah lengkap, tidak ada yang perlu diunduh ulang.");
 });
+document.getElementById("quickSyncBtn").addEventListener("click", ()=> document.getElementById("syncNowBtn").click());
 document.getElementById("testReminder").addEventListener("click", ()=>toggleUjiCoba("reminder"));
 document.getElementById("testAzan").addEventListener("click", ()=>toggleUjiCoba("azan"));
 document.getElementById("inVolume").addEventListener("input", (e)=>{
@@ -1264,7 +1381,7 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
   readPrayerRowsIntoSettings();
   saveSettings();
   closeSettings();
-  scheduleDateStr = null; // paksa refetch jadwal (lokasi mungkin berubah)
+  scheduleDateStr = null;
   await ensureScheduleForToday();
   refreshOfflineCoverage();
 });
@@ -1279,18 +1396,12 @@ function registerServiceWorker(){
   tag.textContent = "Pengingat Sholat v" + APP_VERSION;
 
   if(location.protocol === "file:"){
-    // Service worker TIDAK BISA jalan langsung dari file:// (dobel klik
-    // file HTML) -- browser memblokirnya karena alasan keamanan. Harus
-    // dilayani lewat http/https (server lokal sederhana, atau hosting
-    // seperti Cloudflare Pages/Netlify) supaya offline-cache berfungsi.
     tag.title = "Mode offline nonaktif: buka lewat http/https (server lokal atau hosting), bukan dobel-klik file.";
     return;
   }
   if(!("serviceWorker" in navigator)) return;
 
   navigator.serviceWorker.register("./sw.js").then((reg)=>{
-    // kalau ada worker baru ketemu (mis. abis deploy versi baru) dan dia
-    // sudah "installed" (menunggu aktif), suruh langsung ambil alih.
     reg.addEventListener("updatefound", ()=>{
       const nw = reg.installing;
       nw && nw.addEventListener("statechange", ()=>{
@@ -1301,8 +1412,6 @@ function registerServiceWorker(){
     });
   }).catch((e)=> console.log("SW register gagal:", e));
 
-  // begitu worker baru resmi ambil alih -> reload otomatis, tanpa perlu
-  // pengguna klik apa pun (penting buat layar kantor yg tak dipantau).
   let reloaded = false;
   navigator.serviceWorker.addEventListener("controllerchange", ()=>{
     if(reloaded) return;
@@ -1310,8 +1419,6 @@ function registerServiceWorker(){
     location.reload();
   });
 
-  // cek pembaruan tiap 30 menit (berguna kalau tab dibiarkan terbuka
-  // berhari-hari tanpa pernah di-refresh manual)
   setInterval(()=>{
     navigator.serviceWorker.getRegistration().then((r)=> r && r.update());
   }, 30*60000);
@@ -1321,21 +1428,15 @@ function registerServiceWorker(){
   registerServiceWorker();
   requestWakeLock();
   document.getElementById("cityLabel").textContent = settings.city || "Lokasi belum diatur";
+  updateInfoCards();
   await ensureScheduleForToday();
   tick();
   setInterval(async ()=>{
-    // deteksi ganti hari -> refetch jadwal otomatis
     const key = dateKey(new Date());
     if(key !== scheduleDateStr) await ensureScheduleForToday();
     tick();
   }, 1000);
-  // lengkapi cadangan kalender tiap 6 jam kalau sedang online -- jaga2
-  // supaya buffer 3 bulan ke depan tidak pernah habis walau tab
-  // dibiarkan terbuka berbulan-bulan tanpa restart.
   setInterval(()=> ensureCalendarBuffer(true), 6*3600000);
-  // aturan tambahan sesuai permintaan: begitu online DAN cadangan offline
-  // tinggal kurang dari 1 pekan, langsung sinkron -- tidak menunggu jadwal
-  // 6 jam di atas. Dicek tiap 15 menit + tiap kali koneksi baru nyambung.
   setInterval(maybeAutoSync, 15*60000);
   maybeAutoSync();
 })();
