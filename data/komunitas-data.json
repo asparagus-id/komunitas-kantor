@@ -137,15 +137,16 @@
     "topicKey": "kopi_pagi"
   },
   "calendarReminderMinutes": 30,
+  "calendarDigestTime": null,
+  "calendarDigestLastSentDate": null,
+  "calendarOntimeEnabled": false,
   "calendarRemindedIds": [
     "4qj2c0h5vv5cisav8n89lu5gn9_20260824T013000Z"
   ],
-  "calendarDigestTime": null,
-  "calendarDigestLastSentDate": null,
   "calendarTopicKey": "pengumuman",
   "reminders": [],
   "liburReminder": {
-    "enabled": false,
+    "enabled": true,
     "time": "09:00",
     "topicKey": "pengumuman",
     "lastSentDate": null
