@@ -240,7 +240,7 @@
     <div class="card" style="text-align:left;">
       <div class="field" style="margin-bottom:14px;">
         <label>APP_TOKEN</label>
-        <input type="password" id="gateToken" placeholder="token yang Anda isi di wrangler secret / dashboard">
+        <input type="password" id="gateToken" placeholder="token yang Anda isi di Cloudflare Dashboard (Variables and Secrets)">
       </div>
       <button class="btn primary" id="gateConnect" style="width:100%;">Hubungkan</button>
       <div class="hint">Tersimpan cuma di browser ini (localStorage), tidak dikirim ke mana pun selain Worker Anda sendiri.</div>
@@ -269,6 +269,7 @@
     <div class="nav-item" data-page="kalender"><span class="ic">🗓️</span> Google Calendar</div>
     <div class="nav-item" data-page="pengingat"><span class="ic">🔔</span> Pengingat Umum</div>
     <div class="nav-item" data-page="libur"><span class="ic">🕋</span> Libur Nasional</div>
+    <div class="nav-item" data-page="perangkat"><span class="ic">💡</span> Perangkat &amp; Google Home</div>
     <div class="nav-item" data-page="pengaturan"><span class="ic">⚙️</span> Pengaturan</div>
     <div class="sidebar-note">Perubahan di sini &amp; command Telegram sama-sama berlaku — tersinkron dua arah lewat data yang sama.<br><br>Panel <span id="sidebarPanelVersion">v?.?.?</span> · Worker <span id="sidebarWorkerVersion">memeriksa…</span></div>
   </aside>
@@ -549,6 +550,43 @@
         </div>
       </section>
 
+      <section class="page" id="page-perangkat">
+        <div class="card">
+          <h2>🏠 Status hubungan Google Home <span class="badge" id="ghLinkBadge"></span></h2>
+          <div class="desc">Perangkat di bawah dikontrol lewat panel/bot ini sebagai "hub" -- begitu ditautkan, semua perangkat juga otomatis muncul di app Google Home &amp; bisa diperintah suara ("Hei Google, nyalakan [nama perangkat]"). Butuh ENV Google Home (client id/secret &amp; project) sudah diisi di Worker -- lihat panduan setup.</div>
+          <div id="ghLinkStatusBox" class="empty">Memeriksa status tautan…</div>
+          <button class="btn small" id="ghTestLinkBtn" style="margin-top:10px;">Cek status tautan</button>
+        </div>
+        <div class="card">
+          <h2>💡 Daftar perangkat</h2>
+          <div class="desc">Perangkat fisik (modul wifi seperti Shelly/ESP yang sudah diflash firmware kompatibel) yang lapor status &amp; menerima perintah lewat Worker ini. Tombol "Tes nyala/mati" di bawah untuk uji manual dari panel -- perintah suara lewat Google Home akan otomatis pakai jalur yang sama.</div>
+          <table id="devicesTable"><thead><tr><th>Nama</th><th>Tipe</th><th>Status</th><th>Terakhir lapor</th><th></th></tr></thead><tbody></tbody></table>
+          <div class="row" style="margin-top:14px;">
+            <div class="field"><label>Nama perangkat</label><input type="text" id="newDevName" placeholder="Lampu Teras Masjid"></div>
+            <div class="field"><label>Tipe</label>
+              <select id="newDevType">
+                <option value="light">Lampu (ON/OFF)</option>
+                <option value="switch">Saklar / Stopkontak (ON/OFF)</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="field"><label>ID unik perangkat</label><input type="text" id="newDevId" placeholder="lampu-teras-01"></div>
+          </div>
+          <div class="hint" style="margin-bottom:10px;">ID unik ini yang dipakai firmware ESP/Shelly saat lapor status (<code>POST /device-report</code>) &amp; ambil perintah (<code>GET /device-poll</code>). Harus sama persis dengan yang ditulis di kode firmware.</div>
+          <button class="btn primary" id="addDevBtn">+ Tambah perangkat</button>
+        </div>
+        <div class="card">
+          <h2>📖 Cara pasang (ringkas)</h2>
+          <div class="desc">
+            1) Tambah perangkat di atas dengan ID unik.<br>
+            2) Isi ID yang sama di firmware modul wifi (ESP/Shelly) supaya lapor status ke Worker.<br>
+            3) Ikuti panduan lengkap "PANDUAN-GOOGLE-HOME.md" untuk daftarkan project di Google Home Developer Console (gratis) &amp; tautkan akun dari app Google Home.<br>
+            4) Setelah tertaut, semua perangkat di tabel atas otomatis muncul di app Google Home.
+          </div>
+        </div>
+      </section>
+
       <section class="page" id="page-pengaturan">
         <div class="card">
           <h2>⚙️ Pengaturan panel</h2>
@@ -596,7 +634,7 @@ let data = null, sha = null;
 
 // Versi panel ini -- naikkan tiap kali ada perubahan berarti, cocokkan
 // dengan entri di CHANGELOG.md & WORKER_VERSION di worker-komunitas.js.
-const APP_VERSION = "2.2.2";
+const APP_VERSION = "2.3.0";
 const WORKER_URL_FOR_VERSION_CHECK = "https://gus-asisten.rempahecho.workers.dev";
 
 /* Cek versi worker LANGSUNG saat halaman dibuka, SEBELUM login (endpoint
@@ -627,11 +665,11 @@ checkVersions();
 
 
 /* ---------- NAVIGASI SIDEBAR (SPA) ---------- */
-const PAGES = ["overview","admin","topik","puasa","kajian","kalender","pengingat","libur","pengaturan"];
+const PAGES = ["overview","admin","topik","puasa","kajian","kalender","pengingat","libur","perangkat","pengaturan"];
 const PAGE_TITLES = {
   overview:"Overview", admin:"Admin & Akses", topik:"Topik (Forum)", puasa:"Absensi Puasa",
   kajian:"Kajian", kalender:"Google Calendar", pengingat:"Pengingat Umum", libur:"Libur Nasional",
-  pengaturan:"Pengaturan"
+  perangkat:"Perangkat & Google Home", pengaturan:"Pengaturan"
 };
 function showPage(id){
   if(!PAGES.includes(id)) id = "overview";
@@ -1438,6 +1476,87 @@ document.getElementById("addRemBtn").addEventListener("click", async ()=>{
   }catch(e){ toast("Gagal simpan: " + e.message, true); }
 });
 
+/* ---------- Perangkat & Google Home ---------- */
+async function loadDevices(){
+  const tbody = document.querySelector("#devicesTable tbody");
+  try{
+    const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/device-list", { headers:{ "Authorization":"Bearer " + APP_TOKEN } });
+    const j = await res.json();
+    const list = (j && j.devices) || [];
+    if(!list.length){
+      tbody.innerHTML = `<tr><td colspan="5" class="empty">Belum ada perangkat. Tambah lewat form di bawah.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = "";
+    list.forEach(d=>{
+      const tr = document.createElement("tr");
+      const lapor = d.lastSeen ? new Date(d.lastSeen).toLocaleString("id-ID") : "belum pernah";
+      tr.innerHTML = `<td>${d.name}</td><td>${d.type==="light"?"Lampu":"Saklar"}</td>
+        <td>${d.on ? "🟢 Nyala" : "⚪ Mati"}</td><td>${lapor}</td>
+        <td>
+          <button class="btn small" data-toggle-dev="${d.id}">${d.on?"Matikan":"Nyalakan"}</button>
+          <button class="btn small danger" data-del-dev="${d.id}">Hapus</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+    tbody.querySelectorAll("[data-toggle-dev]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        try{
+          await apiAction("/device-toggle", { id: btn.dataset.toggleDev });
+          toast("Perintah terkirim ✓");
+          await loadDevices();
+        }catch(e){ toast("Gagal: " + e.message, true); }
+      });
+    });
+    tbody.querySelectorAll("[data-del-dev]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        try{
+          await apiAction("/device-hapus", { id: btn.dataset.delDev });
+          toast("Perangkat dihapus ✓");
+          await loadDevices();
+        }catch(e){ toast("Gagal: " + e.message, true); }
+      });
+    });
+  }catch(e){
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">Gagal memuat (cek apakah endpoint /device-list sudah aktif di Worker).</td></tr>`;
+  }
+}
+document.getElementById("addDevBtn").addEventListener("click", async ()=>{
+  const name = document.getElementById("newDevName").value.trim();
+  const type = document.getElementById("newDevType").value;
+  const id = document.getElementById("newDevId").value.trim();
+  if(!name || !id){ toast("Isi nama dan ID unik dulu.", true); return; }
+  try{
+    await apiAction("/device-tambah", { id, name, type });
+    toast("Perangkat ditambahkan ✓");
+    document.getElementById("newDevName").value = "";
+    document.getElementById("newDevId").value = "";
+    await loadDevices();
+  }catch(e){ toast("Gagal: " + e.message, true); }
+});
+async function loadGoogleHomeStatus(){
+  const box = document.getElementById("ghLinkStatusBox");
+  const badge = document.getElementById("ghLinkBadge");
+  try{
+    const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/googlehome-status", { headers:{ "Authorization":"Bearer " + APP_TOKEN } });
+    const j = await res.json();
+    if(j.configured && j.linked){
+      badge.textContent = "Tertaut"; badge.className = "badge on";
+      box.className = ""; box.textContent = "Akun Google Home sudah tertaut. Perintah suara & app siap dipakai.";
+    } else if(j.configured){
+      badge.textContent = "Belum ditautkan"; badge.className = "badge off";
+      box.className = ""; box.innerHTML = "ENV Google Home sudah diisi di Worker, tapi belum ditautkan dari app Google Home. Buka app Google Home → tambah perangkat → cari 'Komunitas Admin Panel' di daftar app pihak ketiga → login pakai APP_TOKEN kamu.";
+    } else {
+      badge.textContent = "Belum dikonfigurasi"; badge.className = "badge off";
+      box.className = "empty"; box.textContent = "ENV Google Home (client id/secret, DEVICES_KV, OAUTH_KV) belum lengkap diisi di Worker. Ikuti PANDUAN-GOOGLE-HOME.md dulu.";
+    }
+  }catch(e){
+    badge.textContent = "?"; box.className = "empty";
+    box.textContent = "Endpoint /googlehome-status belum tersedia di Worker.";
+  }
+}
+document.getElementById("ghTestLinkBtn").addEventListener("click", loadGoogleHomeStatus);
+
 /* ---------- Gate / koneksi ---------- */
 function doDisconnect(){
   localStorage.removeItem("admkom_token");
@@ -1465,6 +1584,8 @@ async function boot(){
   await loadData();
   loadAiQuota();
   loadCalendarEvents();
+  loadDevices();
+  loadGoogleHomeStatus();
   setInterval(async ()=>{
     try{ const res = await api("GET"); data = res.data; sha = res.sha; renderRekap(); renderOverview(); setConn("ok"); }
     catch(e){ /* diam, jangan ganggu kalau kebetulan gagal sesaat */ }
