@@ -105,12 +105,35 @@
     "4qj2c0h5vv5cisav8n89lu5gn9_20260824T013000Z"
   ],
   "calendarTopicKey": "pengumuman",
-  "reminders": [],
+  "reminders": [
+    {
+      "id": 1787656758415,
+      "title": "Kirim Video untuk Bu Nyai",
+      "message": "Minta tolong kirimin video promosi halawa untuk bu Nyai, via grup halawa knowledge, Cc: Ulva Halawa, Pangeran Herry",
+      "topicKey": "pengumuman",
+      "schedule": {
+        "type": "once",
+        "date": "2026-08-26",
+        "time": "08:00"
+      },
+      "enabled": true,
+      "lastSentDate": null,
+      "googleEventId": "9qomaig2qr3lgpht5hfaodmrl0"
+    }
+  ],
   "liburReminder": {
     "enabled": true,
     "time": "09:00",
     "topicKey": "pengumuman",
     "lastSentDate": "2026-08-25"
+  },
+  "bardiMonitor": {
+    "enabled": false,
+    "deviceIds": [],
+    "threshold": null,
+    "label": "",
+    "topicKey": null,
+    "alerted": false
   },
   "puasaLog": {
     "2026-08-24": {
