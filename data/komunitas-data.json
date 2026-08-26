@@ -73,14 +73,6 @@
       ]
     },
     {
-      "id": 6,
-      "q": "dinten ieu puasa, sampeyan tos siap?",
-      "opts": [
-        "ya, siap",
-        "tidak siap"
-      ]
-    },
-    {
       "id": 7,
       "q": "kamu puasa hari ini, iya atau tidak?",
       "opts": [
@@ -113,7 +105,15 @@
       ]
     }
   ],
-  "puasaVariantsCustom": [],
+  "puasaVariantsCustom": [
+    {
+      "q": "dinten ieu puasa, sampeyan tos siap?",
+      "opts": [
+        "ya, siap",
+        "tidak siap"
+      ]
+    }
+  ],
   "puasaVariantNextId": 11,
   "puasaVariantQueue": [
     17,
