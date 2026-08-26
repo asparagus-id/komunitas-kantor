@@ -151,12 +151,16 @@
   .list-item .li-sub{font-size:11.5px; color:var(--muted);}
   .list-icon{width:36px; height:36px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:15px;}
 
-  .feat-row{display:flex; gap:28px; flex-wrap:wrap;}
-  .feat-item{display:flex; align-items:center; gap:9px; font-size:13px;}
+  .feat-row{display:flex; flex-direction:column;}
+  .feat-item{display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 4px; border-bottom:1px solid var(--line);}
+  .feat-item:last-child{border-bottom:none;}
+  .feat-item-left{display:flex; align-items:center; gap:10px; min-width:0;}
+  .feat-item-left span{font-size:13.5px; font-weight:500;}
   .feat-item .fdot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
   .feat-item .fdot.on{background:var(--ok); box-shadow:0 0 5px var(--ok);}
   .feat-item .fdot.off{background:var(--muted-dim);}
-  .feat-item small{display:block; color:var(--muted); font-size:11px; font-weight:400;}
+  .feat-item small{display:block; color:var(--muted); font-size:12px; font-weight:400; text-align:right;}
+  .feat-item-left span, .feat-item small{overflow-wrap:anywhere;}
 
   .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px 22px; margin-bottom:18px;}
   .card h2{font-size:15px; margin:0 0 4px; display:flex; align-items:center; gap:8px;}
@@ -373,21 +377,27 @@
         </div>
 
         <div class="panel-card">
-          <div class="panel-card-head"><h3>Status Fitur</h3></div>
-          <div class="feat-row" id="featRow">
-            <div class="feat-item"><span class="fdot" id="featAiDot"></span><div><span id="featAiLabel">AI (Groq/Workers)</span><small id="featAiSub">Memuat…</small></div></div>
-            <div class="feat-item"><span class="fdot" id="featCalDot"></span><div><span>Google Calendar (ontime)</span><small id="featCalSub">Memuat…</small></div></div>
-            <div class="feat-item"><span class="fdot on"></span><div><span id="featTopikLabel">0 topik terdaftar</span><small>Termasuk auto-deteksi</small></div></div>
-            <div class="feat-item"><span class="fdot on"></span><div><span id="featAdminLabel">0 admin terdaftar</span><small id="featAdminSub">Semua anggota bebas pakai perintah</small></div></div>
-            <!-- Sisanya (GitHub, BARDI/Tuya, Cron, dst) diisi OTOMATIS oleh
-                 renderFeatureStatusRow() setelah /status-sistem selesai
-                 dimuat -- lihat FEATURE_STATUS_DEFS_DINAMIS di script,
-                 4 item statis di atas ini TETAP dipertahankan apa adanya
-                 (dirender lebih awal oleh renderOverview() dari data.json
-                 saja, sebelum /status-sistem sempat kejawab) supaya tidak
-                 ada jeda kosong pas halaman baru dibuka. -->
+          <div class="panel-card-head">
+            <h3>Status Fitur</h3>
+            <span style="font-size:11px; color:var(--muted); font-weight:600; letter-spacing:.04em; text-transform:uppercase;">Infrastruktur</span>
           </div>
-          <div class="hint" style="margin-top:14px;">Baris ini cuma menampilkan hal yang benar-benar bisa dicek dari data bot (bukan status infrastruktur Cloudflare/GitHub live) — supaya tidak ada info yang menyesatkan. Fitur baru otomatis muncul di sini begitu ditambahkan ke <code>/status-sistem</code> di Worker — lihat komentar <code>FEATURE_STATUS_DEFS_DINAMIS</code> di kode panel utk cara tambahnya.</div>
+          <div class="feat-row" id="featRow">
+            <div class="feat-item"><div class="feat-item-left"><span class="fdot" id="featAiDot"></span><span id="featAiLabel">AI (Groq/Workers)</span></div><small id="featAiSub">Memuat…</small></div>
+            <div class="feat-item"><div class="feat-item-left"><span class="fdot" id="featCalDot"></span><span>Google Calendar (ontime)</span></div><small id="featCalSub">Memuat…</small></div>
+            <!-- Item lain (GitHub, BARDI/Tuya, Cron, dst) diisi OTOMATIS oleh
+                 renderFeatureStatusRow() setelah /status-sistem selesai
+                 dimuat -- lihat FEATURE_STATUS_DEFS_DINAMIS di script.
+                 Kartu ini SENGAJA hanya menampilkan kelompok "infra" saja
+                 (Pengaturan Fitur & Ringkasan Data disembunyikan dulu atas
+                 permintaan user -- definisinya tetap ada di JS, tinggal
+                 ubah filter di renderFeatureStatusRow() kalau mau
+                 dimunculkan lagi). 2 item statis di atas (AI/Kalender)
+                 TETAP dipertahankan apa adanya (dirender lebih awal oleh
+                 renderOverview() dari data.json saja, sebelum /status-sistem
+                 sempat kejawab) supaya tidak ada jeda kosong pas halaman
+                 baru dibuka. -->
+          </div>
+          <div class="hint" style="margin-top:14px;">Baris ini cuma menampilkan hal yang benar-benar bisa dicek dari data bot (bukan status infrastruktur Cloudflare/GitHub live) — supaya tidak ada info yang menyesatkan.</div>
         </div>
       </section>
 
@@ -991,14 +1001,22 @@ function getUpcomingKajian(){
              menyisipkan angka/nama dinamis di label-nya sendiri)
      ok    : function(st) => boolean (true = titik hijau "on")
      sub   : function(st) => string (baris kecil di bawah label)
+     group : "infra" | "fitur" | "ringkasan" -- menentukan kolom/kartu
+             tujuan. SAAT INI kartu Overview hanya menampilkan group
+             "infra" (permintaan user, lihat FEATURE_GROUP_TAMPIL di
+             bawah) -- item "fitur"/"ringkasan" tetap didefinisikan di
+             sini (gampang dimunculkan lagi nanti, tinggal ubah
+             FEATURE_GROUP_TAMPIL), tapi untuk saat ini tidak dirender.
    ============================================================ */
 const FEATURE_STATUS_DEFS_DINAMIS = [
   {
+    group: "infra",
     label: "GitHub (database)",
     ok: (st) => !!st.githubOk,
     sub: (st) => st.githubOk ? "Tersambung" : "⚠️ ENV belum lengkap",
   },
   {
+    group: "infra",
     label: "BARDI / Tuya Smart Home",
     ok: (st) => !!(st.tuyaOk && !st.tuyaError),
     sub: (st) =>
@@ -1009,63 +1027,75 @@ const FEATURE_STATUS_DEFS_DINAMIS = [
         : "Belum tertaut (ENV Tuya kosong)",
   },
   {
+    group: "infra",
     label: "Cron tick terjadwal",
     ok: (st) => st.cronHealthy !== false,
     sub: (st) => st.lastCronTickSuccess ? "Terakhir sukses " + new Date(st.lastCronTickSuccess).toLocaleString("id-ID") : "⚠️ Belum pernah tercatat",
   },
   {
+    group: "fitur",
     label: "Polling Puasa Otomatis",
     ok: (st) => !!st.puasaPollEnabled,
     sub: (st) => st.puasaPollEnabled ? st.puasaPollSchedule : "Nonaktif",
   },
   {
+    group: "fitur",
     label: "Rekap Otomatis Puasa",
     ok: (st) => !!st.puasaRekapEnabled,
     sub: (st) => st.puasaRekapEnabled ? "Jam " + st.puasaRekapTime + " WIB" : "Nonaktif",
   },
   {
+    group: "fitur",
     label: "Reminder Kajian",
     ok: (st) => !!st.kajianReminderEnabled,
     sub: (st) => st.kajianReminderEnabled ? st.kajianReminderSchedule : "Belum diatur",
   },
   {
+    group: "fitur",
     label: "Notifikasi Kalender Ontime",
     ok: (st) => !!st.calendarOntimeEnabled,
     sub: (st) => st.calendarOntimeEnabled ? "Aktif" : "Nonaktif",
   },
   {
+    group: "fitur",
     label: "Pengingat Libur Nasional",
     ok: (st) => !!st.liburReminderEnabled,
     sub: (st) => st.liburReminderEnabled ? "Jam " + st.liburReminderTime + " WIB" : "Nonaktif",
   },
   {
+    group: "fitur",
     label: "Pengingat Umum",
     ok: (st) => (st.reminderUmumAktif || 0) > 0,
     sub: (st) => (st.reminderUmumAktif || 0) + " aktif dari " + (st.reminderUmumTotal || 0) + " total",
   },
   {
+    group: "fitur",
     label: "Pemantauan Perangkat BARDI",
     ok: (st) => !!st.bardiMonitorEnabled,
     sub: (st) => st.bardiMonitorEnabled ? "Aktif" : "Nonaktif",
   },
 ];
+// Kelompok yang ditampilkan di kartu "Status Fitur" (Overview). Ubah/tambah
+// isi array ini kalau mau memunculkan lagi "fitur" atau "ringkasan".
+const FEATURE_GROUP_TAMPIL = ["infra"];
 function renderFeatureStatusRow(st) {
   const row = document.getElementById("featRow");
   if (!row || !st) return;
   // Buang item dinamis lama kalau dipanggil ulang (mis. auto-refresh
   // berkala), sebelum tambah yg baru -- ditandai class "feat-item-dinamis"
-  // supaya 4 item statis di atas (AI/Kalender/Topik/Admin) tidak ikut
-  // terhapus.
+  // supaya item statis di atas (AI/Kalender) tidak ikut terhapus.
   row.querySelectorAll(".feat-item-dinamis").forEach((el) => el.remove());
-  FEATURE_STATUS_DEFS_DINAMIS.forEach((def) => {
-    const label = typeof def.label === "function" ? def.label(st) : def.label;
-    const ok = !!def.ok(st);
-    const sub = def.sub(st);
-    const el = document.createElement("div");
-    el.className = "feat-item feat-item-dinamis";
-    el.innerHTML = `<span class="fdot ${ok ? "on" : "off"}"></span><div><span>${label}</span><small>${sub}</small></div>`;
-    row.appendChild(el);
-  });
+  FEATURE_STATUS_DEFS_DINAMIS
+    .filter((def) => FEATURE_GROUP_TAMPIL.includes(def.group))
+    .forEach((def) => {
+      const label = typeof def.label === "function" ? def.label(st) : def.label;
+      const ok = !!def.ok(st);
+      const sub = def.sub(st);
+      const el = document.createElement("div");
+      el.className = "feat-item feat-item-dinamis";
+      el.innerHTML = `<div class="feat-item-left"><span class="fdot ${ok ? "on" : "off"}"></span><span>${label}</span></div><small>${sub}</small>`;
+      row.appendChild(el);
+    });
 }
 function renderOverview(){
   if(!data) return;
@@ -1167,11 +1197,19 @@ function renderOverview(){
   document.getElementById("featAiSub").textContent = aiConfigured ? "Siap dipakai" : "Belum dikonfigurasi";
   document.getElementById("featCalDot").className = "fdot " + (data.calendarOntimeEnabled ? "on" : "off");
   document.getElementById("featCalSub").textContent = data.calendarOntimeEnabled ? "Notifikasi ontime aktif" : "Notifikasi ontime nonaktif";
+  // featTopikLabel/featAdminLabel/featAdminSub sengaja tidak diisi lagi --
+  // kartu "Status Fitur" (Overview) saat ini hanya menampilkan kelompok
+  // "infra" (lihat FEATURE_GROUP_TAMPIL), jadi elemen Topik & Admin sudah
+  // tidak ada di HTML. Pakai optional chaining (?.) jaga-jaga kalau
+  // elemennya dimunculkan lagi nanti tanpa perlu ubah baris ini.
   const topicCount = Object.keys(data.topics || {}).length;
-  document.getElementById("featTopikLabel").textContent = topicCount + " topik terdaftar";
+  const topikEl = document.getElementById("featTopikLabel");
+  if (topikEl) topikEl.textContent = topicCount + " topik terdaftar";
   const adminCount = (data.adminUserIds || []).length;
-  document.getElementById("featAdminLabel").textContent = adminCount + " admin terdaftar";
-  document.getElementById("featAdminSub").textContent = adminCount ? "Perintah pengaturan dibatasi" : "Semua anggota bebas pakai perintah";
+  const adminLabelEl = document.getElementById("featAdminLabel");
+  if (adminLabelEl) adminLabelEl.textContent = adminCount + " admin terdaftar";
+  const adminSubEl = document.getElementById("featAdminSub");
+  if (adminSubEl) adminSubEl.textContent = adminCount ? "Perintah pengaturan dibatasi" : "Semua anggota bebas pakai perintah";
 }
 
 let puasaChartInstance = null;
