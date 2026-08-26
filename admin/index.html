@@ -621,6 +621,7 @@
           <h2>💡 Perangkat BARDI Smart Home <span class="badge" id="bardiStatusBadge"></span></h2>
           <div class="desc">Kontrol perangkat BARDI kamu (yang sudah tertaut ke akun Tuya) langsung dari sini, sama seperti command <code>/bardi_daftar</code>, <code>/bardi_nyala</code>, <code>/bardi_mati</code> di Telegram. Butuh ENV Tuya sudah diisi di Worker -- lihat PANDUAN-BARDI-TUYA.md.</div>
           <div class="table-wrap"><table id="bardiTable"><thead><tr><th>Nama</th><th>Online</th><th>ON/OFF</th><th></th></tr></thead><tbody></tbody></table></div>
+          <div class="hint" id="bardiStatusErrorHint" style="color:var(--ember); margin-top:8px;"></div>
           <button class="btn small" id="bardiReloadBtn" style="margin-top:10px;">Muat ulang daftar</button>
         </div>
 
@@ -695,7 +696,7 @@ let data = null, sha = null;
 
 // Versi panel ini -- naikkan tiap kali ada perubahan berarti, cocokkan
 // dengan entri di CHANGELOG.md & WORKER_VERSION di worker-komunitas.js.
-const APP_VERSION = "2.11.0";
+const APP_VERSION = "2.11.1";
 const WORKER_URL_FOR_VERSION_CHECK = "https://gus-asisten.rempahecho.workers.dev";
 
 /* Cek versi worker LANGSUNG saat halaman dibuka, SEBELUM login (endpoint
@@ -1748,6 +1749,8 @@ let bardiDevicesCache = []; // dipakai bareng oleh kartu pemantauan grup di bawa
 async function loadBardiDevices(){
   const badge = document.getElementById("bardiStatusBadge");
   const tbody = document.querySelector("#bardiTable tbody");
+  const errHint = document.getElementById("bardiStatusErrorHint");
+  errHint.textContent = "";
   try{
     const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/bardi-devices", { headers:{ "Authorization":"Bearer " + APP_TOKEN } });
     const j = await res.json();
@@ -1761,6 +1764,12 @@ async function loadBardiDevices(){
     const list = j.devices || [];
     bardiDevicesCache = list;
     badge.textContent = list.length + " perangkat"; badge.className = "badge on";
+    // Kolom ON/OFF semua tampil "?" -> kemungkinan besar bukan per-device,
+    // tapi 1 panggilan status BATCH ke Tuya yang gagal (mis. Cloud Project
+    // belum subscribe service "Device Status Notification", atau scope
+    // API belum lengkap). j.statusError berisi pesan asli dari Tuya /
+    // Worker supaya kelihatan alasannya, bukan cuma "?" tanpa penjelasan.
+    errHint.textContent = j.statusError ? `⚠️ Status ON/OFF gagal diambil: ${j.statusError}` : "";
     if(!list.length){
       tbody.innerHTML = `<tr><td colspan="4" class="empty">Belum ada perangkat BARDI terdeteksi.</td></tr>`;
       renderBardiMonitorDeviceChecks();
