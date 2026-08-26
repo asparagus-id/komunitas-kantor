@@ -509,9 +509,16 @@
     "lastSentDate": "2026-08-26"
   },
   "bardiMonitor": {
-    "enabled": false,
+    "enabled": true,
     "label": "MATI LISTRIK",
-    "deviceIds": [],
+    "deviceIds": [
+      "a31a65f0d127a86403aaqt",
+      "a3a37e28d0e36ba5d3dtcn",
+      "a3bf151f4d7d20775aeejv",
+      "a3a254c47accafbd9ech5a",
+      "a34da2017a287691e0bxys",
+      "a37d1120927056bfe9qzvj"
+    ],
     "threshold": 2,
     "topicKey": "pengumuman",
     "alerted": false
