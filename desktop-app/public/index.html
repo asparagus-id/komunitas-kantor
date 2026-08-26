@@ -81,6 +81,12 @@
   .head-stat{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted);}
   .head-stat .stv{color:var(--text); font-weight:600; display:block; font-size:13px;}
   .head-stat .icn{width:16px; height:16px; flex-shrink:0; opacity:.7;}
+  /* Hijriyah = tampilan UTAMA (Arab, angka Arab, baris sendiri, lebih
+     besar). Masehi (cityLabel/dateLabel) jadi SEKUNDER -- lebih kecil, di
+     bawahnya -- sesuai permintaan: Hijriyah menonjol, Masehi kecil saja. */
+  #hijriLabel{display:block; font-size:15px; font-weight:700; color:var(--text); line-height:1.5; margin-bottom:1px;}
+  .head-stat #cityLabel{font-size:11px; font-weight:600;}
+  .head-stat #dateLabel{font-size:10.5px; color:var(--muted-dim);}
   .dot{width:7px;height:7px;border-radius:50%; background:var(--muted-dim); flex-shrink:0;}
   .dot.on{background:var(--success); box-shadow:0 0 6px var(--success);}
   .header-actions{display:flex; align-items:center; gap:8px;}
@@ -283,6 +289,28 @@
   .yearly-table-wrap th, .yearly-table-wrap td{padding:8px 6px; white-space:nowrap;}
   .yearly-table-wrap tr.today-row td{background:var(--gold-light); font-weight:700;}
 
+  /* ---------- Toggle mode Tabel/Grid & Grid Kalender Hijriyah ---------- */
+  .yearly-mode-toggle{display:flex; gap:6px; padding:0 22px 10px;}
+  .mode-btn{flex:1; padding:9px 10px; border-radius:9px; border:1px solid var(--line); background:var(--surface-2);
+    color:var(--muted); font-size:12.5px; cursor:pointer; font-family:inherit; transition:.15s;}
+  .mode-btn.active{background:var(--primary); color:var(--on-primary); border-color:var(--primary); font-weight:700;}
+  .yearly-grid-wrap{flex:1; overflow-y:auto; padding:0 22px 20px;}
+  .hijri-grid-weekdays{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:8px;}
+  .hijri-grid-weekdays span{text-align:center; font-size:11px; color:var(--muted); font-family:'Amiri',serif;}
+  .hijri-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px;}
+  .hijri-cell{
+    aspect-ratio:1; border-radius:10px; border:1px solid var(--line); background:var(--surface-2);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:4px;
+  }
+  .hijri-cell.empty{border:none; background:transparent;}
+  .hijri-cell.today{background:var(--gold-light); border-color:var(--gold);}
+  .hijri-cell .hc-hijri{font-family:'Amiri',serif; font-weight:700; font-size:17px; color:var(--text); line-height:1;}
+  .hijri-cell .hc-greg{font-size:9.5px; color:var(--muted-dim); line-height:1;}
+  @media (max-width:520px){
+    .hijri-cell .hc-hijri{font-size:14px;}
+    .hijri-grid-weekdays span{font-size:9.5px;}
+  }
+
   @media (prefers-reduced-motion: reduce){*{transition:none !important; animation:none !important;}}
 
   /* ====== Mode WIDGET ====== */
@@ -407,7 +435,10 @@
     <div class="header-mid">
       <div class="head-stat">
         <svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        <div><span class="stv" id="cityLabel">Lokasi belum diatur</span><span id="dateLabel">—</span></div>
+        <div>
+          <span class="stv" id="hijriLabel" dir="rtl" lang="ar" style="font-family:'Amiri',serif;"></span>
+          <span class="stv" id="cityLabel">Lokasi belum diatur</span><span id="dateLabel">—</span>
+        </div>
       </div>
       <div class="head-stat">
         <span class="dot" id="onlineDot"></span>
@@ -544,8 +575,31 @@
 
       <!-- ---- TAB: JADWAL ---- -->
       <div class="tab-pane" data-pane="jadwal">
-        <div class="sub">Aktifkan/nonaktifkan tiap sholat, dan atur berapa menit sebelum adzan pengingat dibunyikan.</div>
+        <div class="sub">Aktifkan/nonaktifkan tiap sholat, dan atur berapa menit sebelum adzan pengingat dibunyikan. Pengingat (sebelum adzan) dan notifikasi adzan (saat tiba) sekarang independen -- bisa nyalakan satu, matikan yang lain.</div>
+
+        <div class="audio-block" style="margin-bottom:14px;">
+          <div class="atitle">Pengaturan cepat (default)</div>
+          <div class="astat">Atur di sini, klik "Terapkan ke Semua" -- lalu tetap bisa dikustom satu-satu di bawah kalau perlu beda.</div>
+          <div style="display:flex; flex-direction:column; gap:8px; margin:10px 0;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+              <span class="switch"><input type="checkbox" id="defaultReminderEnabled" checked><span class="switch-track"></span></span>
+              Pengingat sebelum adzan
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;">
+              <span class="switch"><input type="checkbox" id="defaultAzanEnabled" checked><span class="switch-track"></span></span>
+              Notifikasi adzan
+            </label>
+          </div>
+          <button class="btn" id="applyDefaultToAllBtn" style="width:100%;">Terapkan ke Semua Waktu Sholat</button>
+        </div>
+
         <div id="prayerRows"></div>
+
+        <div class="section-title">Waktu Duha</div>
+        <div class="hint" style="margin-top:-4px; margin-bottom:10px;">Duha tidak dihitung API, cuma perkiraan dari Terbit + sekian menit (konvensi umum 15-24 menit) -- ditampilkan di jadwal sebagai info, tanpa notifikasi terpisah (bukan sholat wajib).</div>
+        <div class="field-row">
+          <div class="field" style="max-width:160px;"><label>Menit setelah Terbit</label><input type="number" id="inDuhaMinutes" min="1" max="60" value="15"></div>
+        </div>
 
         <div class="section-title">Koreksi manual (menit)</div>
         <div class="hint" style="margin-top:-4px; margin-bottom:12px;">
@@ -628,7 +682,13 @@
       <h2>Jadwal Tahunan</h2>
       <button class="panel-close" id="yearlyCloseX">&times;</button>
     </div>
-    <div class="yearly-nav">
+    <div class="yearly-mode-toggle">
+      <button class="mode-btn active" id="yearlyModeTableBtn">📋 Tabel Masehi</button>
+      <button class="mode-btn" id="yearlyModeGridBtn">🗓️ Grid Hijriyah</button>
+    </div>
+
+    <!-- Navigasi mode Tabel (Masehi) -->
+    <div class="yearly-nav" id="yearlyGregorianNav">
       <button class="icon-btn" id="yearlyPrevBtn" title="Bulan sebelumnya">‹</button>
       <select id="yearlyMonthSelect"></select>
       <select id="yearlyYearSelect"></select>
@@ -636,12 +696,29 @@
       <div style="flex:1;"></div>
       <button class="btn primary" id="yearlyDownloadAllBtn">Unduh semua (4 tahun)</button>
     </div>
+    <!-- Navigasi mode Grid (Hijriyah) -- bulan Hijriyah TIDAK sejajar
+         dengan bulan Masehi, jadi navigasinya terpisah, bukan pakai
+         dropdown Masehi yang sama. -->
+    <div class="yearly-nav" id="yearlyHijriNav" style="display:none;">
+      <button class="icon-btn" id="yearlyHijriPrevBtn" title="Bulan Hijriyah sebelumnya">‹</button>
+      <div id="yearlyHijriLabel" dir="rtl" lang="ar" style="font-family:'Amiri',serif; font-size:16px; font-weight:700; flex:1; text-align:center;">—</div>
+      <button class="icon-btn" id="yearlyHijriNextBtn" title="Bulan Hijriyah berikutnya">›</button>
+    </div>
+
     <div class="hint" id="yearlyStatus" style="margin:0 22px 10px;"></div>
-    <div class="yearly-table-wrap">
+
+    <div class="yearly-table-wrap" id="yearlyTableWrap">
       <table class="sched">
-        <thead><tr><th>Tgl</th><th>Subuh</th><th>Terbit</th><th>Dzuhur</th><th>Ashar</th><th>Maghrib</th><th>Isya</th></tr></thead>
+        <thead><tr><th>Tanggal</th><th>Subuh</th><th>Terbit</th><th>Duha</th><th>Dzuhur</th><th>Ashar</th><th>Maghrib</th><th>Isya</th></tr></thead>
         <tbody id="yearlyTableBody"></tbody>
       </table>
+    </div>
+
+    <div class="yearly-grid-wrap" id="yearlyGridWrap" style="display:none;">
+      <div class="hijri-grid-weekdays" dir="rtl">
+        <span>أحد</span><span>اثنين</span><span>ثلاثاء</span><span>أربعاء</span><span>خميس</span><span>جمعة</span><span>سبت</span>
+      </div>
+      <div class="hijri-grid" id="hijriGrid"></div>
     </div>
   </div>
 </div>
@@ -699,20 +776,30 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.10.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
+const APP_VERSION = "1.12.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
   lat: null,
   lng: null,
   method: 20, // Kemenag RI
+  // "enabled" = pengingat SEBELUM adzan (nama field dipertahankan biar
+  // data lama yg sudah tersimpan tetap kebaca -- cuma maknanya sekarang
+  // dipersempit khusus reminder, bukan lagi gabungan reminder+adzan).
+  // "azanEnabled" = BARU, notifikasi/suara adzan SAAT waktu tiba -- dua-
+  // duanya independen, bisa dimatikan satu tapi yg lain tetap nyala.
   prayerSettings: {
-    Fajr:    {enabled:true, minutes:10},
-    Dhuhr:   {enabled:true, minutes:10, fridayMinutes:20},
-    Asr:     {enabled:true, minutes:10},
-    Maghrib: {enabled:true, minutes:10},
-    Isha:    {enabled:true, minutes:10}
+    Fajr:    {enabled:true, minutes:10, azanEnabled:true},
+    Dhuhr:   {enabled:true, minutes:10, fridayMinutes:20, azanEnabled:true},
+    Asr:     {enabled:true, minutes:10, azanEnabled:true},
+    Maghrib: {enabled:true, minutes:10, azanEnabled:true},
+    Isha:    {enabled:true, minutes:10, azanEnabled:true}
   },
+  // Duha TIDAK datang dari AlAdhan API -- dihitung sendiri dari Terbit +
+  // sekian menit (konvensi umum). Cuma DITAMPILKAN di jadwal (informasi),
+  // TIDAK ada notifikasi/reminder terpisah utknya (Duha sunnah, jendela
+  // waktunya panjang, tidak perlu diingatkan presisi spt sholat wajib).
+  duhaMinutesAfterSunrise: 15,
   // Koreksi manual (dalam MENIT, boleh negatif) per waktu sholat.
   // DEFAULT +2 menit (BUKAN 0 lagi) -- ini angka ihtiyat resmi Kemenag RI
   // hasil riset (OIF UMSU & FivePrayer: "ditambah ihtiyati 2 menit"),
@@ -729,6 +816,14 @@ const DEFAULTS = {
   correctionMinutes: { Fajr:2, Sunrise:0, Dhuhr:2, Asr:2, Maghrib:2, Isha:2 },
   volume: 0.8
 };
+
+/* Ubah angka Latin (0-9) jadi angka Arab (٠-٩) -- dipakai buat tampilan
+   tanggal Hijriyah supaya benar-benar dalam bahasa & angka Arab, bukan
+   cuma nama bulannya saja. */
+function keAngkaArab(str){
+  const digitArab = ["٠","١","٢","٣","٤","٥","٦","٧","٨","٩"];
+  return String(str).replace(/[0-9]/g, d => digitArab[d]);
+}
 
 const PRAYER_LABEL = {
   Fajr: "Subuh", Sunrise: "Terbit", Dhuhr: "Dzuhur", Asr: "Ashar",
@@ -1037,6 +1132,58 @@ async function maybeAutoSync(){
   }
 }
 
+/* ---------------- Auto-update jadwal 4 TAHUN secara berkala ----------------
+   Beda dari maybeAutoSync() di atas (yg cuma jaga cadangan minimal 7 hari
+   ke depan, dicek tiap 15 menit) -- ini jauh lebih JARANG (tiap 3 bulan)
+   tapi jauh lebih LUAS: ulang unduh SEMUA bulan tahun-ini s/d +3 tahun,
+   sama persis logikanya dgn tombol "Unduh semua (4 tahun)" manual di
+   Jadwal Tahunan, cuma dipicu OTOMATIS di background, diam-diam (TIDAK
+   ada toast/progress terlihat kecuali memang ada bulan baru yg berhasil
+   diunduh -- supaya tidak mengganggu kalau semua memang sudah lengkap).
+   Alasannya: (1) tahun+3 itu jendela BERGULIR -- makin lama app dipakai
+   tanpa update, makin jauh dari cakupan 4 tahun yg dijanjikan; (2) AlAdhan
+   kadang merevisi datanya, jadi re-sync berkala menjaga akurasi tetap
+   terbaru, bukan cuma sekali unduh lalu dilupakan selamanya. */
+const FULL_SYNC_INTERVAL_MONTHS = 3;
+function getLastFullSyncDate(){
+  try{ return localStorage.getItem("adzan_last_full_sync"); }catch(e){ return null; }
+}
+function setLastFullSyncDate(iso){
+  try{ localStorage.setItem("adzan_last_full_sync", iso); }catch(e){}
+}
+async function maybeAutoFullSync(){
+  if(!navigator.onLine || !locationConfigured()) return;
+  const last = getLastFullSyncDate();
+  const now = new Date();
+  if(last){
+    const lastDate = new Date(last);
+    const bulanBerlalu = (now.getFullYear()-lastDate.getFullYear())*12 + (now.getMonth()-lastDate.getMonth());
+    if(bulanBerlalu < FULL_SYNC_INTERVAL_MONTHS) return; // belum waktunya, jangan buang-buang kuota API
+  }
+  const tahunSekarang = now.getFullYear();
+  let adaYangBaru = false, semuaBerhasil = true;
+  outer:
+  for(let y=tahunSekarang; y<=tahunSekarang+3; y++){
+    for(let m=1; m<=12; m++){
+      if(!navigator.onLine){ semuaBerhasil = false; break outer; } // koneksi putus di tengah -- berhenti total, coba lagi nanti
+      const mk = monthKeyOf(y,m);
+      if(!cacheParamsMatch(calendarCache[mk])){
+        try{
+          calendarCache[mk] = await fetchCalendarMonth(y,m);
+          saveCalendarCache(); // simpan progresif, sama spt tombol manual
+          adaYangBaru = true;
+          await new Promise(r=>setTimeout(r, 250)); // jeda singkat -- ini jalan diam-diam tanpa diawasi, sopan ke API drpd nembak beruntun
+        }catch(e){ semuaBerhasil = false; /* lewati bulan ini, lanjut yg lain */ }
+      }
+    }
+  }
+  if(semuaBerhasil) setLastFullSyncDate(now.toISOString()); // cuma tandai "selesai" kalau BENAR-BENAR semua bulan berhasil dicek/diunduh
+  if(adaYangBaru){
+    refreshOfflineCoverage();
+    showToast("Cadangan jadwal 4 tahun ke depan diperbarui otomatis.", "ok");
+  }
+}
+
 /* Update 3 kartu info (Cadangan Offline, Terakhir Sinkron, Status) di
    halaman utama -- dipanggil setiap kali jadwal berhasil disinkron/dimuat,
    supaya kartu-kartu ini selalu menampilkan info terbaru tanpa perlu buka
@@ -1109,8 +1256,11 @@ async function ensureScheduleForToday(){
 }
 
 /* ---------------- Logika reminder minutes ---------------- */
-function isPrayerEnabled(key){
+function isReminderEnabled(key){
   return !!(settings.prayerSettings[key] && settings.prayerSettings[key].enabled);
+}
+function isAzanEnabled(key){
+  return !!(settings.prayerSettings[key] && settings.prayerSettings[key].azanEnabled);
 }
 function reminderMinutesFor(prayerKey, dateObj){
   const ps = settings.prayerSettings[prayerKey];
@@ -1118,6 +1268,12 @@ function reminderMinutesFor(prayerKey, dateObj){
   const day = dateObj.getDay();
   if(day === 5 && prayerKey === "Dhuhr" && ps.fridayMinutes != null) return ps.fridayMinutes;
   return ps.minutes;
+}
+/* Duha TIDAK ada di respons AlAdhan -- dihitung manual dari Terbit + N
+   menit (settings.duhaMinutesAfterSunrise). Cuma informasi, tidak ada
+   notifikasi terpisah utknya. */
+function computeDuhaTime(sunriseDate){
+  return new Date(sunriseDate.getTime() + (settings.duhaMinutesAfterSunrise || 15) * 60000);
 }
 
 /* ---------------- Render UI ---------------- */
@@ -1151,10 +1307,11 @@ function renderSchedule(now){
     const tr = document.createElement("tr");
     const isPast = t.getTime() <= now.getTime();
     const isNext = upcoming && upcoming.key === key && upcoming.date.getTime() === t.getTime();
-    const isMuted = (REMINDABLE.includes(key) && !isPrayerEnabled(key));
+    const isMuted = (REMINDABLE.includes(key) && !isAzanEnabled(key));
     tr.className = (isNext ? "next" : "") + (isMuted ? " row-muted" : "");
     const remMin = REMINDABLE.includes(key) ? reminderMinutesFor(key, todaySchedule[key]) : null;
-    const showRem = remMin!=null && isPrayerEnabled(key);
+    const showRem = remMin!=null && isReminderEnabled(key);
+    const azanOff = REMINDABLE.includes(key) && !isAzanEnabled(key);
     const statusHtml = isNext
       ? `<span class="sstatus next">🕐 Berikutnya</span>`
       : isPast
@@ -1163,22 +1320,37 @@ function renderSchedule(now){
     tr.innerHTML = `
       <td><div class="sname-cell"><span class="semoji">${PRAYER_EMOJI[key]||""}</span>${PRAYER_LABEL[key]}</div>
         ${showRem ? `<div class="rem-note">−${remMin} mnt pengingat</div>` : (REMINDABLE.includes(key) ? `<div class="rem-note">Pengingat nonaktif</div>` : "")}
+        ${azanOff ? `<div class="rem-note">🔇 Adzan nonaktif</div>` : ""}
       </td>
       <td class="stime">${t.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"})}</td>
       <td>${statusHtml}</td>
     `;
     body.appendChild(tr);
+    // Sisipkan baris Duha TEPAT setelah Terbit -- dihitung, bukan dari API,
+    // murni informasi (tidak ada status/reminder krn bukan sholat wajib).
+    if(key === "Sunrise"){
+      const duha = computeDuhaTime(t);
+      const trDuha = document.createElement("tr");
+      trDuha.innerHTML = `
+        <td><div class="sname-cell"><span class="semoji">🌤️</span>Duha</div>
+          <div class="rem-note">${settings.duhaMinutesAfterSunrise || 15} mnt setelah Terbit</div>
+        </td>
+        <td class="stime">${duha.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"})}</td>
+        <td><span class="sstatus wait">ⓘ Info</span></td>
+      `;
+      body.appendChild(trDuha);
+    }
   }
 }
 
 function nextPrayerInfo(now){
   for(const key of REMINDABLE){
-    if(!isPrayerEnabled(key)) continue;
+    if(!isAzanEnabled(key)) continue;
     if(todaySchedule[key].getTime() > now.getTime()) return {key, date: todaySchedule[key]};
   }
   if(tomorrowSchedule){
     for(const key of REMINDABLE){
-      if(!isPrayerEnabled(key)) continue;
+      if(!isAzanEnabled(key)) continue;
       return {key, date: tomorrowSchedule[key], isTomorrow:true};
     }
   }
@@ -1196,8 +1368,14 @@ function fmtCountdown(ms){
 
 function tick(){
   const now = new Date();
-  document.getElementById("dateLabel").textContent = now.toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"long", year:"numeric"}) +
-    (todaySchedule && todaySchedule.hijri ? ` • ${todaySchedule.hijri.day} ${todaySchedule.hijri.month.en} ${todaySchedule.hijri.year} H` : "");
+  document.getElementById("dateLabel").textContent = now.toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"long", year:"numeric"});
+  const hijriEl = document.getElementById("hijriLabel");
+  if(todaySchedule && todaySchedule.hijri && hijriEl){
+    const h = todaySchedule.hijri;
+    const namaBulanArab = (h.month && h.month.ar) || (h.month && h.month.en) || "";
+    const namaHariArab = (h.weekday && h.weekday.ar) || "";
+    hijriEl.textContent = `${namaHariArab ? namaHariArab + "، " : ""}${keAngkaArab(h.day)} ${namaBulanArab} ${keAngkaArab(h.year)} هـ`;
+  }
   document.getElementById("cityLabel").textContent = settings.city || "Lokasi belum diatur";
   updateSkyAmbience();
 
@@ -1233,22 +1411,29 @@ function checkTriggers(now){
   if(!todaySchedule) return;
   const key = dateKey(now);
   for(const pKey of REMINDABLE){
-    if(!isPrayerEnabled(pKey)) continue;
+    const ps = settings.prayerSettings[pKey];
+    if(!ps) continue;
     const prayerTime = todaySchedule[pKey].getTime();
-    const remMin = reminderMinutesFor(pKey, todaySchedule[pKey]);
-    const remindAt = prayerTime - remMin*60000;
 
-    const remLogKey = `${key}:${pKey}:reminder`;
-    if(!triggeredLog[remLogKey] && now.getTime() >= remindAt && now.getTime() < prayerTime){
-      triggeredLog[remLogKey] = true; saveTriggerLog();
-      playSound("reminder");
-      showReminderPopup(pKey, prayerTime);
+    // ---- Pengingat SEBELUM adzan -- independen, toggle sendiri (ps.enabled) ----
+    if(ps.enabled){
+      const remMin = reminderMinutesFor(pKey, todaySchedule[pKey]);
+      const remindAt = prayerTime - remMin*60000;
+      const remLogKey = `${key}:${pKey}:reminder`;
+      if(!triggeredLog[remLogKey] && now.getTime() >= remindAt && now.getTime() < prayerTime){
+        triggeredLog[remLogKey] = true; saveTriggerLog();
+        playSound("reminder");
+        showReminderPopup(pKey, prayerTime);
+      }
     }
-    const azanLogKey = `${key}:${pKey}:azan`;
-    if(!triggeredLog[azanLogKey] && now.getTime() >= prayerTime && now.getTime() < prayerTime + 60000){
-      triggeredLog[azanLogKey] = true; saveTriggerLog();
-      playSound("azan");
-      flashNowBadge(pKey);
+    // ---- Notifikasi ADZAN saat waktu tiba -- independen, toggle sendiri (ps.azanEnabled) ----
+    if(ps.azanEnabled){
+      const azanLogKey = `${key}:${pKey}:azan`;
+      if(!triggeredLog[azanLogKey] && now.getTime() >= prayerTime && now.getTime() < prayerTime + 60000){
+        triggeredLog[azanLogKey] = true; saveTriggerLog();
+        playSound("azan");
+        flashNowBadge(pKey);
+      }
     }
   }
 }
@@ -1368,6 +1553,7 @@ function openSettings(){
   document.getElementById("citySearchResults").innerHTML = "";
   document.getElementById("inVolume").value = Math.round(settings.volume*100);
   document.getElementById("volumeVal").textContent = Math.round(settings.volume*100)+"%";
+  document.getElementById("inDuhaMinutes").value = settings.duhaMinutesAfterSunrise || 15;
   renderPrayerRows();
   renderCorrectionRows();
   refreshAudioStatus();
@@ -1432,15 +1618,26 @@ async function renderYearlyTable(){
   }
   statusEl.textContent = "";
   const todayKeyStr = dateKey(new Date());
+  const namaBulanMasehi = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
   const hariList = Object.keys(entry.days).sort();
   tbody.innerHTML = hariList.map(tgl=>{
     const d = entry.days[tgl];
-    const [,, dd] = tgl.split("-");
+    const [yy, mm, dd] = tgl.split("-").map(Number);
     const isToday = tgl === todayKeyStr;
+    const h = d.hijri || {};
+    const hijriText = h.day ? `${keAngkaArab(h.day)} ${(h.month&&h.month.ar)||""}` : "-";
+    const [sh, smi] = d.times.Sunrise.split(":").map(Number);
+    const duhaDate = new Date(yy, mm-1, dd, sh, smi);
+    duhaDate.setMinutes(duhaDate.getMinutes() + (settings.duhaMinutesAfterSunrise || 15));
+    const duhaStr = `${String(duhaDate.getHours()).padStart(2,"0")}:${String(duhaDate.getMinutes()).padStart(2,"0")}`;
     return `<tr class="${isToday ? "today-row":""}">
-      <td>${parseInt(dd,10)}</td>
+      <td style="white-space:normal; min-width:110px;">
+        <div dir="rtl" lang="ar" style="font-family:'Amiri',serif; font-weight:700; font-size:14px;">${hijriText}</div>
+        <div style="font-size:10.5px; color:var(--muted);">${dd} ${namaBulanMasehi[mm-1]} ${yy}</div>
+      </td>
       <td>${bulanKoreksi(d.times.Fajr,"Fajr")}</td>
       <td>${d.times.Sunrise}</td>
+      <td>${duhaStr}</td>
       <td>${bulanKoreksi(d.times.Dhuhr,"Dhuhr")}</td>
       <td>${bulanKoreksi(d.times.Asr,"Asr")}</td>
       <td>${bulanKoreksi(d.times.Maghrib,"Maghrib")}</td>
@@ -1448,6 +1645,9 @@ async function renderYearlyTable(){
     </tr>`;
   }).join("");
 }
+let yearlyMode = "tabel"; // "tabel" | "grid"
+let hijriViewMonth, hijriViewYear; // 1-12, tahun Hijriyah
+
 function openYearly(){
   const now = new Date();
   yearlyViewYear = now.getFullYear();
@@ -1455,6 +1655,14 @@ function openYearly(){
   isiPilihanBulanTahun();
   document.getElementById("yearlyMonthSelect").value = String(yearlyViewMonth);
   document.getElementById("yearlyYearSelect").value = String(yearlyViewYear);
+  // mulai grid Hijriyah dari bulan Hijriyah HARI INI (kalau sudah diketahui
+  // dari todaySchedule.hijri), fallback ke perkiraan kasar kalau belum ada.
+  if(todaySchedule && todaySchedule.hijri){
+    hijriViewMonth = parseInt(todaySchedule.hijri.month.number, 10);
+    hijriViewYear = parseInt(todaySchedule.hijri.year, 10);
+  } else {
+    hijriViewMonth = 1; hijriViewYear = 1447;
+  }
   yearlyOverlay.classList.add("open");
   renderYearlyTable();
 }
@@ -1476,6 +1684,106 @@ document.getElementById("yearlyNextBtn").addEventListener("click", ()=>{
   document.getElementById("yearlyYearSelect").value = String(yearlyViewYear);
   renderYearlyTable();
 });
+
+/* ---------------- Grid Kalender Hijriyah ----------------
+   Beda dari tabel Masehi di atas (yang datanya dari calendarCache,
+   disusun per BULAN MASEHI) -- grid ini pakai endpoint KHUSUS AlAdhan
+   yang menyelaraskan ke BULAN HIJRIYAH asli (bukan Masehi dipaksa jadi
+   Hijriyah), supaya grid-nya benar spt kalender Hijriyah sungguhan
+   (baris pertama bisa mulai di tengah minggu, dst -- sama kayak app
+   referensi Anda). Cache-nya SENGAJA terpisah dari calendarCache. */
+function loadHijriCalendarCache(){
+  try{ return JSON.parse(localStorage.getItem("adzan_hijri_calendar_v1")||"{}"); }catch(e){ return {}; }
+}
+function saveHijriCalendarCache(){ localStorage.setItem("adzan_hijri_calendar_v1", JSON.stringify(hijriCalendarCache)); }
+let hijriCalendarCache = loadHijriCalendarCache();
+function hijriCacheKey(m,y){ return `${y}-${String(m).padStart(2,"0")}`; }
+function hijriCacheParamsMatch(entry){
+  return entry && entry.lat===settings.lat && entry.lng===settings.lng && entry.method===settings.method;
+}
+/* Endpoint: /hijriCalendar/{bulan}/{tahun} -- urutan bulan DULU baru
+   tahun (beda dari /calendar/{tahun}/{bulan} yg dipakai tabel Masehi --
+   ini memang urutan resmi dari dokumentasi AlAdhan utk endpoint Hijriyah,
+   bukan salah ketik). */
+async function fetchHijriCalendarMonth(hijriMonth, hijriYear){
+  const url = `https://api.aladhan.com/v1/hijriCalendar/${hijriMonth}/${hijriYear}?latitude=${settings.lat}&longitude=${settings.lng}&method=${settings.method}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error("Gagal ambil kalender Hijriyah: HTTP " + res.status);
+  const data = await res.json();
+  if(!Array.isArray(data.data)) throw new Error("Format respons tidak dikenali");
+  return { items: data.data, lat:settings.lat, lng:settings.lng, method:settings.method, fetchedAt:new Date().toISOString() };
+}
+async function renderHijriGrid(){
+  const statusEl = document.getElementById("yearlyStatus");
+  const gridEl = document.getElementById("hijriGrid");
+  const labelEl = document.getElementById("yearlyHijriLabel");
+  const ck = hijriCacheKey(hijriViewMonth, hijriViewYear);
+  let entry = hijriCalendarCache[ck];
+  if(!hijriCacheParamsMatch(entry)){
+    if(!locationConfigured()){ statusEl.textContent = "⚠️ Lokasi belum diatur -- isi dulu di Pengaturan > Lokasi."; gridEl.innerHTML=""; return; }
+    if(!navigator.onLine){ statusEl.textContent = "Offline & bulan Hijriyah ini belum ada di cadangan. Sambungkan internet dulu."; gridEl.innerHTML=""; return; }
+    statusEl.textContent = "Mengambil kalender Hijriyah...";
+    gridEl.innerHTML = "";
+    try{
+      entry = await fetchHijriCalendarMonth(hijriViewMonth, hijriViewYear);
+      hijriCalendarCache[ck] = entry;
+      saveHijriCalendarCache();
+    }catch(e){
+      statusEl.textContent = "Gagal mengambil data: " + String(e.message||e);
+      return;
+    }
+  }
+  statusEl.textContent = "";
+  if(!entry.items.length){ gridEl.innerHTML = ""; return; }
+
+  // Label header: nama bulan Arab + tahun Hijriyah (angka Arab), diambil
+  // dari data hari pertama bulan itu sendiri -- bukan tabel nama manual,
+  // supaya SELALU cocok persis dgn yg dikembalikan API.
+  const contoh = entry.items[0].date.hijri;
+  labelEl.textContent = `${contoh.month.ar} ${keAngkaArab(contoh.year)} هـ`;
+
+  const todayKeyStr = dateKey(new Date());
+  // Tentukan posisi weekday hari PERTAMA di bulan Hijriyah ini (0=Ahad..6=Sabtu)
+  // dari tanggal Masehi-nya (dihitung sendiri via Date, TIDAK bergantung
+  // field weekday API -- lebih pasti benar).
+  const [d1,m1,y1] = entry.items[0].date.gregorian.date.split("-").map(Number);
+  const startWeekday = new Date(y1, m1-1, d1).getDay();
+
+  let html = "";
+  for(let i=0;i<startWeekday;i++) html += `<div class="hijri-cell empty"></div>`;
+  entry.items.forEach(item=>{
+    const [dd,mm,yy] = item.date.gregorian.date.split("-").map(Number);
+    const gregKeyStr = `${yy}-${String(mm).padStart(2,"0")}-${String(dd).padStart(2,"0")}`;
+    const isToday = gregKeyStr === todayKeyStr;
+    html += `<div class="hijri-cell ${isToday?"today":""}">
+      <div class="hc-hijri">${keAngkaArab(item.date.hijri.day)}</div>
+      <div class="hc-greg">${dd}/${mm}</div>
+    </div>`;
+  });
+  gridEl.innerHTML = html;
+}
+document.getElementById("yearlyHijriPrevBtn").addEventListener("click", ()=>{
+  hijriViewMonth--; if(hijriViewMonth<1){ hijriViewMonth=12; hijriViewYear--; }
+  renderHijriGrid();
+});
+document.getElementById("yearlyHijriNextBtn").addEventListener("click", ()=>{
+  hijriViewMonth++; if(hijriViewMonth>12){ hijriViewMonth=1; hijriViewYear++; }
+  renderHijriGrid();
+});
+function setYearlyMode(mode){
+  yearlyMode = mode;
+  document.getElementById("yearlyModeTableBtn").classList.toggle("active", mode==="tabel");
+  document.getElementById("yearlyModeGridBtn").classList.toggle("active", mode==="grid");
+  document.getElementById("yearlyGregorianNav").style.display = mode==="tabel" ? "flex" : "none";
+  document.getElementById("yearlyHijriNav").style.display = mode==="grid" ? "flex" : "none";
+  document.getElementById("yearlyTableWrap").style.display = mode==="tabel" ? "" : "none";
+  document.getElementById("yearlyGridWrap").style.display = mode==="grid" ? "" : "none";
+  document.getElementById("yearlyStatus").textContent = "";
+  if(mode==="tabel") renderYearlyTable(); else renderHijriGrid();
+}
+document.getElementById("yearlyModeTableBtn").addEventListener("click", ()=> setYearlyMode("tabel"));
+document.getElementById("yearlyModeGridBtn").addEventListener("click", ()=> setYearlyMode("grid"));
+
 document.getElementById("yearlyDownloadAllBtn").addEventListener("click", async ()=>{
   if(!locationConfigured()){ showToast("Atur lokasi dulu di Pengaturan.", "err"); return; }
   if(!navigator.onLine){ showToast("Tidak ada koneksi internet.", "err"); return; }
@@ -1514,18 +1822,23 @@ function renderPrayerRows(){
   REMINDABLE.forEach(key=>{
     const ps = settings.prayerSettings[key];
     const row = document.createElement("div");
-    row.className = "prayer-row" + (ps.enabled ? "" : " off");
+    row.className = "prayer-row" + ((ps.enabled || ps.azanEnabled) ? "" : " off");
     row.dataset.key = key;
     row.innerHTML = `
       <div class="prayer-row-top">
         <div class="prayer-row-name">${PRAYER_LABEL[key]}</div>
-        <label class="switch">
-          <input type="checkbox" class="enableInput" ${ps.enabled ? "checked":""}>
-          <span class="switch-track"></span>
+      </div>
+      <div class="prayer-row-sub" style="justify-content:space-between;">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+          <span class="switch"><input type="checkbox" class="reminderEnableInput" ${ps.enabled?"checked":""}><span class="switch-track"></span></span>
+          Pengingat <input type="number" class="minutesInput" min="0" max="120" value="${ps.minutes}" style="width:44px;"> mnt sebelum
         </label>
       </div>
       <div class="prayer-row-sub">
-        Ingatkan <input type="number" class="minutesInput" min="0" max="120" value="${ps.minutes}"> menit sebelum adzan
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+          <span class="switch"><input type="checkbox" class="azanEnableInput" ${ps.azanEnabled?"checked":""}><span class="switch-track"></span></span>
+          Notifikasi adzan (saat waktu tiba)
+        </label>
       </div>
       ${key==="Dhuhr" ? `
       <div class="friday-override">
@@ -1533,23 +1846,42 @@ function renderPrayerRows(){
         <input type="number" class="fridayInput" min="0" max="120" value="${ps.fridayMinutes!=null?ps.fridayMinutes:20}"> menit
       </div>` : ""}
     `;
-    row.querySelector(".enableInput").addEventListener("change",(e)=>{
-      row.classList.toggle("off", !e.target.checked);
-    });
+    const updateOffState = ()=>{
+      const anyOn = row.querySelector(".reminderEnableInput").checked || row.querySelector(".azanEnableInput").checked;
+      row.classList.toggle("off", !anyOn);
+    };
+    row.querySelector(".reminderEnableInput").addEventListener("change", updateOffState);
+    row.querySelector(".azanEnableInput").addEventListener("change", updateOffState);
     box.appendChild(row);
   });
 }
 function readPrayerRowsIntoSettings(){
   document.querySelectorAll(".prayer-row").forEach(row=>{
     const key = row.dataset.key;
-    const enabled = row.querySelector(".enableInput").checked;
+    const enabled = row.querySelector(".reminderEnableInput").checked;
+    const azanEnabled = row.querySelector(".azanEnableInput").checked;
     const minutes = Math.max(0, parseInt(row.querySelector(".minutesInput").value,10) || 0);
     settings.prayerSettings[key].enabled = enabled;
+    settings.prayerSettings[key].azanEnabled = azanEnabled;
     settings.prayerSettings[key].minutes = minutes;
     const fridayEl = row.querySelector(".fridayInput");
     if(fridayEl) settings.prayerSettings[key].fridayMinutes = Math.max(0, parseInt(fridayEl.value,10) || 0);
   });
 }
+/* Tombol "Terapkan ke Semua Waktu Sholat" -- ambil 2 toggle default di
+   atas, tempelkan ke SEMUA baris (tanpa menyentuh angka menit tiap
+   sholat), supaya bisa atur cepat lalu tetap bisa custom satu-satu
+   sesudahnya (klik tombol ini, baru edit manual kalau perlu beda). */
+document.getElementById("applyDefaultToAllBtn").addEventListener("click", ()=>{
+  const defReminder = document.getElementById("defaultReminderEnabled").checked;
+  const defAzan = document.getElementById("defaultAzanEnabled").checked;
+  document.querySelectorAll(".prayer-row").forEach(row=>{
+    row.querySelector(".reminderEnableInput").checked = defReminder;
+    row.querySelector(".azanEnableInput").checked = defAzan;
+    row.classList.toggle("off", !defReminder && !defAzan);
+  });
+  showToast("Diterapkan ke semua waktu sholat -- klik \"Simpan & tutup\" untuk menyimpan.", "ok");
+});
 
 /* ---------------- Koreksi manual per waktu sholat (menit, boleh negatif) ----------------
    Lihat catatan lengkap di DEFAULTS.correctionMinutes -- ini buat
@@ -1782,6 +2114,7 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
   settings.lat = parseFloat(document.getElementById("inLat").value) || DEFAULTS.lat;
   settings.lng = parseFloat(document.getElementById("inLng").value) || DEFAULTS.lng;
   settings.volume = parseInt(document.getElementById("inVolume").value,10)/100;
+  settings.duhaMinutesAfterSunrise = Math.max(1, parseInt(document.getElementById("inDuhaMinutes").value,10) || 15);
   readPrayerRowsIntoSettings();
   readCorrectionRowsIntoSettings();
   saveSettings();
@@ -1844,6 +2177,8 @@ function registerServiceWorker(){
   setInterval(()=> ensureCalendarBuffer(true), 6*3600000);
   setInterval(maybeAutoSync, 15*60000);
   maybeAutoSync();
+  setInterval(maybeAutoFullSync, 24*3600000); // cek 1x/hari apakah sudah waktunya sync 4-tahunan (ambang 3 bulan dicek di dalam fungsinya sendiri)
+  maybeAutoFullSync();
 })();
 </script>
 </body>
