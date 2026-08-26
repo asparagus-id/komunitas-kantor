@@ -102,9 +102,11 @@
   "calendarDigestLastSentDate": null,
   "calendarOntimeEnabled": true,
   "calendarRemindedIds": [
-    "4qj2c0h5vv5cisav8n89lu5gn9_20260824T013000Z"
+    "4qj2c0h5vv5cisav8n89lu5gn9_20260824T013000Z",
+    "9qomaig2qr3lgpht5hfaodmrl0"
   ],
   "calendarTopicKey": "pengumuman",
+  "calendarTopicRules": [],
   "reminders": [
     {
       "id": 1787656758415,
@@ -116,8 +118,8 @@
         "date": "2026-08-26",
         "time": "08:00"
       },
-      "enabled": true,
-      "lastSentDate": null,
+      "enabled": false,
+      "lastSentDate": "2026-08-26",
       "googleEventId": "9qomaig2qr3lgpht5hfaodmrl0"
     }
   ],
