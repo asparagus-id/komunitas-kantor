@@ -3,6 +3,7 @@
     216663781,
     121822437
   ],
+  "superAdminIds": [],
   "topics": {
     "kopi_pagi": {
       "threadId": 9270,
@@ -154,6 +155,25 @@
       "enabled": false,
       "lastSentDate": "2026-08-26",
       "googleEventId": "9qomaig2qr3lgpht5hfaodmrl0"
+    },
+    {
+      "id": 1787736640656,
+      "title": "KERJA BAKTI",
+      "message": "JANGAN LUPA KERJA BAKTI HARI INI MULAI JAM 08.00 s/d  SELESAI, AKAN ADA BRIEF DULU JAM 08.00 UNTUK PEMBAGIAN TUGAS",
+      "topicKey": "pengumuman",
+      "schedule": {
+        "type": "once",
+        "date": "2026-08-29",
+        "time": "08:00"
+      },
+      "enabled": true,
+      "lastSentDate": null,
+      "preReminder": {
+        "date": "2026-08-28",
+        "time": "09:00",
+        "sent": false
+      },
+      "googleEventId": "ea0ek9gam6ql36kni0r1svh8l0"
     }
   ],
   "liburReminder": {
@@ -202,6 +222,11 @@
       }
     }
   },
+  "puasaVoterRoster": {},
   "lastPuasaPollSentDate": "2026-08-24",
-  "lastKajianCheckDate": "2026-08-26"
+  "lastKajianCheckDate": "2026-08-26",
+  "maintenanceReports": [],
+  "maintenanceTopicKey": null,
+  "maintenanceSchedules": [],
+  "systemErrorLog": []
 }
