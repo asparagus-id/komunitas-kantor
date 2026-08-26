@@ -822,7 +822,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.15.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
+const APP_VERSION = "1.15.1"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -1551,6 +1551,14 @@ function tick(){
 
 function checkTriggers(now){
   if(!todaySchedule) return;
+  // PENTING: baca ulang dari localStorage setiap kali dicek (bukan cuma
+  // andalkan variabel triggeredLog yang dimuat sekali saat halaman
+  // dibuka). Ini mencegah suara pengingat/adzan terdengar DOBEL saat
+  // jendela "main" dan "widget" sama-sama aktif -- tanpa baris ini,
+  // memori triggeredLog di tiap jendela tidak pernah sinkron satu sama
+  // lain, jadi keduanya bisa lolos pengecekan "belum pernah dibunyikan"
+  // di waktu yang sama dan sama-sama memutar suara.
+  triggeredLog = loadTriggerLog();
   const key = dateKey(now);
   for(const pKey of REMINDABLE){
     const ps = settings.prayerSettings[pKey];
@@ -1587,9 +1595,11 @@ function flashNowBadge(key){
    ARSITEKTUR: jendela "reminder" didefinisikan di tauri.conf.json, hidden
    dari awal (persis pola jendela "widget"). Yang MEMICU tampil/hitung
    mundurnya cuma checkTriggers() di jendela manapun yang sedang aktif
-   (main/widget) -- SAMA seperti pemicu playSound("reminder") yang sudah
-   ada, jadi otomatis TIDAK dobel-trigger (triggeredLog sudah mencegah itu
-   duluan). Jendela popup sendiri TIDAK ikut menjalankan checkTriggers()-
+   (main/widget) -- checkTriggers() sekarang SELALU membaca ulang
+   triggeredLog dari localStorage di awal tiap pengecekan (lihat komentar
+   di checkTriggers), jadi begitu satu jendela menandai sudah dibunyikan,
+   jendela lain ikut tahu di tick berikutnya dan tidak dobel memutar
+   suara. Jendela popup sendiri TIDAK ikut menjalankan checkTriggers()-
    nya sendiri -- dia murni PENAMPIL, baca info dari localStorage
    (adzan_active_popup) yang ditulis fungsi showReminderPopup() di bawah,
    supaya tidak ada risiko suara/popup terpicu 2x dari 2 jendela berbeda.
