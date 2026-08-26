@@ -3,7 +3,9 @@
     216663781,
     121822437
   ],
-  "superAdminIds": [],
+  "superAdminIds": [
+    216663781
+  ],
   "topics": {
     "kopi_pagi": {
       "threadId": 9270,
