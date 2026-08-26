@@ -127,7 +127,7 @@
     "enabled": true,
     "time": "09:00",
     "topicKey": "pengumuman",
-    "lastSentDate": "2026-08-25"
+    "lastSentDate": "2026-08-26"
   },
   "bardiMonitor": {
     "enabled": false,
