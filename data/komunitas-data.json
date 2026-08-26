@@ -413,14 +413,6 @@
       "googleEventId": "qss5bkk1ldpubdkoub19d8hfi0"
     },
     {
-      "id": 1787711930080,
-      "tanggal": "2026-01-28",
-      "pengisi": "MILA PARAMITA LC",
-      "tema": "Hadist Arbain Nawawi 8",
-      "remindersSent": [],
-      "googleEventId": "ccr55ip3da1ben466pfla1g29k"
-    },
-    {
       "id": 1787712016100,
       "tanggal": "2026-12-24",
       "pengisi": "TANGGUH PRIMA VIERNANTO",
@@ -566,7 +558,7 @@
   },
   "puasaVoterRoster": {},
   "lastPuasaPollSentDate": "2026-08-24",
-  "lastKajianCheckDate": "2026-08-26",
+  "lastKajianCheckDate": "2026-08-27",
   "maintenanceReports": [],
   "maintenanceTopicKey": null,
   "maintenanceSchedules": [],
