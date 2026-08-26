@@ -738,7 +738,7 @@ let data = null, sha = null;
 
 // Versi panel ini -- naikkan tiap kali ada perubahan berarti, cocokkan
 // dengan entri di CHANGELOG.md & WORKER_VERSION di worker-komunitas.js.
-const APP_VERSION = "2.14.0";
+const APP_VERSION = "2.14.1";
 const WORKER_URL_FOR_VERSION_CHECK = "https://gus-asisten.rempahecho.workers.dev";
 
 /* Cek versi worker LANGSUNG saat halaman dibuka, SEBELUM login (endpoint
@@ -1849,13 +1849,23 @@ async function loadBardiDevices(){
     list.forEach(d=>{
       const tr = document.createElement("tr");
       // hasSwitch === false -> PASTI bukan device switch (dipastikan dari
-      // status lengkapnya di Worker, bukan tebakan) -- tampilkan reading
-      // sensornya (kalau ada) & JANGAN tampilkan tombol Nyalakan/Matikan
-      // (device ini memang tidak punya saklar utk dikontrol).
+      // status lengkapnya di Worker, bukan tebakan) -- tampilkan info
+      // tambahan (kalau ada) & JANGAN tampilkan tombol Nyalakan/Matikan.
+      // hasSwitch === null -> BENAR-BENAR tidak ada data status sama
+      // sekali (mis. remote IR universal) -- beda dari "sensor", tetap
+      // tampilkan tombol kontrol (siapa tahu sebenarnya bisa, cuma
+      // status-nya yang tidak terbaca).
       const isSensor = d.hasSwitch === false;
-      const onLabel = isSensor
-        ? (d.sensorReadings && d.sensorReadings.length ? d.sensorReadings.join("<br>") : "<span class=\"empty\">(bukan switch, tidak ada reading)</span>")
-        : (d.on === null ? "<span class=\"empty\">?</span>" : (d.on ? "🟡 ON" : "⚫ OFF"));
+      const isUnknown = d.hasSwitch === null;
+      const extraInfoHtml = (d.extraInfo && d.extraInfo.length) ? d.extraInfo.join("<br>") : "";
+      let onLabel;
+      if (isSensor) {
+        onLabel = extraInfoHtml || "<span class=\"empty\">(bukan switch, tidak ada info terbaca)</span>";
+      } else if (isUnknown) {
+        onLabel = "<span class=\"empty\">❔ tidak ada data status</span>";
+      } else {
+        onLabel = (d.on ? "🟡 ON" : "⚫ OFF") + (extraInfoHtml ? "<br>" + extraInfoHtml : "");
+      }
       const actionsCell = isSensor
         ? `<span class="hint">Sensor -- tidak bisa dikontrol</span>`
         : `<button class="btn small" data-bardi-on="${d.id}">Nyalakan</button>
