@@ -169,6 +169,11 @@
     border-radius:9px; padding:9px 11px; font-size:13.5px; font-family:inherit; width:100%;
   }
   input:focus, select:focus{outline:none; border-color:var(--gold);}
+  input:disabled, select:disabled{opacity:.55; cursor:not-allowed;}
+  .chip-days label:has(input:disabled){opacity:.55; cursor:not-allowed;}
+  .btn:disabled{opacity:.5; cursor:not-allowed;}
+  .btn:disabled:hover{border-color:var(--line);}
+  .locked-note{font-size:11.5px; color:var(--muted); margin-top:8px;}
   .btn{border:1px solid var(--line); background:var(--panel-2); color:var(--text); border-radius:9px; padding:9px 16px; font-size:13px; cursor:pointer; font-family:inherit;}
   .btn:hover{border-color:var(--gold);}
   .btn.primary{background:var(--gold); color:var(--on-gold-text); border-color:var(--gold); font-weight:700;}
@@ -464,14 +469,21 @@
             <div class="field" style="flex:2"><label>Catatan tambahan (muncul di tiap reminder)</label><input type="text" id="kajianCatatan" placeholder="Tidak wajib bawa konsumsi. Kabari petugas selanjutnya jika berhalangan."></div>
             <div class="field"><label>Kirim ke topik</label><select id="kajianTopic"><option value="">(topik bernama "kajian", kalau ada)</option></select></div>
           </div>
-          <button class="btn small" id="saveKajianSettingsBtn">Simpan pengaturan kajian</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn small" id="saveKajianSettingsBtn">Simpan pengaturan kajian</button>
+            <button class="btn small hidden" id="editKajianSettingsBtn">✏️ Edit pengaturan</button>
+          </div>
+          <div class="locked-note hidden" id="kajianSettingsLockedNote">Pengaturan tersimpan &amp; terkunci -- klik "Edit pengaturan" utk mengubahnya.</div>
           <div class="table-wrap"><table id="kajianTable"><thead><tr><th>Tanggal</th><th>Pengisi</th><th>Tema</th><th></th></tr></thead><tbody></tbody></table></div>
           <div class="row" style="margin-top:14px;">
             <div class="field"><label>Tanggal</label><input type="date" id="newKajianDate"></div>
             <div class="field"><label>Pengisi</label><input type="text" id="newKajianPengisi" placeholder="Ust. Fulan"></div>
             <div class="field" style="flex:2"><label>Tema</label><input type="text" id="newKajianTema" placeholder="Fiqih Puasa Sunnah"></div>
           </div>
-          <button class="btn primary" id="addKajianBtn">+ Tambah kajian</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn primary" id="addKajianBtn">+ Tambah kajian</button>
+            <button class="btn hidden" id="cancelEditKajianBtn">Batal edit</button>
+          </div>
         </div>
 
         <div class="card">
@@ -627,7 +639,12 @@
           <div class="field"><label>Perangkat yang dipantau (minimal 2)</label><div class="chip-days" id="bmDeviceChecks"></div></div>
           <div class="hint" id="bmSummary"></div>
 
-          <button class="btn primary" id="saveBmBtn" style="margin-top:16px;">Simpan pengaturan pemantauan</button>
+          <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn primary" id="saveBmBtn">Simpan pengaturan pemantauan</button>
+            <button class="btn small hidden" id="editBmBtn">✏️ Edit pengaturan</button>
+            <button class="btn small danger hidden" id="hapusBmBtn">🗑️ Hapus pemantauan</button>
+          </div>
+          <div class="locked-note hidden" id="bmLockedNote">Pengaturan tersimpan &amp; terkunci -- klik "Edit pengaturan" utk mengubahnya.</div>
         </div>
       </section>
 
@@ -678,7 +695,7 @@ let data = null, sha = null;
 
 // Versi panel ini -- naikkan tiap kali ada perubahan berarti, cocokkan
 // dengan entri di CHANGELOG.md & WORKER_VERSION di worker-komunitas.js.
-const APP_VERSION = "2.4.0";
+const APP_VERSION = "2.11.0";
 const WORKER_URL_FOR_VERSION_CHECK = "https://gus-asisten.rempahecho.workers.dev";
 
 /* Cek versi worker LANGSUNG saat halaman dibuka, SEBELUM login (endpoint
@@ -1292,6 +1309,7 @@ function renderKajian(){
   document.getElementById("kajianLokasi").value = ks.lokasi || "";
   document.getElementById("kajianCatatan").value = ks.catatan || "";
   document.getElementById("kajianTopic").value = ks.topicKey || "";
+  kajianSettingsSetLocked(kajianSettingsIsConfigured());
   const tbody = document.querySelector("#kajianTable tbody");
   const list = getUpcomingKajian();
   tbody.innerHTML = list.length ? "" : `<tr><td colspan="4" class="empty">Belum ada jadwal kajian mendatang.</td></tr>`;
@@ -1301,7 +1319,10 @@ function renderKajian(){
       <td>${fmtTanggalID(k.tanggal)}</td>
       <td>${k.pengisi}</td>
       <td>${k.tema}</td>
-      <td><button class="btn small danger" data-del-kajian="${k.id}">Hapus</button></td>
+      <td class="td-actions">
+        <button class="btn small" data-edit-kajian="${k.id}">Edit</button>
+        <button class="btn small danger" data-del-kajian="${k.id}">Hapus</button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
@@ -1315,7 +1336,50 @@ function renderKajian(){
       }catch(e){ toast("Gagal hapus: " + e.message, true); }
     });
   });
+  tbody.querySelectorAll("[data-edit-kajian]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = Number(btn.dataset.editKajian);
+      const k = (data.kajian || []).find(x=>x.id === id);
+      if(!k) return;
+      startEditKajian(k);
+    });
+  });
   renderKajianRiwayat();
+}
+/* Pengaturan kajian dianggap "tersimpan" (layak dikunci) kalau minimal
+   jam pengingat atau jam mulai acara sudah pernah diisi. */
+function kajianSettingsIsConfigured(){
+  const ks = data.kajianSettings || {};
+  return !!(ks.time || ks.jamAcara || (ks.offsetsDays && ks.offsetsDays.length));
+}
+function kajianSettingsSetLocked(locked){
+  ["kajianOffsets","kajianTime","kajianJamAcara","kajianLokasi","kajianCatatan","kajianTopic"].forEach(id=>{
+    document.getElementById(id).disabled = locked;
+  });
+  document.getElementById("saveKajianSettingsBtn").classList.toggle("hidden", locked);
+  document.getElementById("editKajianSettingsBtn").classList.toggle("hidden", !locked);
+  document.getElementById("kajianSettingsLockedNote").classList.toggle("hidden", !locked);
+}
+/* Mode edit form "+ Tambah kajian" -- dipakai ulang utk tambah BARU
+   maupun EDIT kajian yang sudah ada (supaya tidak duplikasi form). Saat
+   edit, id kajian yg sedang diedit disimpan di dataset tombol Simpan. */
+let kajianEditingId = null;
+function startEditKajian(k){
+  kajianEditingId = k.id;
+  document.getElementById("newKajianDate").value = k.tanggal;
+  document.getElementById("newKajianPengisi").value = k.pengisi;
+  document.getElementById("newKajianTema").value = k.tema;
+  document.getElementById("addKajianBtn").textContent = "Simpan perubahan";
+  document.getElementById("cancelEditKajianBtn").classList.remove("hidden");
+  document.getElementById("newKajianDate").scrollIntoView({ behavior:"smooth", block:"center" });
+}
+function cancelEditKajian(){
+  kajianEditingId = null;
+  document.getElementById("newKajianDate").value = "";
+  document.getElementById("newKajianPengisi").value = "";
+  document.getElementById("newKajianTema").value = "";
+  document.getElementById("addKajianBtn").textContent = "+ Tambah kajian";
+  document.getElementById("cancelEditKajianBtn").classList.add("hidden");
 }
 /* Kajian yang tanggalnya SUDAH LEWAT -- cuma tampilan, tidak ada tombol
    hapus/edit (mengikuti pola read-only). Diurutkan terbaru dulu supaya
@@ -1350,20 +1414,28 @@ document.getElementById("saveKajianSettingsBtn").addEventListener("click", async
   };
   if(await saveData()) renderKajian();
 });
+document.getElementById("editKajianSettingsBtn").addEventListener("click", ()=> kajianSettingsSetLocked(false));
 document.getElementById("addKajianBtn").addEventListener("click", async ()=>{
   const tanggal = document.getElementById("newKajianDate").value;
   const pengisi = document.getElementById("newKajianPengisi").value.trim();
   const tema = document.getElementById("newKajianTema").value.trim();
   if(!tanggal || !pengisi || !tema){ toast("Isi tanggal, pengisi, dan tema dulu.", true); return; }
   try{
-    const res = await apiAction("/kajian-tambah", { tanggal, pengisi, tema });
-    toast(res.kajian && res.kajian.googleEventId ? "Tersimpan ✓ 🗓️ tersinkron ke Google Calendar." : "Tersimpan ✓");
+    if(kajianEditingId !== null){
+      const res = await apiAction("/kajian-edit", { id: kajianEditingId, tanggal, pengisi, tema });
+      toast(res.kajian && res.kajian.googleEventId ? "Perubahan tersimpan ✓ 🗓️ event Google Calendar ikut diperbarui." : "Perubahan tersimpan ✓");
+      cancelEditKajian();
+    } else {
+      const res = await apiAction("/kajian-tambah", { tanggal, pengisi, tema });
+      toast(res.kajian && res.kajian.googleEventId ? "Tersimpan ✓ 🗓️ tersinkron ke Google Calendar." : "Tersimpan ✓");
+      document.getElementById("newKajianDate").value = "";
+      document.getElementById("newKajianPengisi").value = "";
+      document.getElementById("newKajianTema").value = "";
+    }
     await loadData();
-    document.getElementById("newKajianDate").value = "";
-    document.getElementById("newKajianPengisi").value = "";
-    document.getElementById("newKajianTema").value = "";
   }catch(e){ toast("Gagal simpan: " + e.message, true); }
 });
+document.getElementById("cancelEditKajianBtn").addEventListener("click", cancelEditKajian);
 
 /* ---------- GOOGLE CALENDAR: NOTIFIKASI ONTIME PER-EVENT ---------- */
 function renderCalReminder(){
@@ -1736,6 +1808,22 @@ function renderBardiMonitorDeviceChecks(){
     ? bardiDevicesCache.map(d=>`<label><input type="checkbox" value="${d.id}" ${selected.has(d.id)?"checked":""}> ${d.name}</label>`).join("")
     : `<span class="empty">Muat daftar perangkat BARDI dulu (kartu di atas).</span>`;
 }
+// Pengaturan pemantauan dianggap "tersimpan" (layak dikunci) kalau label
+// atau perangkat yang dipilih sudah pernah diisi -- bukan cuma cek
+// `enabled`, supaya pengaturan yang sengaja dinonaktifkan sementara pun
+// tetap kelihatan sbg "tersimpan" (terkunci), bukan balik ke form kosong.
+function bmIsConfigured(){
+  const m = data.bardiMonitor || {};
+  return !!(m.label || (m.deviceIds && m.deviceIds.length));
+}
+function bmSetLocked(locked){
+  ["bmEnabled","bmLabel","bmThreshold","bmTopic"].forEach(id=>{ document.getElementById(id).disabled = locked; });
+  document.querySelectorAll("#bmDeviceChecks input").forEach(el=>{ el.disabled = locked; });
+  document.getElementById("saveBmBtn").classList.toggle("hidden", locked);
+  document.getElementById("editBmBtn").classList.toggle("hidden", !locked);
+  document.getElementById("hapusBmBtn").classList.toggle("hidden", !locked);
+  document.getElementById("bmLockedNote").classList.toggle("hidden", !locked);
+}
 function renderBardiMonitor(){
   populateTopicSelect();
   data.bardiMonitor = data.bardiMonitor || { enabled:false, deviceIds:[], threshold:null, label:"", topicKey:null, alerted:false };
@@ -1745,6 +1833,7 @@ function renderBardiMonitor(){
   document.getElementById("bmThreshold").value = m.threshold || "";
   document.getElementById("bmTopic").value = m.topicKey || "";
   renderBardiMonitorDeviceChecks();
+  bmSetLocked(bmIsConfigured());
 
   const badge = document.getElementById("bmStatusBadge");
   if(!m.enabled){
@@ -1778,6 +1867,12 @@ document.getElementById("saveBmBtn").addEventListener("click", async ()=>{
     alerted: enabled ? (data.bardiMonitor.alerted || false) : false, // reset kalau dimatikan
   };
   if(await saveData()) renderBardiMonitor();
+});
+document.getElementById("editBmBtn").addEventListener("click", ()=> bmSetLocked(false));
+document.getElementById("hapusBmBtn").addEventListener("click", async ()=>{
+  if(!confirm("Hapus pengaturan pemantauan perangkat BARDI ini?")) return;
+  data.bardiMonitor = { enabled:false, deviceIds:[], threshold:null, label:"", topicKey:null, alerted:false };
+  if(await saveData()){ toast("Pengaturan pemantauan dihapus ✓"); renderBardiMonitor(); }
 });
 
 /* ---------- Gate / koneksi ---------- */
