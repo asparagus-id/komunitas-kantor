@@ -183,6 +183,8 @@
   .chip-days input{width:auto; accent-color:var(--gold);}
   .chip-days label:has(input:checked){border-color:var(--gold); color:var(--gold-soft); background:rgba(var(--gold-rgb),.1);}
   table{width:100%; border-collapse:collapse; font-size:13px;}
+  .table-wrap{width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:10px;}
+  .td-actions{display:flex; gap:6px; flex-wrap:wrap;}
   th{text-align:left; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; padding:6px 8px; border-bottom:1px solid var(--line);}
   td{padding:9px 8px; border-bottom:1px solid rgba(var(--line-rgb),.5); vertical-align:top;}
   tr:last-child td{border-bottom:none;}
@@ -380,7 +382,7 @@
         <div class="card">
           <h2>👮 Admin bot</h2>
           <div class="desc">ID Telegram yang boleh pakai perintah pengaturan (topik/jadwal/kajian/pengingat). Kosongkan daftar ini kalau mau semua anggota grup bebas pakai semua perintah — begitu ada 1 ID di sini, pembatasan otomatis aktif. Anggota bisa lihat ID mereka sendiri lewat <code>/id</code> di Telegram.</div>
-          <table id="adminsTable"><thead><tr><th>User ID</th><th></th></tr></thead><tbody></tbody></table>
+          <div class="table-wrap"><table id="adminsTable"><thead><tr><th>User ID</th><th></th></tr></thead><tbody></tbody></table></div>
           <div class="row" style="margin-top:12px;">
             <div class="field"><label>User ID Telegram</label><input type="number" id="newAdminId" placeholder="123456789"></div>
           </div>
@@ -392,7 +394,7 @@
         <div class="card">
           <h2>🗂️ Topik grup</h2>
           <div class="desc">Cocok dengan hasil <code>/topik_set</code> di Telegram. thread_id didapat otomatis kalau didaftarkan lewat command; di sini Anda bisa lihat, ubah nama, atau tambah manual kalau sudah tahu thread_id-nya. <b>Baru:</b> topik juga otomatis kedeteksi diam-diam dari aktivitas chat biasa di grup (lihat <code>autoRegisterTopicFromMessage</code> di Worker) — topik yang namanya masih <code>topik_&lt;angka&gt;</code> di bawah ini artinya hasil deteksi otomatis, belum di-rename manual.</div>
-          <table id="topicsTable"><thead><tr><th>Nama pendek</th><th>Label</th><th>Thread ID</th><th></th></tr></thead><tbody></tbody></table>
+          <div class="table-wrap"><table id="topicsTable"><thead><tr><th>Nama pendek</th><th>Label</th><th>Thread ID</th><th></th></tr></thead><tbody></tbody></table></div>
           <div class="row" style="margin-top:12px;">
             <div class="field"><label>Nama pendek</label><input type="text" id="newTopicKey" placeholder="puasa"></div>
             <div class="field"><label>Label</label><input type="text" id="newTopicLabel" placeholder="Puasa"></div>
@@ -431,17 +433,17 @@
         <div class="card">
           <h2>📅 Riwayat rekap puasa (14 hari terakhir)</h2>
           <div class="desc">Data lebih lama dari 14 hari otomatis dibersihkan oleh bot, jadi cuma segini yang bisa ditampilkan.</div>
-          <table id="puasaRiwayatTable"><thead><tr><th>Tanggal</th><th>Puasa</th><th>Tidak puasa</th></tr></thead><tbody></tbody></table>
+          <div class="table-wrap"><table id="puasaRiwayatTable"><thead><tr><th>Tanggal</th><th>Puasa</th><th>Tidak puasa</th></tr></thead><tbody></tbody></table></div>
         </div>
 
         <div class="card">
           <h2>🧠 Varian poll puasa (AI) <span class="badge" id="variantBadge"></span></h2>
           <div class="desc">150 varian bawaan selalu aktif (tidak bisa dihapus). Admin bisa minta AI bikinkan varian TAMBAHAN lewat <code>/puasa_variant_generate &lt;jumlah&gt;</code> di Telegram (fitur ini butuh AI, cuma bisa dipicu dari Telegram bukan dari panel). Hasilnya masuk antrian di bawah — cek dulu maknanya benar (opsi 1 harus berarti "puasa", opsi 2 harus berarti "tidak puasa") sebelum di-approve.</div>
-          <table id="variantTable"><thead><tr><th>Pertanyaan</th><th>Opsi 1 (puasa)</th><th>Opsi 2 (tidak)</th><th></th></tr></thead><tbody></tbody></table>
+          <div class="table-wrap"><table id="variantTable"><thead><tr><th>Pertanyaan</th><th>Opsi 1 (puasa)</th><th>Opsi 2 (tidak)</th><th></th></tr></thead><tbody></tbody></table></div>
           <div class="hint" id="variantCustomCount" style="margin-top:10px;"></div>
           <div id="variantCustomListWrap" style="margin-top:14px;">
             <div class="desc" style="margin-bottom:8px;">Varian tambahan yang sudah aktif (bisa dihapus kalau ternyata salah makna):</div>
-            <table id="variantCustomTable"><thead><tr><th>Pertanyaan</th><th>Opsi 1 (puasa)</th><th>Opsi 2 (tidak)</th><th></th></tr></thead><tbody></tbody></table>
+            <div class="table-wrap"><table id="variantCustomTable"><thead><tr><th>Pertanyaan</th><th>Opsi 1 (puasa)</th><th>Opsi 2 (tidak)</th><th></th></tr></thead><tbody></tbody></table></div>
           </div>
         </div>
       </section>
@@ -463,7 +465,7 @@
             <div class="field"><label>Kirim ke topik</label><select id="kajianTopic"><option value="">(topik bernama "kajian", kalau ada)</option></select></div>
           </div>
           <button class="btn small" id="saveKajianSettingsBtn">Simpan pengaturan kajian</button>
-          <table id="kajianTable"><thead><tr><th>Tanggal</th><th>Pengisi</th><th>Tema</th><th></th></tr></thead><tbody></tbody></table>
+          <div class="table-wrap"><table id="kajianTable"><thead><tr><th>Tanggal</th><th>Pengisi</th><th>Tema</th><th></th></tr></thead><tbody></tbody></table></div>
           <div class="row" style="margin-top:14px;">
             <div class="field"><label>Tanggal</label><input type="date" id="newKajianDate"></div>
             <div class="field"><label>Pengisi</label><input type="text" id="newKajianPengisi" placeholder="Ust. Fulan"></div>
@@ -475,7 +477,7 @@
         <div class="card">
           <h2>🗂️ Riwayat kajian</h2>
           <div class="desc">Kajian yang sudah lewat tanggalnya — cuma untuk dilihat, tidak bisa diedit dari sini (data mentah tersimpan selamanya di <code>data.kajian</code>, tapi otomatis dibersihkan dari daftar aktif setelah &gt;7 hari lewat).</div>
-          <table id="kajianRiwayatTable"><thead><tr><th>Tanggal</th><th>Pengisi</th><th>Tema</th></tr></thead><tbody></tbody></table>
+          <div class="table-wrap"><table id="kajianRiwayatTable"><thead><tr><th>Tanggal</th><th>Pengisi</th><th>Tema</th></tr></thead><tbody></tbody></table></div>
         </div>
       </section>
 
@@ -495,13 +497,24 @@
           <button class="btn small" id="testKalenderBtn" style="margin-left:8px;">Tes koneksi</button>
           <div id="kalenderCekResult" class="hint" style="margin-top:10px;"></div>
         </div>
+
+        <div class="card">
+          <h2>🏷️ Aturan Topik Otomatis dari Kalender</h2>
+          <div class="desc">Kalau kamu input acara LANGSUNG di Google Calendar (bukan lewat bot), bot tetap bisa tahu ini acara jenis apa — dari <b>kata kunci di judul event</b>. Contoh: judul event mengandung kata "kajian" → otomatis dikirim ke topik kajian, bukan ke topik kalender default. Dicek kata UTUH (bukan sekadar mengandung huruf) &amp; urut dari atas — aturan pertama yang cocok yang dipakai. Kalau tidak ada yang cocok, tetap pakai topik default di atas.</div>
+          <div class="table-wrap"><table id="calRulesTable"><thead><tr><th>Kata kunci</th><th>Kirim ke topik</th><th></th></tr></thead><tbody></tbody></table></div>
+          <div class="row" style="margin-top:14px;">
+            <div class="field"><label>Kata kunci di judul event</label><input type="text" id="newCalRuleKeyword" placeholder="mis. kajian"></div>
+            <div class="field"><label>Kirim ke topik</label><select id="newCalRuleTopic"></select></div>
+          </div>
+          <button class="btn primary" id="addCalRuleBtn">+ Tambah aturan</button>
+        </div>
       </section>
 
       <section class="page" id="page-pengingat">
         <div class="card">
           <h2>🔔 Pengingat umum</h2>
           <div class="desc">Sama dengan <code>/ingat_tambah</code>. Bebas judul &amp; pesan, ke topik mana saja, sekali/harian/mingguan/bulanan. Otomatis tersinkron ke Google Calendar kalau sudah dikonfigurasi (termasuk sebagai recurring event asli untuk yang berulang). <b>Tips:</b> pilih topik <code>pengumuman</code> di dropdown Topik untuk bikin pengumuman — ini fitur yang SAMA PERSIS dengan command <code>/pengumuman &lt;judul&gt; | &lt;pesan&gt; | &lt;jadwal&gt;</code> di Telegram (cuma lebih singkat karena topiknya otomatis).</div>
-          <table id="remindersTable"><thead><tr><th>Judul</th><th>Jadwal</th><th>Topik</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+          <div class="table-wrap"><table id="remindersTable"><thead><tr><th>Judul</th><th>Jadwal</th><th>Topik</th><th>Status</th><th></th></tr></thead><tbody></tbody></table></div>
           <div class="row" style="margin-top:14px;">
             <div class="field"><label>Judul</label><input type="text" id="newRemTitle" placeholder="Rapat Bulanan"></div>
             <div class="field"><label>Topik</label><select id="newRemTopic"></select></div>
@@ -529,7 +542,13 @@
           <div class="row" id="remFieldMonthly" style="display:none;">
             <div class="field" style="max-width:140px;"><label>Tanggal tiap bulan</label><input type="number" id="newRemDom" min="1" max="31" value="1"></div>
           </div>
-          <button class="btn primary" id="addRemBtn">+ Tambah pengingat</button>
+          <div class="field" style="margin-top:6px;"><label><input type="checkbox" id="newRemPreEnabled"> Tambah reminder awal (opsional)</label></div>
+          <div class="row" id="remFieldPre" style="display:none;">
+            <div class="field"><label>Tanggal reminder awal</label><input type="date" id="newRemPreDate"></div>
+            <div class="field"><label>Jam reminder awal</label><input type="time" id="newRemPreTime" value="20:00"></div>
+          </div>
+          <div class="hint" id="remPreHint" style="display:none;">Dikirim 1x pada tanggal &amp; jam di atas, terpisah dari jadwal acara utama — isinya "pemberitahuan lebih awal", dibuat otomatis oleh bot supaya tidak rancu dengan pesan acara aslinya.</div>
+          <button class="btn primary" id="addRemBtn" style="margin-top:12px;">+ Tambah pengingat</button>
         </div>
       </section>
 
@@ -560,7 +579,7 @@
         <div class="card">
           <h2>💡 Daftar perangkat</h2>
           <div class="desc">Perangkat fisik (modul wifi seperti Shelly/ESP yang sudah diflash firmware kompatibel) yang lapor status &amp; menerima perintah lewat Worker ini. Tombol "Tes nyala/mati" di bawah untuk uji manual dari panel -- perintah suara lewat Google Home akan otomatis pakai jalur yang sama.</div>
-          <table id="devicesTable"><thead><tr><th>Nama</th><th>Tipe</th><th>Status</th><th>Terakhir lapor</th><th></th></tr></thead><tbody></tbody></table>
+          <div class="table-wrap"><table id="devicesTable"><thead><tr><th>Nama</th><th>Tipe</th><th>Status</th><th>Terakhir lapor</th><th></th></tr></thead><tbody></tbody></table></div>
           <div class="row" style="margin-top:14px;">
             <div class="field"><label>Nama perangkat</label><input type="text" id="newDevName" placeholder="Lampu Teras Masjid"></div>
             <div class="field"><label>Tipe</label>
@@ -584,6 +603,31 @@
             3) Ikuti panduan lengkap "PANDUAN-GOOGLE-HOME.md" untuk daftarkan project di Google Home Developer Console (gratis) &amp; tautkan akun dari app Google Home.<br>
             4) Setelah tertaut, semua perangkat di tabel atas otomatis muncul di app Google Home.
           </div>
+        </div>
+
+        <div class="card">
+          <h2>💡 Perangkat BARDI Smart Home <span class="badge" id="bardiStatusBadge"></span></h2>
+          <div class="desc">Kontrol perangkat BARDI kamu (yang sudah tertaut ke akun Tuya) langsung dari sini, sama seperti command <code>/bardi_daftar</code>, <code>/bardi_nyala</code>, <code>/bardi_mati</code> di Telegram. Butuh ENV Tuya sudah diisi di Worker -- lihat PANDUAN-BARDI-TUYA.md.</div>
+          <div class="table-wrap"><table id="bardiTable"><thead><tr><th>Nama</th><th>Online</th><th>ON/OFF</th><th></th></tr></thead><tbody></tbody></table></div>
+          <button class="btn small" id="bardiReloadBtn" style="margin-top:10px;">Muat ulang daftar</button>
+        </div>
+
+        <div class="card">
+          <h2>🔔 Pemantauan Perangkat BARDI <span class="badge" id="bmStatusBadge"></span></h2>
+          <div class="desc">Pantau kumpulan perangkat BARDI (mis. "Lampu Kantor"). Kalau jumlah perangkat yang mati/offline mencapai ambang batas yang kamu atur, bot otomatis kirim pesan peringatan ke grup Telegram — berguna misalnya buat deteksi dini listrik kantor padam. Otomatis kirim pesan susulan begitu kondisi kembali normal.</div>
+
+          <div class="field" style="margin-bottom:16px;"><label><input type="checkbox" id="bmEnabled"> Aktifkan pemantauan</label></div>
+
+          <div class="row">
+            <div class="field"><label>Label (dipakai di teks pesan)</label><input type="text" id="bmLabel" placeholder="mis. Lampu Kantor"></div>
+            <div class="field"><label>Ambang batas mati/offline</label><input type="number" id="bmThreshold" min="1" placeholder="mis. 2"></div>
+            <div class="field"><label>Kirim ke topik</label><select id="bmTopic"><option value="">(percakapan umum grup)</option></select></div>
+          </div>
+
+          <div class="field"><label>Perangkat yang dipantau (minimal 2)</label><div class="chip-days" id="bmDeviceChecks"></div></div>
+          <div class="hint" id="bmSummary"></div>
+
+          <button class="btn primary" id="saveBmBtn" style="margin-top:16px;">Simpan pengaturan pemantauan</button>
         </div>
       </section>
 
@@ -634,7 +678,7 @@ let data = null, sha = null;
 
 // Versi panel ini -- naikkan tiap kali ada perubahan berarti, cocokkan
 // dengan entri di CHANGELOG.md & WORKER_VERSION di worker-komunitas.js.
-const APP_VERSION = "2.3.0";
+const APP_VERSION = "2.4.0";
 const WORKER_URL_FOR_VERSION_CHECK = "https://gus-asisten.rempahecho.workers.dev";
 
 /* Cek versi worker LANGSUNG saat halaman dibuka, SEBELUM login (endpoint
@@ -736,6 +780,11 @@ tickClock();
 setInterval(tickClock, 1000);
 
 const WORKER_URL = "https://gus-asisten.rempahecho.workers.dev";
+// Worker RELAY (akun Cloudflare terpisah, tempat OAuth Google Home
+// beneran diproses -- lihat PANDUAN-GOOGLE-HOME.md Bagian C.5). Status
+// tautan Google Home yang AKURAT dicek dari sini, bukan dari WORKER_URL,
+// karena OAUTH_KV (tempat token tautan disimpan) ada di akun ini.
+const RELAY_WORKER_URL = "https://smarthome.halawa.id";
 let APP_TOKEN = localStorage.getItem("admkom_token") || "";
 
 function toast(msg, isError){
@@ -822,7 +871,9 @@ function renderAll(){
   renderPuasaRiwayat();
   renderReminders();
   renderCalReminder();
+  renderCalRules();
   renderLibur();
+  renderBardiMonitor();
   toggleRemFields();
   renderVariantQueue();
   renderOverview();
@@ -1026,7 +1077,7 @@ function renderTopics(){
       <td><code>${k}</code>${isAuto ? ' <span class="badge off" title="Terdeteksi otomatis dari chat biasa, belum di-rename">Auto</span>' : ''}</td>
       <td>${t.label || "-"}</td>
       <td>${t.threadId}</td>
-      <td style="white-space:nowrap;">
+      <td class="td-actions">
         ${isAuto ? `<button class="btn small" data-rename-topic="${k}">Ganti nama</button>` : ''}
         <button class="btn small danger" data-del-topic="${k}">Hapus</button>
       </td>
@@ -1123,7 +1174,7 @@ function renderVariantQueue(){
       <td>${v.q}</td>
       <td>${v.opts[0]}</td>
       <td>${v.opts[1]}</td>
-      <td style="white-space:nowrap;">
+      <td class="td-actions">
         <button class="btn small primary" data-approve-variant="${v.id}">Approve</button>
         <button class="btn small danger" data-reject-variant="${v.id}">Tolak</button>
       </td>
@@ -1346,6 +1397,40 @@ document.getElementById("testKalenderBtn").addEventListener("click", async ()=>{
   }
 });
 
+/* ---------- Aturan Topik Otomatis dari Kalender (kata kunci judul) ---------- */
+function renderCalRules(){
+  const tbody = document.querySelector("#calRulesTable tbody");
+  if(!tbody) return;
+  const rules = data.calendarTopicRules || [];
+  tbody.innerHTML = rules.length ? "" : `<tr><td colspan="3" class="empty">Belum ada aturan -- semua event dikirim ke topik default di atas.</td></tr>`;
+  rules.forEach(r=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td><code>${r.keyword}</code></td><td>${r.topicKey}</td>
+      <td class="td-actions"><button class="btn small danger" data-del-calrule="${r.id}">Hapus</button></td>`;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll("[data-del-calrule]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = Number(btn.dataset.delCalrule);
+      data.calendarTopicRules = (data.calendarTopicRules||[]).filter(x=>x.id!==id);
+      if(await saveData()) renderCalRules();
+    });
+  });
+}
+document.getElementById("addCalRuleBtn").addEventListener("click", async ()=>{
+  const keyword = document.getElementById("newCalRuleKeyword").value.trim();
+  const topicKey = document.getElementById("newCalRuleTopic").value;
+  if(!keyword){ toast("Isi kata kuncinya dulu.", true); return; }
+  if(!topicKey){ toast("Pilih topik tujuannya dulu.", true); return; }
+  data.calendarTopicRules = data.calendarTopicRules || [];
+  data.calendarTopicRules.push({ id: Date.now(), keyword, topicKey });
+  if(await saveData()){
+    toast("Aturan tersimpan ✓");
+    document.getElementById("newCalRuleKeyword").value = "";
+    renderCalRules();
+  }
+});
+
 /* ---------- PENGINGAT UMUM ---------- */
 function populateTopicSelect(){
   const sel = document.getElementById("newRemTopic");
@@ -1359,7 +1444,8 @@ function populateTopicSelect(){
   }
   [["puasaTopic", '(topik bernama "puasa", kalau ada)'],
    ["kajianTopic", '(topik bernama "kajian", kalau ada)'],
-   ["calReminderTopic", '(topik bernama "kalender", kalau ada)']
+   ["calReminderTopic", '(topik bernama "kalender", kalau ada)'],
+   ["bmTopic", '(percakapan umum grup)'],
   ].forEach(([id, placeholderLabel])=>{
     const s = document.getElementById(id);
     if(!s) return;
@@ -1367,6 +1453,12 @@ function populateTopicSelect(){
     s.innerHTML = `<option value="">${placeholderLabel}</option>` + keys.map(k=>`<option value="${k}">${k}</option>`).join("");
     s.value = current;
   });
+  const calRuleSel = document.getElementById("newCalRuleTopic");
+  if(calRuleSel){
+    const current = calRuleSel.value;
+    calRuleSel.innerHTML = keys.length ? keys.map(k=>`<option value="${k}">${k}</option>`).join("") : `<option value="">(belum ada topik)</option>`;
+    calRuleSel.value = current;
+  }
 }
 function renderLibur(){
   populateTopicSelect();
@@ -1409,10 +1501,10 @@ function renderReminders(){
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${r.title}${r.googleEventId ? ' <span title="Tersinkron Google Calendar">🗓️</span>':''}</td>
-      <td>${formatJadwalUmum(r.schedule)}</td>
+      <td>${formatJadwalUmum(r.schedule)}${r.preReminder ? `<br><span class="hint" style="margin:0;">⏳ awal: ${formatPreReminderHtml(r.preReminder)}${r.preReminder.sent?' (terkirim)':''}</span>` : ''}</td>
       <td><code>${r.topicKey}</code></td>
       <td><span class="badge ${r.enabled?"on":"off"}">${r.enabled?"Aktif":"Nonaktif"}</span></td>
-      <td style="white-space:nowrap;">
+      <td class="td-actions">
         <button class="btn small" data-toggle-rem="${r.id}">${r.enabled?"Matikan":"Aktifkan"}</button>
         <button class="btn small danger" data-del-rem="${r.id}">Hapus</button>
       </td>
@@ -1445,6 +1537,15 @@ function formatJadwalUmum(s){
   if(s.type==="monthly") return `Tanggal ${s.dayOfMonth} tiap bulan jam ${s.time}`;
   return "-";
 }
+function formatPreReminderHtml(p){
+  const [y,m,d] = p.date.split("-");
+  return `${d}-${m}-${y} jam ${p.time}`;
+}
+document.getElementById("newRemPreEnabled").addEventListener("change", (e)=>{
+  const show = e.target.checked;
+  document.getElementById("remFieldPre").style.display = show ? "flex" : "none";
+  document.getElementById("remPreHint").style.display = show ? "block" : "none";
+});
 document.getElementById("addRemBtn").addEventListener("click", async ()=>{
   const title = document.getElementById("newRemTitle").value.trim();
   const message = document.getElementById("newRemMessage").value.trim();
@@ -1467,12 +1568,23 @@ document.getElementById("addRemBtn").addEventListener("click", async ()=>{
     const dom = parseInt(document.getElementById("newRemDom").value,10) || 1;
     schedule = { type:"monthly", time, dayOfMonth: dom };
   }
+  let preReminder = null;
+  if(document.getElementById("newRemPreEnabled").checked){
+    const preDate = document.getElementById("newRemPreDate").value;
+    const preTime = document.getElementById("newRemPreTime").value || "20:00";
+    if(!preDate){ toast("Isi tanggal reminder awal dulu (atau matikan centangnya kalau tidak perlu).", true); return; }
+    preReminder = { date: preDate, time: preTime };
+  }
   try{
-    const res = await apiAction("/reminder-tambah", { title, message, topicKey, schedule });
+    const res = await apiAction("/reminder-tambah", { title, message, topicKey, schedule, preReminder });
     toast(res.reminder && res.reminder.googleEventId ? "Tersimpan ✓ 🗓️ tersinkron ke Google Calendar." : "Tersimpan ✓");
     await loadData();
     document.getElementById("newRemTitle").value = "";
     document.getElementById("newRemMessage").value = "";
+    document.getElementById("newRemPreEnabled").checked = false;
+    document.getElementById("remFieldPre").style.display = "none";
+    document.getElementById("remPreHint").style.display = "none";
+    document.getElementById("newRemPreDate").value = "";
   }catch(e){ toast("Gagal simpan: " + e.message, true); }
 });
 
@@ -1493,7 +1605,7 @@ async function loadDevices(){
       const lapor = d.lastSeen ? new Date(d.lastSeen).toLocaleString("id-ID") : "belum pernah";
       tr.innerHTML = `<td>${d.name}</td><td>${d.type==="light"?"Lampu":"Saklar"}</td>
         <td>${d.on ? "🟢 Nyala" : "⚪ Mati"}</td><td>${lapor}</td>
-        <td>
+        <td class="td-actions">
           <button class="btn small" data-toggle-dev="${d.id}">${d.on?"Matikan":"Nyalakan"}</button>
           <button class="btn small danger" data-del-dev="${d.id}">Hapus</button>
         </td>`;
@@ -1538,24 +1650,135 @@ async function loadGoogleHomeStatus(){
   const box = document.getElementById("ghLinkStatusBox");
   const badge = document.getElementById("ghLinkBadge");
   try{
-    const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/googlehome-status", { headers:{ "Authorization":"Bearer " + APP_TOKEN } });
+    // Cek ke Worker RELAY (bukan WORKER_URL) -- di situlah OAuth Google
+    // Home beneran diproses & status tautan yang asli tersimpan.
+    const res = await fetch(RELAY_WORKER_URL.replace(/\/$/,"") + "/googlehome-status", { headers:{ "Authorization":"Bearer " + APP_TOKEN } });
     const j = await res.json();
     if(j.configured && j.linked){
       badge.textContent = "Tertaut"; badge.className = "badge on";
       box.className = ""; box.textContent = "Akun Google Home sudah tertaut. Perintah suara & app siap dipakai.";
     } else if(j.configured){
       badge.textContent = "Belum ditautkan"; badge.className = "badge off";
-      box.className = ""; box.innerHTML = "ENV Google Home sudah diisi di Worker, tapi belum ditautkan dari app Google Home. Buka app Google Home → tambah perangkat → cari 'Komunitas Admin Panel' di daftar app pihak ketiga → login pakai APP_TOKEN kamu.";
+      box.className = ""; box.innerHTML = "ENV Google Home sudah diisi, tapi belum ditautkan dari app Google Home. Buka app Google Home → avatar profil → Tautkan aplikasi atau layanan → Kompatibel dengan Google → cari 'Komunitas Admin Panel' → login pakai APP_TOKEN kamu.";
     } else {
       badge.textContent = "Belum dikonfigurasi"; badge.className = "badge off";
-      box.className = "empty"; box.textContent = "ENV Google Home (client id/secret, DEVICES_KV, OAUTH_KV) belum lengkap diisi di Worker. Ikuti PANDUAN-GOOGLE-HOME.md dulu.";
+      box.className = "empty"; box.textContent = "ENV Google Home (Client ID/Secret, OAUTH_KV) belum lengkap diisi di Worker relay. Ikuti PANDUAN-GOOGLE-HOME.md dulu.";
     }
   }catch(e){
     badge.textContent = "?"; box.className = "empty";
-    box.textContent = "Endpoint /googlehome-status belum tersedia di Worker.";
+    box.textContent = "Gagal cek status tautan ke Worker relay (" + RELAY_WORKER_URL + "). Pastikan Worker relay sudah live.";
   }
 }
 document.getElementById("ghTestLinkBtn").addEventListener("click", loadGoogleHomeStatus);
+
+/* ---------- BARDI Smart Home (via Tuya, lewat Worker utama) ---------- */
+let bardiDevicesCache = []; // dipakai bareng oleh kartu pemantauan grup di bawah
+async function loadBardiDevices(){
+  const badge = document.getElementById("bardiStatusBadge");
+  const tbody = document.querySelector("#bardiTable tbody");
+  try{
+    const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/bardi-devices", { headers:{ "Authorization":"Bearer " + APP_TOKEN } });
+    const j = await res.json();
+    if(j.error){
+      badge.textContent = "Belum dikonfigurasi"; badge.className = "badge off";
+      tbody.innerHTML = `<tr><td colspan="4" class="empty">${j.error}</td></tr>`;
+      bardiDevicesCache = [];
+      renderBardiMonitorDeviceChecks();
+      return;
+    }
+    const list = j.devices || [];
+    bardiDevicesCache = list;
+    badge.textContent = list.length + " perangkat"; badge.className = "badge on";
+    if(!list.length){
+      tbody.innerHTML = `<tr><td colspan="4" class="empty">Belum ada perangkat BARDI terdeteksi.</td></tr>`;
+      renderBardiMonitorDeviceChecks();
+      return;
+    }
+    tbody.innerHTML = "";
+    list.forEach(d=>{
+      const tr = document.createElement("tr");
+      const onLabel = d.on === null ? "<span class=\"empty\">?</span>" : (d.on ? "🟡 ON" : "⚫ OFF");
+      tr.innerHTML = `<td>${d.name}</td><td>${d.online ? "🟢 Online" : "⚪ Offline"}</td><td>${onLabel}</td>
+        <td class="td-actions">
+          <button class="btn small" data-bardi-on="${d.id}">Nyalakan</button>
+          <button class="btn small danger" data-bardi-off="${d.id}">Matikan</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+    tbody.querySelectorAll("[data-bardi-on]").forEach(btn=>{
+      btn.addEventListener("click", ()=> bardiToggle(btn.dataset.bardiOn, true));
+    });
+    tbody.querySelectorAll("[data-bardi-off]").forEach(btn=>{
+      btn.addEventListener("click", ()=> bardiToggle(btn.dataset.bardiOff, false));
+    });
+    renderBardiMonitorDeviceChecks();
+    renderBardiMonitor(); // nama perangkat di tabel grup ikut ter-update
+  }catch(e){
+    badge.textContent = "?"; 
+    tbody.innerHTML = `<tr><td colspan="4" class="empty">Gagal memuat: ${e.message}</td></tr>`;
+  }
+}
+async function bardiToggle(deviceId, value){
+  try{
+    await apiAction("/bardi-toggle", { deviceId, value });
+    toast("Perintah terkirim ✓");
+    setTimeout(loadBardiDevices, 1500); // beri jeda sebentar biar status online/offline sempat update
+  }catch(e){ toast("Gagal: " + e.message, true); }
+}
+document.getElementById("bardiReloadBtn").addEventListener("click", loadBardiDevices);
+
+/* ---------- Pemantauan Perangkat BARDI ---------- */
+function renderBardiMonitorDeviceChecks(){
+  const box = document.getElementById("bmDeviceChecks");
+  if(!box) return;
+  const selected = new Set((data.bardiMonitor && data.bardiMonitor.deviceIds) || []);
+  box.innerHTML = bardiDevicesCache.length
+    ? bardiDevicesCache.map(d=>`<label><input type="checkbox" value="${d.id}" ${selected.has(d.id)?"checked":""}> ${d.name}</label>`).join("")
+    : `<span class="empty">Muat daftar perangkat BARDI dulu (kartu di atas).</span>`;
+}
+function renderBardiMonitor(){
+  populateTopicSelect();
+  data.bardiMonitor = data.bardiMonitor || { enabled:false, deviceIds:[], threshold:null, label:"", topicKey:null, alerted:false };
+  const m = data.bardiMonitor;
+  document.getElementById("bmEnabled").checked = !!m.enabled;
+  document.getElementById("bmLabel").value = m.label || "";
+  document.getElementById("bmThreshold").value = m.threshold || "";
+  document.getElementById("bmTopic").value = m.topicKey || "";
+  renderBardiMonitorDeviceChecks();
+
+  const badge = document.getElementById("bmStatusBadge");
+  if(!m.enabled){
+    badge.textContent = "Nonaktif"; badge.className = "badge off";
+  } else if(m.alerted){
+    badge.textContent = "⚠️ Peringatan aktif"; badge.className = "badge off"; badge.style.color = "var(--ember)"; badge.style.background = "rgba(var(--ember-rgb),.15)";
+  } else {
+    badge.textContent = "Aktif — normal"; badge.className = "badge on"; badge.style.color = ""; badge.style.background = "";
+  }
+
+  const summary = document.getElementById("bmSummary");
+  const n = (m.deviceIds||[]).length;
+  summary.textContent = n
+    ? `${n} perangkat dipilih${m.threshold ? ` • peringatan terkirim kalau ${m.threshold} dari ${n} mati/offline` : ""}`
+    : "Belum ada perangkat dipilih.";
+}
+document.getElementById("saveBmBtn").addEventListener("click", async ()=>{
+  const enabled = document.getElementById("bmEnabled").checked;
+  const label = document.getElementById("bmLabel").value.trim();
+  const deviceIds = Array.from(document.querySelectorAll("#bmDeviceChecks input:checked")).map(el=>el.value);
+  const threshold = parseInt(document.getElementById("bmThreshold").value,10) || null;
+  const topicKey = document.getElementById("bmTopic").value || null;
+  if(enabled){
+    if(!label){ toast("Isi label dulu.", true); return; }
+    if(deviceIds.length < 2){ toast("Pilih minimal 2 perangkat.", true); return; }
+    if(!threshold){ toast("Isi ambang batas dulu.", true); return; }
+    if(threshold > deviceIds.length){ toast("Ambang batas tidak boleh lebih besar dari jumlah perangkat yang dipilih.", true); return; }
+  }
+  data.bardiMonitor = {
+    enabled, label, deviceIds, threshold, topicKey,
+    alerted: enabled ? (data.bardiMonitor.alerted || false) : false, // reset kalau dimatikan
+  };
+  if(await saveData()) renderBardiMonitor();
+});
 
 /* ---------- Gate / koneksi ---------- */
 function doDisconnect(){
@@ -1586,6 +1809,7 @@ async function boot(){
   loadCalendarEvents();
   loadDevices();
   loadGoogleHomeStatus();
+  loadBardiDevices();
   setInterval(async ()=>{
     try{ const res = await api("GET"); data = res.data; sha = res.sha; renderRekap(); renderOverview(); setConn("ok"); }
     catch(e){ /* diam, jangan ganggu kalau kebetulan gagal sesaat */ }
