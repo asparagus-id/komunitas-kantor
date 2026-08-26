@@ -163,10 +163,10 @@
   },
   "bardiMonitor": {
     "enabled": false,
+    "label": "MATI LISTRIK",
     "deviceIds": [],
-    "threshold": null,
-    "label": "",
-    "topicKey": null,
+    "threshold": 2,
+    "topicKey": "pengumuman",
     "alerted": false
   },
   "puasaLog": {
