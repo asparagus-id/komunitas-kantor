@@ -822,7 +822,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.15.1"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
+const APP_VERSION = "1.15.2"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -1022,12 +1022,12 @@ function berhentiUjiCoba(){
   sedangUjiCoba = null;
   updateTombolUjiCoba();
 }
-async function toggleUjiCoba(kind, prayerKey){
+async function toggleUjiCoba(kind, prayerKey, audioKeys){
   const idUjiCoba = prayerKey ? `${kind}_${prayerKey}` : kind;
   if (sedangUjiCoba === idUjiCoba){ berhentiUjiCoba(); return; }
   sedangUjiCoba = idUjiCoba;
   updateTombolUjiCoba();
-  await playSound(kind, prayerKey);
+  await playSound(kind, audioKeys != null ? audioKeys : prayerKey);
 }
 document.getElementById("audioEl").addEventListener("ended", () => { sedangUjiCoba = null; updateTombolUjiCoba(); });
 
@@ -1043,9 +1043,15 @@ function audioKeysFor(kind, prayerKey){
    override khusus sholat itu, pakai itu -- kalau TIDAK ada override sama
    sekali (belum pernah diisi), baru jatuh ke default global. Dipakai baik
    oleh playSound() (beneran memutar) maupun refreshPrayerAudioStatus()
-   (buat tampilan status teks). */
-async function resolveAudioSource(kind, prayerKey){
-  if(prayerKey){
+   (buat tampilan status teks).
+   prayerKeyOrKeys boleh string tunggal ATAU array -- dicoba berurutan,
+   yang PALING SPESIFIK duluan (mis. ["DhuhrJumat","Dhuhr"] -- override
+   khusus Jumat dicoba dulu, baru override Dzuhur biasa, baru default
+   global -- dipakai utk pengingat Dzuhur di hari Jumat yg boleh punya
+   MP3 sendiri, lebih panjang, tanpa wajib diisi kalau belum sempat). */
+async function resolveAudioSource(kind, prayerKeyOrKeys){
+  const daftarKunci = Array.isArray(prayerKeyOrKeys) ? prayerKeyOrKeys : (prayerKeyOrKeys ? [prayerKeyOrKeys] : []);
+  for(const prayerKey of daftarKunci){
     const { idbKey, urlKey } = audioKeysFor(kind, prayerKey);
     const blobOverride = await idbGet(idbKey).catch(()=>null);
     if(blobOverride) return { blob: blobOverride, sumber:"override-file" };
@@ -1572,7 +1578,11 @@ function checkTriggers(now){
       const remLogKey = `${key}:${pKey}:reminder`;
       if(!triggeredLog[remLogKey] && now.getTime() >= remindAt && now.getTime() < prayerTime){
         triggeredLog[remLogKey] = true; saveTriggerLog();
-        playSound("reminder", pKey);
+        // Dzuhur di hari Jumat (Jumatan) -- kalau ada MP3 khusus Jumat
+        // yang diunggah, pakai itu (biasanya lebih panjang); kalau belum
+        // diisi, jatuh ke MP3 Dzuhur biasa, baru ke nada default global.
+        const isJumatDhuhur = pKey === "Dhuhr" && new Date(prayerTime).getDay() === 5;
+        playSound("reminder", isJumatDhuhur ? ["DhuhrJumat","Dhuhr"] : pKey);
         showReminderPopup(pKey, prayerTime);
       }
     }
@@ -2015,7 +2025,16 @@ function renderPrayerRows(){
       <div class="friday-override">
         🕌 Khusus hari Jumat (Jumatan):
         <input type="number" class="fridayInput" min="0" max="120" value="${ps.fridayMinutes!=null?ps.fridayMinutes:20}"> menit
-      </div>` : ""}
+      </div>
+      <div class="pa-row">
+        <span class="pa-icon">🕌</span>
+        <span class="pa-status" id="paStat_reminder_DhuhrJumat">…</span>
+        <label class="pa-upload-btn" for="paFile_reminder_DhuhrJumat" title="Unggah MP3 pengingat khusus Jumat">⬆</label>
+        <input type="file" id="paFile_reminder_DhuhrJumat" class="pa-file-input" accept="audio/*" data-pa-kind="reminder" data-pa-key="DhuhrJumat">
+        <button class="pa-mini-btn" data-test-audio="reminder_DhuhrJumat" data-pa-test-kind="reminder" data-pa-test-key="DhuhrJumat" title="Uji coba">▶</button>
+        <button class="pa-mini-btn" data-pa-reset-kind="reminder" data-pa-reset-key="DhuhrJumat" title="Kembali ke default">↺</button>
+      </div>
+      <div class="hint" style="margin:0 0 8px;">MP3 di atas cuma dipakai buat pengingat Jumat (biasanya lebih panjang, isi persiapan Jumatan). Kalau belum diisi, otomatis pakai MP3 pengingat Dzuhur biasa di bawah ini.</div>` : ""}
       <div class="pa-row">
         <span class="pa-icon">🔔</span>
         <span class="pa-status" id="paStat_reminder_${key}">…</span>
@@ -2056,13 +2075,21 @@ function renderPrayerRows(){
       try{
         await idbSet(idbKey, f);
         localStorage.removeItem(urlKey);
-        showToast(`MP3 ${kind==="reminder"?"pengingat":"adzan"} khusus ${PRAYER_LABEL[key]} diunggah: ${f.name}`, "ok");
+        showToast(`MP3 ${kind==="reminder"?"pengingat":"adzan"} khusus ${labelForAudioKey(key)} diunggah: ${f.name}`, "ok");
         refreshPrayerAudioStatus();
       }catch(err){ showToast("Gagal menyimpan file: " + String(err.message||err), "err"); }
     });
   });
   box.querySelectorAll("[data-pa-test-kind]").forEach(btn=>{
-    btn.addEventListener("click", ()=> toggleUjiCoba(btn.dataset.paTestKind, btn.dataset.paTestKey));
+    btn.addEventListener("click", ()=>{
+      const kind = btn.dataset.paTestKind, key = btn.dataset.paTestKey;
+      // Kunci semu "DhuhrJumat" -- uji coba pakai rantai fallback yang
+      // SAMA persis dengan yang beneran dipakai saat Jumat tiba (Jumat
+      // dulu, baru Dzuhur biasa, baru default), supaya tombol ▶ di sini
+      // benar-benar mencerminkan suara yang bakal terdengar nanti.
+      const audioKeys = key === "DhuhrJumat" ? ["DhuhrJumat","Dhuhr"] : key;
+      toggleUjiCoba(kind, key, audioKeys);
+    });
   });
   box.querySelectorAll("[data-pa-reset-kind]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
@@ -2070,11 +2097,17 @@ function renderPrayerRows(){
       const { idbKey, urlKey } = audioKeysFor(kind, key);
       await idbDelete(idbKey).catch(()=>{});
       localStorage.removeItem(urlKey);
-      showToast(`MP3 ${kind==="reminder"?"pengingat":"adzan"} ${PRAYER_LABEL[key]} dikembalikan ke default.`, "ok");
+      showToast(`MP3 ${kind==="reminder"?"pengingat":"adzan"} ${labelForAudioKey(key)} dikembalikan ke default.`, "ok");
       refreshPrayerAudioStatus();
     });
   });
   refreshPrayerAudioStatus();
+}
+/* Label tampilan utk kunci audio -- REMINDABLE pakai PRAYER_LABEL biasa,
+   "DhuhrJumat" adalah kunci SEMU khusus penyimpanan MP3 pengingat Jumat
+   (bukan waktu sholat sungguhan, jadi tidak ada di PRAYER_LABEL). */
+function labelForAudioKey(key){
+  return key === "DhuhrJumat" ? "Jumat (Dzuhur)" : PRAYER_LABEL[key];
 }
 /* Isi teks status tiap baris audio per-sholat -- "Khusus: nama.mp3" kalau
    ada override, atau "Pakai default" kalau masih ikut yg global. */
@@ -2089,6 +2122,18 @@ async function refreshPrayerAudioStatus(){
       const url = localStorage.getItem(urlKey);
       if(url){ el.textContent = "Khusus (link) ✓"; continue; }
       el.textContent = "Pakai default";
+    }
+  }
+  // Status baris MP3 khusus Jumat (kunci semu "DhuhrJumat") -- di luar
+  // loop REMINDABLE karena bukan waktu sholat sungguhan, cuma reminder.
+  const elJumat = document.getElementById("paStat_reminder_DhuhrJumat");
+  if(elJumat){
+    const { idbKey, urlKey } = audioKeysFor("reminder", "DhuhrJumat");
+    const blob = await idbGet(idbKey).catch(()=>null);
+    if(blob){ elJumat.textContent = "Khusus ✓"; }
+    else{
+      const url = localStorage.getItem(urlKey);
+      elJumat.textContent = url ? "Khusus (link) ✓" : "Belum diisi (pakai Dzuhur biasa)";
     }
   }
 }
