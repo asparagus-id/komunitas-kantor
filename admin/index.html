@@ -374,13 +374,20 @@
 
         <div class="panel-card">
           <div class="panel-card-head"><h3>Status Fitur</h3></div>
-          <div class="feat-row">
+          <div class="feat-row" id="featRow">
             <div class="feat-item"><span class="fdot" id="featAiDot"></span><div><span id="featAiLabel">AI (Groq/Workers)</span><small id="featAiSub">Memuat…</small></div></div>
             <div class="feat-item"><span class="fdot" id="featCalDot"></span><div><span>Google Calendar (ontime)</span><small id="featCalSub">Memuat…</small></div></div>
             <div class="feat-item"><span class="fdot on"></span><div><span id="featTopikLabel">0 topik terdaftar</span><small>Termasuk auto-deteksi</small></div></div>
             <div class="feat-item"><span class="fdot on"></span><div><span id="featAdminLabel">0 admin terdaftar</span><small id="featAdminSub">Semua anggota bebas pakai perintah</small></div></div>
+            <!-- Sisanya (GitHub, BARDI/Tuya, Cron, dst) diisi OTOMATIS oleh
+                 renderFeatureStatusRow() setelah /status-sistem selesai
+                 dimuat -- lihat FEATURE_STATUS_DEFS_DINAMIS di script,
+                 4 item statis di atas ini TETAP dipertahankan apa adanya
+                 (dirender lebih awal oleh renderOverview() dari data.json
+                 saja, sebelum /status-sistem sempat kejawab) supaya tidak
+                 ada jeda kosong pas halaman baru dibuka. -->
           </div>
-          <div class="hint" style="margin-top:14px;">Baris ini cuma menampilkan hal yang benar-benar bisa dicek dari data bot (bukan status infrastruktur Cloudflare/GitHub live) — supaya tidak ada info yang menyesatkan.</div>
+          <div class="hint" style="margin-top:14px;">Baris ini cuma menampilkan hal yang benar-benar bisa dicek dari data bot (bukan status infrastruktur Cloudflare/GitHub live) — supaya tidak ada info yang menyesatkan. Fitur baru otomatis muncul di sini begitu ditambahkan ke <code>/status-sistem</code> di Worker — lihat komentar <code>FEATURE_STATUS_DEFS_DINAMIS</code> di kode panel utk cara tambahnya.</div>
         </div>
       </section>
 
@@ -964,6 +971,66 @@ function getTodayKey(){
 function getUpcomingKajian(){
   const today = getTodayKey();
   return (data.kajian || []).filter(k=>k.tanggal >= today).sort((a,b)=>a.tanggal.localeCompare(b.tanggal));
+}
+/* ============================================================
+   FEATURE_STATUS_DEFS_DINAMIS -- daftar fitur TAMBAHAN yang ikut
+   ditampilkan di kartu "Status Fitur" (Overview), SELAIN 4 item statis
+   yg sudah dirender renderOverview() (AI/Kalender/Topik/Admin -- tetap
+   dipertahankan apa adanya krn butuh dirender lebih awal, sebelum
+   /status-sistem kejawab, supaya tidak ada jeda kosong).
+
+   ATURAN utk fitur baru: begitu Worker punya fitur baru yang statusnya
+   bisa dicek, TAMBAHKAN 1 objek ke array ini (jangan edit HTML manual).
+   Kalau field-nya belum ada di respons endpoint /status-sistem, tambah
+   dulu field itu di handleStatusSistem() (worker-komunitas.js), lalu
+   baca field itu di sini lewat `st.<namaField>`. Itu saja -- kartu
+   Overview & kartu detail /status-sistem otomatis ikut menyesuaikan,
+   tidak perlu sentuh markup <div class="feat-item"> di HTML lagi.
+   Tiap objek:
+     label : string TETAP, atau function(st) => string (kalau perlu
+             menyisipkan angka/nama dinamis di label-nya sendiri)
+     ok    : function(st) => boolean (true = titik hijau "on")
+     sub   : function(st) => string (baris kecil di bawah label)
+   ============================================================ */
+const FEATURE_STATUS_DEFS_DINAMIS = [
+  {
+    label: "GitHub (database)",
+    ok: (st) => !!st.githubOk,
+    sub: (st) => st.githubOk ? "Tersambung" : "⚠️ ENV belum lengkap",
+  },
+  {
+    label: "BARDI / Tuya Smart Home",
+    ok: (st) => !!(st.tuyaOk && !st.tuyaError),
+    sub: (st) =>
+      st.tuyaError
+        ? "⚠️ " + st.tuyaError
+        : st.tuyaOk
+        ? st.tuyaDeviceCount + " perangkat tertaut" + (st.tuyaStatusError ? " (⚠️ status gagal)" : "")
+        : "Belum tertaut (ENV Tuya kosong)",
+  },
+  {
+    label: "Cron tick terjadwal",
+    ok: (st) => st.cronHealthy !== false,
+    sub: (st) => st.lastCronTickSuccess ? "Terakhir sukses " + new Date(st.lastCronTickSuccess).toLocaleString("id-ID") : "⚠️ Belum pernah tercatat",
+  },
+];
+function renderFeatureStatusRow(st) {
+  const row = document.getElementById("featRow");
+  if (!row || !st) return;
+  // Buang item dinamis lama kalau dipanggil ulang (mis. auto-refresh
+  // berkala), sebelum tambah yg baru -- ditandai class "feat-item-dinamis"
+  // supaya 4 item statis di atas (AI/Kalender/Topik/Admin) tidak ikut
+  // terhapus.
+  row.querySelectorAll(".feat-item-dinamis").forEach((el) => el.remove());
+  FEATURE_STATUS_DEFS_DINAMIS.forEach((def) => {
+    const label = typeof def.label === "function" ? def.label(st) : def.label;
+    const ok = !!def.ok(st);
+    const sub = def.sub(st);
+    const el = document.createElement("div");
+    el.className = "feat-item feat-item-dinamis";
+    el.innerHTML = `<span class="fdot ${ok ? "on" : "off"}"></span><div><span>${label}</span><small>${sub}</small></div>`;
+    row.appendChild(el);
+  });
 }
 function renderOverview(){
   if(!data) return;
@@ -2134,6 +2201,7 @@ async function boot(){
   }, 60000);
   setInterval(loadAiQuota, 300000);
   setInterval(loadCalendarEvents, 300000);
+  setInterval(loadStatusSistem, 120000);
 }
 async function loadAiQuota(){
   const chipEl = document.getElementById("aiQuotaChipVal");
@@ -2182,6 +2250,7 @@ async function loadStatusSistem(){
   try{
     const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/status-sistem", { headers:{ "Authorization":"Bearer " + APP_TOKEN }, cache:"no-store" });
     const st = await res.json();
+    renderFeatureStatusRow(st); // isi item DINAMIS di kartu "Status Fitur" (Overview) -- lihat FEATURE_STATUS_DEFS_DINAMIS
     const masalah = [];
     if(!st.githubOk) masalah.push("GitHub");
     if(!st.googleCalendarOk) masalah.push("Google Calendar");
