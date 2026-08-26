@@ -1,0 +1,109 @@
+{
+  "build": {
+    "distDir": "../public",
+    "devPath": "../public",
+    "beforeBuildCommand": "",
+    "beforeDevCommand": "",
+    "withGlobalTauri": true
+  },
+  "package": {
+    "productName": "Pengingat Sholat",
+    "version": "1.15.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "http": {
+        "all": true,
+        "scope": ["https://api.aladhan.com/*", "https://nominatim.openstreetmap.org/*"]
+      },
+      "notification": {
+        "all": true
+      },
+      "window": {
+        "all": false,
+        "close": true,
+        "minimize": true,
+        "maximize": true,
+        "setFullscreen": true,
+        "startDragging": true,
+        "show": true,
+        "hide": true,
+        "unminimize": true,
+        "setFocus": true
+      }
+    },
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://github.com/asparagus-id/komunitas-kantor/releases/latest/download/latest.json"
+      ],
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk3OUQ0NEQxRDc0REZDNjMKUldSai9FM1gwVVNkbC91bnNZTzhyN0FhS1ZjMmd6SkN4TldDUG5VTHRicm1TV1Q4M21Pay9YNjMK"
+    },
+    "systemTray": {
+      "iconPath": "icons/icon.ico",
+      "iconAsTemplate": false
+    },
+    "bundle": {
+      "active": true,
+      "targets": ["msi", "nsis", "updater"],
+      "identifier": "com.rempahecho.pengingatsholat",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ]
+    },
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "Pengingat Sholat - Kantor",
+        "width": 1280,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false,
+        "fileDropEnabled": false,
+        "visible": true,
+        "url": "index.html"
+      },
+      {
+        "label": "widget",
+        "title": "Pengingat Sholat",
+        "width": 300,
+        "height": 190,
+        "x": 1600,
+        "y": 40,
+        "resizable": false,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "transparent": true,
+        "fileDropEnabled": false,
+        "visible": false,
+        "url": "index.html?widget=1"
+      },
+      {
+        "label": "reminder",
+        "title": "Pengingat Sholat",
+        "width": 440,
+        "height": 60,
+        "x": 740,
+        "y": 16,
+        "resizable": false,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "transparent": true,
+        "fileDropEnabled": false,
+        "visible": false,
+        "url": "index.html?popup=1"
+      }
+    ]
+  }
+}
