@@ -645,13 +645,12 @@
 
         <div class="card">
           <h2>🔔 Pemantauan Perangkat BARDI <span class="badge" id="bmStatusBadge"></span></h2>
-          <div class="desc">Pantau kumpulan perangkat BARDI (mis. "Lampu Kantor"). Kalau jumlah perangkat yang mati/offline mencapai ambang batas yang kamu atur, bot otomatis kirim pesan peringatan ke grup Telegram — berguna misalnya buat deteksi dini listrik kantor padam. Otomatis kirim pesan susulan begitu kondisi kembali normal.</div>
+          <div class="desc">Pantau kumpulan perangkat BARDI (mis. "Lampu Kantor"). Bot otomatis kirim peringatan ke grup Telegram kalau <b>SEMUA</b> perangkat yang dipantau offline/terputus wifi bersamaan, atau minimal <b>2 perangkat</b> offline bersamaan — ambang batas ini otomatis, tidak perlu diatur manual. Kalau cuma 1 perangkat yang offline, diabaikan (dianggap gangguan perangkat itu sendiri, bukan listrik padam). Perangkat yang cuma dimatikan manual/saklar off TIDAK dihitung sebagai offline. Otomatis kirim pesan susulan begitu koneksi kembali normal.</div>
 
           <div class="field" style="margin-bottom:16px;"><label><input type="checkbox" id="bmEnabled"> Aktifkan pemantauan</label></div>
 
           <div class="row">
             <div class="field"><label>Label (dipakai di teks pesan)</label><input type="text" id="bmLabel" placeholder="mis. Lampu Kantor"></div>
-            <div class="field"><label>Ambang batas mati/offline</label><input type="number" id="bmThreshold" min="1" placeholder="mis. 2"></div>
             <div class="field"><label>Kirim ke topik</label><select id="bmTopic"><option value="">(percakapan umum grup)</option></select></div>
           </div>
 
@@ -2055,7 +2054,7 @@ function bmIsConfigured(){
   return !!(m.label || (m.deviceIds && m.deviceIds.length));
 }
 function bmSetLocked(locked){
-  ["bmEnabled","bmLabel","bmThreshold","bmTopic"].forEach(id=>{ document.getElementById(id).disabled = locked; });
+  ["bmEnabled","bmLabel","bmTopic"].forEach(id=>{ document.getElementById(id).disabled = locked; });
   document.querySelectorAll("#bmDeviceChecks input").forEach(el=>{ el.disabled = locked; });
   document.getElementById("saveBmBtn").classList.toggle("hidden", locked);
   document.getElementById("editBmBtn").classList.toggle("hidden", !locked);
@@ -2064,11 +2063,10 @@ function bmSetLocked(locked){
 }
 function renderBardiMonitor(){
   populateTopicSelect();
-  data.bardiMonitor = data.bardiMonitor || { enabled:false, deviceIds:[], threshold:null, label:"", topicKey:null, alerted:false };
+  data.bardiMonitor = data.bardiMonitor || { enabled:false, deviceIds:[], label:"", topicKey:null, alerted:false };
   const m = data.bardiMonitor;
   document.getElementById("bmEnabled").checked = !!m.enabled;
   document.getElementById("bmLabel").value = m.label || "";
-  document.getElementById("bmThreshold").value = m.threshold || "";
   document.getElementById("bmTopic").value = m.topicKey || "";
   renderBardiMonitorDeviceChecks();
   bmSetLocked(bmIsConfigured());
@@ -2085,23 +2083,20 @@ function renderBardiMonitor(){
   const summary = document.getElementById("bmSummary");
   const n = (m.deviceIds||[]).length;
   summary.textContent = n
-    ? `${n} perangkat dipilih${m.threshold ? ` • peringatan terkirim kalau ${m.threshold} dari ${n} mati/offline` : ""}`
+    ? `${n} perangkat dipilih • peringatan terkirim kalau semua offline bersamaan, atau minimal 2 dari ${n} offline bersamaan`
     : "Belum ada perangkat dipilih.";
 }
 document.getElementById("saveBmBtn").addEventListener("click", async ()=>{
   const enabled = document.getElementById("bmEnabled").checked;
   const label = document.getElementById("bmLabel").value.trim();
   const deviceIds = Array.from(document.querySelectorAll("#bmDeviceChecks input:checked")).map(el=>el.value);
-  const threshold = parseInt(document.getElementById("bmThreshold").value,10) || null;
   const topicKey = document.getElementById("bmTopic").value || null;
   if(enabled){
     if(!label){ toast("Isi label dulu.", true); return; }
     if(deviceIds.length < 2){ toast("Pilih minimal 2 perangkat.", true); return; }
-    if(!threshold){ toast("Isi ambang batas dulu.", true); return; }
-    if(threshold > deviceIds.length){ toast("Ambang batas tidak boleh lebih besar dari jumlah perangkat yang dipilih.", true); return; }
   }
   data.bardiMonitor = {
-    enabled, label, deviceIds, threshold, topicKey,
+    enabled, label, deviceIds, topicKey,
     alerted: enabled ? (data.bardiMonitor.alerted || false) : false, // reset kalau dimatikan
   };
   if(await saveData()) renderBardiMonitor();
@@ -2109,7 +2104,7 @@ document.getElementById("saveBmBtn").addEventListener("click", async ()=>{
 document.getElementById("editBmBtn").addEventListener("click", ()=> bmSetLocked(false));
 document.getElementById("hapusBmBtn").addEventListener("click", async ()=>{
   if(!confirm("Hapus pengaturan pemantauan perangkat BARDI ini?")) return;
-  data.bardiMonitor = { enabled:false, deviceIds:[], threshold:null, label:"", topicKey:null, alerted:false };
+  data.bardiMonitor = { enabled:false, deviceIds:[], label:"", topicKey:null, alerted:false };
   if(await saveData()){ toast("Pengaturan pemantauan dihapus ✓"); renderBardiMonitor(); }
 });
 
