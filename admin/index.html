@@ -442,7 +442,7 @@
           <div class="table-wrap"><table id="puasaRiwayatTable"><thead><tr><th>Tanggal</th><th>Puasa</th><th>Tidak puasa</th></tr></thead><tbody></tbody></table></div>
         </div>
 
-        <div class="card">
+        <div class="card" style="display:none;"><!-- Menu "Varian poll puasa (AI)" disembunyikan atas permintaan admin. Fungsinya (approve/reject varian pertanyaan poll dari AI) TETAP jalan penuh lewat Telegram: /puasa_variant_generate, /puasa_variant_review, /puasa_variant_approve, /puasa_variant_reject -- ini cuma menyembunyikan tampilan kartunya di panel HTML, bukan mematikan fiturnya. Hapus "style=display:none" di <div class="card"> ini kalau suatu saat mau dimunculkan lagi. -->
           <h2>🧠 Varian poll puasa (AI) <span class="badge" id="variantBadge"></span></h2>
           <div class="desc">150 varian bawaan selalu aktif (tidak bisa dihapus). Admin bisa minta AI bikinkan varian TAMBAHAN lewat <code>/puasa_variant_generate &lt;jumlah&gt;</code> di Telegram (fitur ini butuh AI, cuma bisa dipicu dari Telegram bukan dari panel). Hasilnya masuk antrian di bawah — cek dulu maknanya benar (opsi 1 harus berarti "puasa", opsi 2 harus berarti "tidak puasa") sebelum di-approve.</div>
           <div class="table-wrap"><table id="variantTable"><thead><tr><th>Pertanyaan</th><th>Opsi 1 (puasa)</th><th>Opsi 2 (tidak)</th><th></th></tr></thead><tbody></tbody></table></div>
