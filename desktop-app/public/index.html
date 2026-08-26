@@ -229,7 +229,8 @@
   .switch input:checked + .switch-track{background:rgba(201,162,39,.35);}
   .switch input:checked + .switch-track::before{transform:translateX(18px); background:var(--gold);}
   .prayer-row-sub{display:flex; align-items:center; gap:8px; margin-top:10px; font-size:12.5px; color:var(--muted);}
-  .prayer-row-sub input{width:56px; padding:6px 8px; font-size:13px; background:var(--surface); border:1px solid var(--line); border-radius:8px; color:var(--text);}
+  .prayer-row-sub input{width:56px; padding:6px 8px; font-size:13px; font-weight:600; background:var(--surface-2); border:1.5px solid var(--muted-dim); border-radius:8px; color:var(--text); text-align:center;}
+  .prayer-row-sub input:focus{outline:none; border-color:var(--gold); box-shadow:0 0 0 2px rgba(201,162,39,.2);}
   .friday-override{display:flex; align-items:center; gap:8px; margin-top:8px; padding-top:8px; border-top:1px dashed var(--line); font-size:12px; color:var(--gold-soft);}
   .pa-row{display:flex; align-items:center; gap:8px; margin-top:8px; padding-top:8px; border-top:1px dashed var(--line); font-size:11.5px;}
   .pa-row:first-of-type{border-top:1px dashed var(--line);}
@@ -789,7 +790,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.13.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
+const APP_VERSION = "1.14.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -1735,39 +1736,57 @@ document.getElementById("yearlyNextBtn").addEventListener("click", ()=>{
    (baris pertama bisa mulai di tengah minggu, dst -- sama kayak app
    referensi Anda). Cache-nya SENGAJA terpisah dari calendarCache. */
 function loadHijriCalendarCache(){
-  try{ return JSON.parse(localStorage.getItem("adzan_hijri_calendar_v1")||"{}"); }catch(e){ return {}; }
+  try{ return JSON.parse(localStorage.getItem("adzan_hijri_calendar_v2")||"{}"); }catch(e){ return {}; }
 }
-function saveHijriCalendarCache(){ localStorage.setItem("adzan_hijri_calendar_v1", JSON.stringify(hijriCalendarCache)); }
+function saveHijriCalendarCache(){ localStorage.setItem("adzan_hijri_calendar_v2", JSON.stringify(hijriCalendarCache)); }
 let hijriCalendarCache = loadHijriCalendarCache();
-function hijriCacheKey(m,y){ return `${y}-${String(m).padStart(2,"0")}`; }
+// Cache disimpan per TAHUN Hijriyah (bukan per bulan lagi) -- lihat alasan di
+// fetchHijriCalendarYear() di bawah.
+function hijriCacheKey(y){ return String(y); }
 function hijriCacheParamsMatch(entry){
   return entry && entry.lat===settings.lat && entry.lng===settings.lng && entry.method===settings.method;
 }
-/* Endpoint: /hijriCalendar/{bulan}/{tahun} -- urutan bulan DULU baru
-   tahun (beda dari /calendar/{tahun}/{bulan} yg dipakai tabel Masehi --
-   ini memang urutan resmi dari dokumentasi AlAdhan utk endpoint Hijriyah,
-   bukan salah ketik). */
-async function fetchHijriCalendarMonth(hijriMonth, hijriYear){
-  const url = `https://api.aladhan.com/v1/hijriCalendar/${hijriMonth}/${hijriYear}?latitude=${settings.lat}&longitude=${settings.lng}&method=${settings.method}`;
+/* Endpoint LAMA /hijriCalendar/{bulan}/{tahun} sudah TIDAK ADA lagi di API
+   AlAdhan (makanya selalu balas HTTP 400) -- dokumentasi resmi mereka
+   sekarang cuma punya /hijriCalendar/{tahun} (1 tahun Hijriyah penuh,
+   TANPA parameter bulan). Jadi di sini kita ambil satu tahun Hijriyah
+   sekaligus (otomatis ke-cache utk 12 bulan sekaligus, hemat request pas
+   geser2 bulan), lalu bulan yg mau ditampilkan disaring dari situ. */
+async function fetchHijriCalendarYear(hijriYear){
+  const url = `https://api.aladhan.com/v1/hijriCalendar/${hijriYear}?latitude=${settings.lat}&longitude=${settings.lng}&method=${settings.method}`;
   const res = await fetch(url);
   if(!res.ok) throw new Error("Gagal ambil kalender Hijriyah: HTTP " + res.status);
   const data = await res.json();
-  if(!Array.isArray(data.data)) throw new Error("Format respons tidak dikenali");
-  return { items: data.data, lat:settings.lat, lng:settings.lng, method:settings.method, fetchedAt:new Date().toISOString() };
+  // Respons AlAdhan utk endpoint tahunan bisa berupa object {"1":[...],..,"12":[...]}
+  // (dikelompokkan per bulan) ATAU array datar berisi semua hari setahun --
+  // ditangani dua-duanya supaya tidak gampang rusak kalau formatnya berubah lagi.
+  let byMonth = {};
+  if(data.data && !Array.isArray(data.data) && typeof data.data==="object"){
+    byMonth = data.data;
+  } else if(Array.isArray(data.data)){
+    data.data.forEach(item=>{
+      const mo = String(item?.date?.hijri?.month?.number || "");
+      if(!mo) return;
+      (byMonth[mo] = byMonth[mo] || []).push(item);
+    });
+  } else {
+    throw new Error("Format respons tidak dikenali");
+  }
+  return { months: byMonth, lat:settings.lat, lng:settings.lng, method:settings.method, fetchedAt:new Date().toISOString() };
 }
 async function renderHijriGrid(){
   const statusEl = document.getElementById("yearlyStatus");
   const gridEl = document.getElementById("hijriGrid");
   const labelEl = document.getElementById("yearlyHijriLabel");
-  const ck = hijriCacheKey(hijriViewMonth, hijriViewYear);
+  const ck = hijriCacheKey(hijriViewYear);
   let entry = hijriCalendarCache[ck];
   if(!hijriCacheParamsMatch(entry)){
     if(!locationConfigured()){ statusEl.textContent = "⚠️ Lokasi belum diatur -- isi dulu di Pengaturan > Lokasi."; gridEl.innerHTML=""; return; }
-    if(!navigator.onLine){ statusEl.textContent = "Offline & bulan Hijriyah ini belum ada di cadangan. Sambungkan internet dulu."; gridEl.innerHTML=""; return; }
+    if(!navigator.onLine){ statusEl.textContent = "Offline & tahun Hijriyah ini belum ada di cadangan. Sambungkan internet dulu."; gridEl.innerHTML=""; return; }
     statusEl.textContent = "Mengambil kalender Hijriyah...";
     gridEl.innerHTML = "";
     try{
-      entry = await fetchHijriCalendarMonth(hijriViewMonth, hijriViewYear);
+      entry = await fetchHijriCalendarYear(hijriViewYear);
       hijriCalendarCache[ck] = entry;
       saveHijriCalendarCache();
     }catch(e){
@@ -1775,25 +1794,26 @@ async function renderHijriGrid(){
       return;
     }
   }
+  const items = entry.months[String(hijriViewMonth)] || [];
+  if(!items.length){ statusEl.textContent = "Data bulan ini tidak ditemukan di respons API."; gridEl.innerHTML = ""; return; }
   statusEl.textContent = "";
-  if(!entry.items.length){ gridEl.innerHTML = ""; return; }
 
   // Label header: nama bulan Arab + tahun Hijriyah (angka Arab), diambil
   // dari data hari pertama bulan itu sendiri -- bukan tabel nama manual,
   // supaya SELALU cocok persis dgn yg dikembalikan API.
-  const contoh = entry.items[0].date.hijri;
+  const contoh = items[0].date.hijri;
   labelEl.textContent = `${contoh.month.ar} ${keAngkaArab(contoh.year)} هـ`;
 
   const todayKeyStr = dateKey(new Date());
   // Tentukan posisi weekday hari PERTAMA di bulan Hijriyah ini (0=Ahad..6=Sabtu)
   // dari tanggal Masehi-nya (dihitung sendiri via Date, TIDAK bergantung
   // field weekday API -- lebih pasti benar).
-  const [d1,m1,y1] = entry.items[0].date.gregorian.date.split("-").map(Number);
+  const [d1,m1,y1] = items[0].date.gregorian.date.split("-").map(Number);
   const startWeekday = new Date(y1, m1-1, d1).getDay();
 
   let html = "";
   for(let i=0;i<startWeekday;i++) html += `<div class="hijri-cell empty"></div>`;
-  entry.items.forEach(item=>{
+  items.forEach(item=>{
     const [dd,mm,yy] = item.date.gregorian.date.split("-").map(Number);
     const gregKeyStr = `${yy}-${String(mm).padStart(2,"0")}-${String(dd).padStart(2,"0")}`;
     const isToday = gregKeyStr === todayKeyStr;
@@ -1873,7 +1893,7 @@ function renderPrayerRows(){
       <div class="prayer-row-sub" style="justify-content:space-between;">
         <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
           <span class="switch"><input type="checkbox" class="reminderEnableInput" ${ps.enabled?"checked":""}><span class="switch-track"></span></span>
-          Pengingat <input type="number" class="minutesInput" min="0" max="120" value="${ps.minutes}" style="width:44px;"> mnt sebelum
+          Pengingat <input type="number" class="minutesInput" min="0" max="120" value="${ps.minutes}" style="width:44px;"> menit sebelum
         </label>
       </div>
       <div class="prayer-row-sub">
