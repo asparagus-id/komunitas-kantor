@@ -696,7 +696,7 @@ let data = null, sha = null;
 
 // Versi panel ini -- naikkan tiap kali ada perubahan berarti, cocokkan
 // dengan entri di CHANGELOG.md & WORKER_VERSION di worker-komunitas.js.
-const APP_VERSION = "2.11.7";
+const APP_VERSION = "2.12.0";
 const WORKER_URL_FOR_VERSION_CHECK = "https://gus-asisten.rempahecho.workers.dev";
 
 /* Cek versi worker LANGSUNG saat halaman dibuka, SEBELUM login (endpoint
@@ -1801,7 +1801,8 @@ async function loadBardiDevices(){
 }
 async function bardiToggle(deviceId, value){
   try{
-    await apiAction("/bardi-toggle", { deviceId, value });
+    const res = await apiAction("/bardi-toggle", { deviceId, value });
+    if(res.error){ toast("Gagal: " + res.error, true); return; }
     toast("Perintah terkirim ✓");
     setTimeout(loadBardiDevices, 1500); // beri jeda sebentar biar status online/offline sempat update
   }catch(e){ toast("Gagal: " + e.message, true); }
