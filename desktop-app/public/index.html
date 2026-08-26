@@ -231,6 +231,17 @@
   .prayer-row-sub{display:flex; align-items:center; gap:8px; margin-top:10px; font-size:12.5px; color:var(--muted);}
   .prayer-row-sub input{width:56px; padding:6px 8px; font-size:13px; background:var(--surface); border:1px solid var(--line); border-radius:8px; color:var(--text);}
   .friday-override{display:flex; align-items:center; gap:8px; margin-top:8px; padding-top:8px; border-top:1px dashed var(--line); font-size:12px; color:var(--gold-soft);}
+  .pa-row{display:flex; align-items:center; gap:8px; margin-top:8px; padding-top:8px; border-top:1px dashed var(--line); font-size:11.5px;}
+  .pa-row:first-of-type{border-top:1px dashed var(--line);}
+  .pa-icon{flex-shrink:0;}
+  .pa-status{flex:1; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .pa-file-input{display:none;}
+  .pa-upload-btn, .pa-mini-btn{
+    flex-shrink:0; width:26px; height:26px; border-radius:7px; border:1px solid var(--line);
+    background:var(--surface); color:var(--muted); font-size:12px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-family:inherit;
+  }
+  .pa-upload-btn:hover, .pa-mini-btn:hover{border-color:var(--primary); color:var(--primary);}
   .friday-override input{width:50px; padding:5px 7px; font-size:12.5px; background:var(--surface); border:1px solid rgba(201,162,39,.35); border-radius:8px; color:var(--text);}
   .audio-block{background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:10px;}
   .audio-block .atitle{font-size:13px; font-weight:600; margin-bottom:2px;}
@@ -641,6 +652,8 @@
           </div>
           <div class="link-status" id="linkStatusAzan"></div>
         </div>
+        <button class="btn primary" id="applyAudioToAllBtn" style="width:100%; margin-bottom:14px;">Terapkan MP3 Default ke Semua Waktu Sholat</button>
+        <div class="hint" style="margin-top:-10px; margin-bottom:14px;">Menyalin file di atas ke tiap waktu sholat (5x). Sesudahnya, di tab Jadwal, tiap sholat bisa diganti sendiri-sendiri kalau ada yang mau beda (mis. cuma Subuh pakai suara lain).</div>
         <div class="field">
           <label>Volume</label>
           <div class="slider-row">
@@ -776,7 +789,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.12.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
+const APP_VERSION = "1.13.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -960,12 +973,15 @@ function showToast(pesan, tipe){
 }
 
 /* ---------------- Uji coba suara ---------------- */
-let sedangUjiCoba = null;
+let sedangUjiCoba = null; // string "reminder"/"azan" (default) ATAU "reminder_Fajr" dst (per-sholat)
 function updateTombolUjiCoba(){
   const btnReminder = document.getElementById("testReminder");
   const btnAzan = document.getElementById("testAzan");
   btnReminder.textContent = sedangUjiCoba === "reminder" ? "⏸ Berhenti" : "▶ Uji coba";
   btnAzan.textContent = sedangUjiCoba === "azan" ? "⏸ Berhenti" : "▶ Uji coba";
+  document.querySelectorAll("[data-test-audio]").forEach(btn=>{
+    btn.textContent = (sedangUjiCoba === btn.dataset.testAudio) ? "⏸" : "▶";
+  });
 }
 function berhentiUjiCoba(){
   const audioEl = document.getElementById("audioEl");
@@ -973,29 +989,55 @@ function berhentiUjiCoba(){
   sedangUjiCoba = null;
   updateTombolUjiCoba();
 }
-async function toggleUjiCoba(kind){
-  if (sedangUjiCoba === kind){ berhentiUjiCoba(); return; }
-  sedangUjiCoba = kind;
+async function toggleUjiCoba(kind, prayerKey){
+  const idUjiCoba = prayerKey ? `${kind}_${prayerKey}` : kind;
+  if (sedangUjiCoba === idUjiCoba){ berhentiUjiCoba(); return; }
+  sedangUjiCoba = idUjiCoba;
   updateTombolUjiCoba();
-  await playSound(kind);
+  await playSound(kind, prayerKey);
 }
 document.getElementById("audioEl").addEventListener("ended", () => { sedangUjiCoba = null; updateTombolUjiCoba(); });
 
-async function playSound(kind){
-  const key = kind === "reminder" ? "reminderAudio" : "azanAudio";
-  const urlKey = kind === "reminder" ? "reminderAudioUrl" : "azanAudioUrl";
-  const blob = await idbGet(key).catch(()=>null);
+/* Ambil kunci IndexedDB & localStorage(url) buat kombinasi kind+prayerKey.
+   Tanpa prayerKey -> kunci DEFAULT/global (spt sebelumnya, "reminderAudio").
+   Dengan prayerKey -> kunci KHUSUS 1 waktu sholat (mis. "reminderAudio_Fajr"). */
+function audioKeysFor(kind, prayerKey){
+  const dasar = kind === "reminder" ? "reminderAudio" : "azanAudio";
+  const idbKey = prayerKey ? `${dasar}_${prayerKey}` : dasar;
+  return { idbKey, urlKey: idbKey + "Url" };
+}
+/* Cari file/link YANG BENAR-BENAR DIPAKAI utk kombinasi ini: kalau ada
+   override khusus sholat itu, pakai itu -- kalau TIDAK ada override sama
+   sekali (belum pernah diisi), baru jatuh ke default global. Dipakai baik
+   oleh playSound() (beneran memutar) maupun refreshPrayerAudioStatus()
+   (buat tampilan status teks). */
+async function resolveAudioSource(kind, prayerKey){
+  if(prayerKey){
+    const { idbKey, urlKey } = audioKeysFor(kind, prayerKey);
+    const blobOverride = await idbGet(idbKey).catch(()=>null);
+    if(blobOverride) return { blob: blobOverride, sumber:"override-file" };
+    const urlOverride = localStorage.getItem(urlKey);
+    if(urlOverride) return { url: urlOverride, sumber:"override-link" };
+  }
+  const { idbKey: defIdbKey, urlKey: defUrlKey } = audioKeysFor(kind, null);
+  const blobDefault = await idbGet(defIdbKey).catch(()=>null);
+  if(blobDefault) return { blob: blobDefault, sumber:"default-file" };
+  const urlDefault = localStorage.getItem(defUrlKey);
+  if(urlDefault) return { url: urlDefault, sumber:"default-link" };
+  return { sumber:"nada-bawaan" };
+}
+async function playSound(kind, prayerKey){
+  const sumber = await resolveAudioSource(kind, prayerKey);
   const audioEl = document.getElementById("audioEl");
-  if(blob){
-    audioEl.src = URL.createObjectURL(blob);
+  if(sumber.blob){
+    audioEl.src = URL.createObjectURL(sumber.blob);
     audioEl.volume = settings.volume;
     audioEl.currentTime = 0;
     try{ await audioEl.play(); }catch(e){ playChime(kind); }
     return;
   }
-  const savedUrl = localStorage.getItem(urlKey);
-  if(savedUrl){
-    audioEl.src = savedUrl;
+  if(sumber.url){
+    audioEl.src = sumber.url;
     audioEl.volume = settings.volume;
     audioEl.currentTime = 0;
     try{ await audioEl.play(); return; }catch(e){ /* lanjut ke fallback nada */ }
@@ -1422,7 +1464,7 @@ function checkTriggers(now){
       const remLogKey = `${key}:${pKey}:reminder`;
       if(!triggeredLog[remLogKey] && now.getTime() >= remindAt && now.getTime() < prayerTime){
         triggeredLog[remLogKey] = true; saveTriggerLog();
-        playSound("reminder");
+        playSound("reminder", pKey);
         showReminderPopup(pKey, prayerTime);
       }
     }
@@ -1431,7 +1473,7 @@ function checkTriggers(now){
       const azanLogKey = `${key}:${pKey}:azan`;
       if(!triggeredLog[azanLogKey] && now.getTime() >= prayerTime && now.getTime() < prayerTime + 60000){
         triggeredLog[azanLogKey] = true; saveTriggerLog();
-        playSound("azan");
+        playSound("azan", pKey);
         flashNowBadge(pKey);
       }
     }
@@ -1845,6 +1887,22 @@ function renderPrayerRows(){
         🕌 Khusus hari Jumat (Jumatan):
         <input type="number" class="fridayInput" min="0" max="120" value="${ps.fridayMinutes!=null?ps.fridayMinutes:20}"> menit
       </div>` : ""}
+      <div class="pa-row">
+        <span class="pa-icon">🔔</span>
+        <span class="pa-status" id="paStat_reminder_${key}">…</span>
+        <label class="pa-upload-btn" for="paFile_reminder_${key}" title="Unggah MP3 khusus">⬆</label>
+        <input type="file" id="paFile_reminder_${key}" class="pa-file-input" accept="audio/*" data-pa-kind="reminder" data-pa-key="${key}">
+        <button class="pa-mini-btn" data-test-audio="reminder_${key}" data-pa-test-kind="reminder" data-pa-test-key="${key}" title="Uji coba">▶</button>
+        <button class="pa-mini-btn" data-pa-reset-kind="reminder" data-pa-reset-key="${key}" title="Kembali ke default">↺</button>
+      </div>
+      <div class="pa-row">
+        <span class="pa-icon">📢</span>
+        <span class="pa-status" id="paStat_azan_${key}">…</span>
+        <label class="pa-upload-btn" for="paFile_azan_${key}" title="Unggah MP3 khusus">⬆</label>
+        <input type="file" id="paFile_azan_${key}" class="pa-file-input" accept="audio/*" data-pa-kind="azan" data-pa-key="${key}">
+        <button class="pa-mini-btn" data-test-audio="azan_${key}" data-pa-test-kind="azan" data-pa-test-key="${key}" title="Uji coba">▶</button>
+        <button class="pa-mini-btn" data-pa-reset-kind="azan" data-pa-reset-key="${key}" title="Kembali ke default">↺</button>
+      </div>
     `;
     const updateOffState = ()=>{
       const anyOn = row.querySelector(".reminderEnableInput").checked || row.querySelector(".azanEnableInput").checked;
@@ -1854,7 +1912,58 @@ function renderPrayerRows(){
     row.querySelector(".azanEnableInput").addEventListener("change", updateOffState);
     box.appendChild(row);
   });
+  // Event delegation -- SATU listener per jenis aksi di kontainer #prayerRows,
+  // bukan 10x addEventListener manual (lebih ringkas & aman dari lupa
+  // pasang listener kalau baris di-render ulang).
+  box.querySelectorAll(".pa-file-input").forEach(inp=>{
+    inp.addEventListener("change", async (e)=>{
+      const f = e.target.files[0]; if(!f) return;
+      if(!f.type.startsWith("audio")){
+        showToast("File yang dipilih bukan berkas audio.", "err");
+        e.target.value = ""; return;
+      }
+      const kind = inp.dataset.paKind, key = inp.dataset.paKey;
+      const { idbKey, urlKey } = audioKeysFor(kind, key);
+      try{
+        await idbSet(idbKey, f);
+        localStorage.removeItem(urlKey);
+        showToast(`MP3 ${kind==="reminder"?"pengingat":"adzan"} khusus ${PRAYER_LABEL[key]} diunggah: ${f.name}`, "ok");
+        refreshPrayerAudioStatus();
+      }catch(err){ showToast("Gagal menyimpan file: " + String(err.message||err), "err"); }
+    });
+  });
+  box.querySelectorAll("[data-pa-test-kind]").forEach(btn=>{
+    btn.addEventListener("click", ()=> toggleUjiCoba(btn.dataset.paTestKind, btn.dataset.paTestKey));
+  });
+  box.querySelectorAll("[data-pa-reset-kind]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const kind = btn.dataset.paResetKind, key = btn.dataset.paResetKey;
+      const { idbKey, urlKey } = audioKeysFor(kind, key);
+      await idbDelete(idbKey).catch(()=>{});
+      localStorage.removeItem(urlKey);
+      showToast(`MP3 ${kind==="reminder"?"pengingat":"adzan"} ${PRAYER_LABEL[key]} dikembalikan ke default.`, "ok");
+      refreshPrayerAudioStatus();
+    });
+  });
+  refreshPrayerAudioStatus();
 }
+/* Isi teks status tiap baris audio per-sholat -- "Khusus: nama.mp3" kalau
+   ada override, atau "Pakai default" kalau masih ikut yg global. */
+async function refreshPrayerAudioStatus(){
+  for(const key of REMINDABLE){
+    for(const kind of ["reminder","azan"]){
+      const el = document.getElementById(`paStat_${kind}_${key}`);
+      if(!el) continue;
+      const { idbKey, urlKey } = audioKeysFor(kind, key);
+      const blob = await idbGet(idbKey).catch(()=>null);
+      if(blob){ el.textContent = "Khusus ✓"; continue; }
+      const url = localStorage.getItem(urlKey);
+      if(url){ el.textContent = "Khusus (link) ✓"; continue; }
+      el.textContent = "Pakai default";
+    }
+  }
+}
+
 function readPrayerRowsIntoSettings(){
   document.querySelectorAll(".prayer-row").forEach(row=>{
     const key = row.dataset.key;
@@ -1972,6 +2081,32 @@ document.getElementById("fetchAzan").addEventListener("click", ()=>{
   const url = document.getElementById("urlAzan").value.trim();
   if(!url) return;
   fetchAudioFromUrl("azan", url, document.getElementById("linkStatusAzan"));
+});
+/* "Terapkan ke Semua" utk audio -- SALIN file/link DEFAULT (2 blok paling
+   atas di tab Audio) ke SEMUA 5 waktu sholat sekaligus, utk kedua jenis
+   (pengingat & adzan). Sesudah ini, admin tinggal timpa satu-dua yg mau
+   beda lewat baris audio di tab Jadwal -- sama pola dgn tombol "Terapkan
+   ke Semua Waktu Sholat" yg sudah ada utk toggle enable/disable. */
+document.getElementById("applyAudioToAllBtn").addEventListener("click", async ()=>{
+  let disalin = 0;
+  for(const kind of ["reminder","azan"]){
+    const { idbKey: defIdbKey, urlKey: defUrlKey } = audioKeysFor(kind, null);
+    const blobDefault = await idbGet(defIdbKey).catch(()=>null);
+    const urlDefault = localStorage.getItem(defUrlKey);
+    if(!blobDefault && !urlDefault) continue; // tidak ada default sama sekali utk jenis ini -- lewati
+    for(const key of REMINDABLE){
+      const { idbKey, urlKey } = audioKeysFor(kind, key);
+      if(blobDefault){ await idbSet(idbKey, blobDefault); localStorage.removeItem(urlKey); }
+      else if(urlDefault){ await idbDelete(idbKey).catch(()=>{}); localStorage.setItem(urlKey, urlDefault); }
+      disalin++;
+    }
+  }
+  if(disalin === 0){
+    showToast("Belum ada MP3 default yang diisi (pengingat/adzan) -- unggah dulu file default di atas.", "err");
+  } else {
+    showToast("MP3 default diterapkan ke semua waktu sholat.", "ok");
+    refreshPrayerAudioStatus();
+  }
 });
 function refreshOfflineCoverage(){
   const cov = offlineCoverageDays();
