@@ -513,6 +513,19 @@
 
       <section class="page" id="page-kalender">
         <div class="card">
+          <h2>📅 Tampilan Google Calendar</h2>
+          <div class="desc" id="calEmbedNote">Memuat kalender…</div>
+          <div id="calEmbedWrap" style="display:none;">
+            <div style="border-radius:10px; overflow:hidden; border:1px solid var(--border,rgba(255,255,255,.12));">
+              <iframe id="calEmbedIframe" style="width:100%; height:600px; border:0; display:block;" frameborder="0" scrolling="no"></iframe>
+            </div>
+            <div style="margin-top:10px;">
+              <a id="calEmbedOpenLink" class="btn small" href="#" target="_blank" rel="noopener">Buka di Google Calendar ↗</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
           <h2>🗓️ Notifikasi ontime Google Calendar <span class="badge" id="calReminderBadge"></span></h2>
           <div class="desc">Sama dengan <code>/kalender_ontime</code>. Berlaku untuk SEMUA event di Google Calendar yang dipantau (bukan cuma kajian/pengingat umum yang dibuat dari bot ini) — bot kirim notifikasi <b>PAS jam yang tertulis di event</b> (bukan N menit sebelum, bukan rangkuman pagi). Bikin event jam 10:00 → notif terkirim jam 10:00, otomatis, tidak perlu atur jam manual. Fitur ini butuh ENV Google (service account) sudah diisi di Worker. Cek status koneksi lewat <code>/kalender_cek</code> di Telegram.</div>
           <div class="row">
@@ -801,6 +814,7 @@ function showPage(id, pushHistory = true){
     el.classList.toggle("active", el.dataset.page===id);
   });
   document.getElementById("pageTitle").textContent = PAGE_TITLES[id] || id;
+  if(id === "kalender") loadCalendarEmbed();
   localStorage.setItem("admkom_page", id);
   document.body.classList.remove("sidebar-open");
   window.scrollTo(0,0);
@@ -1636,6 +1650,47 @@ document.getElementById("addKajianBtn").addEventListener("click", async ()=>{
   }catch(e){ toast("Gagal simpan: " + e.message, true); }
 });
 document.getElementById("cancelEditKajianBtn").addEventListener("click", cancelEditKajian);
+
+/* ---------- GOOGLE CALENDAR: EMBED TAMPILAN KALENDER ---------- */
+// Nampilin kalender Google asli (iframe embed) di halaman menu "Google
+// Calendar", pakai Calendar ID PERTAMA dari GOOGLE_CALENDAR_ID (kalender
+// utama) -- id-nya diambil dari endpoint /kalender-cek yang sudah ada
+// (sama yg dipakai tombol "Tes koneksi" di bawah), jadi tidak perlu
+// hardcode ID di sini.
+//
+// CATATAN PENTING: iframe embed Google Calendar ini HANYA jalan kalau
+// kalendernya di-set "Available to public" di pengaturan sharing Google
+// Calendar (Settings and sharing -> Access permissions -> Make available
+// to public). Akses service account (utk fitur notifikasi/sinkron) TIDAK
+// cukup utk bikin iframe publik ini muncul -- itu dua izin yang beda.
+// Kalau kalender masih private, iframe akan nampilin halaman kosong/error
+// dari Google sendiri (bukan bug di sini).
+let __calEmbedLoaded = false;
+async function loadCalendarEmbed(){
+  if(__calEmbedLoaded) return;
+  const note = document.getElementById("calEmbedNote");
+  const wrap = document.getElementById("calEmbedWrap");
+  try{
+    const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/kalender-cek", { headers:{ "Authorization":"Bearer " + APP_TOKEN }, cache:"no-store" });
+    const j = await res.json();
+    if(j.connected && (j.calendarIds||[]).length){
+      const calId = j.calendarIds[0];
+      const params = new URLSearchParams({ src: calId, ctz: "Asia/Jakarta" });
+      const embedSrc = "https://calendar.google.com/calendar/embed?" + params.toString();
+      document.getElementById("calEmbedIframe").src = embedSrc;
+      document.getElementById("calEmbedOpenLink").href = "https://calendar.google.com/calendar/u/0?cid=" + encodeURIComponent(calId);
+      note.textContent = "Menampilkan kalender utama: " + calId + ". Kalau kotak di bawah kosong/error, kalender ini belum di-set \"Available to public\" di pengaturan sharing Google Calendar.";
+      wrap.style.display = "";
+      __calEmbedLoaded = true;
+    } else if(j.missingEnv){
+      note.textContent = "Google Calendar belum dikonfigurasi -- ENV berikut belum diisi di Worker: " + j.missingEnv.join(", ") + ".";
+    } else {
+      note.textContent = "Belum bisa memuat kalender: " + (j.error || "gagal konek ke Google Calendar") + ".";
+    }
+  }catch(e){
+    note.textContent = "Gagal memuat kalender: " + e.message;
+  }
+}
 
 /* ---------- GOOGLE CALENDAR: NOTIFIKASI ONTIME PER-EVENT ---------- */
 function renderCalReminder(){
