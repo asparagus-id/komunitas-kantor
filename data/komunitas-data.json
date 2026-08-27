@@ -560,14 +560,21 @@
     "2026-08-27": {
       "pollId": "6087014611817596472",
       "threadId": 9028,
-      "answers": {},
+      "answers": {
+        "223975427": {
+          "name": "Pangeran Herry",
+          "choice": 1
+        }
+      },
       "options": [
         "Sertai",
         "Tak sertai"
       ]
     }
   },
-  "puasaVoterRoster": {},
+  "puasaVoterRoster": {
+    "223975427": "Pangeran Herry"
+  },
   "lastPuasaPollSentDate": "2026-08-27",
   "lastKajianCheckDate": "2026-08-27",
   "maintenanceReports": [],
