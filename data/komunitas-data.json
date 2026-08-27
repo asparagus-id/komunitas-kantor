@@ -368,28 +368,6 @@
   "puasaVariantQueuePoolSize": 249,
   "kajian": [
     {
-      "id": 1787504666164,
-      "tanggal": "2026-08-20",
-      "pengisi": "Edwin",
-      "tema": "Kajian Hadist Arbain Nawawi",
-      "remindersSent": [
-        7,
-        0
-      ],
-      "googleEventId": "9b2u9i6mc1gohsai1qq54u4l7c"
-    },
-    {
-      "id": 1787504814420,
-      "tanggal": "2026-08-20",
-      "pengisi": "Edwin",
-      "tema": "Hadist Arbain Nawawi 3",
-      "remindersSent": [
-        7,
-        0
-      ],
-      "googleEventId": "7nlnpkdtnu6fbpkkl71rfophe0"
-    },
-    {
       "id": 1787504814981,
       "tanggal": "2026-09-24",
       "pengisi": "Heri",
@@ -601,7 +579,7 @@
     "1244930074": "Mila Paramita"
   },
   "lastPuasaPollSentDate": "2026-08-27",
-  "lastKajianCheckDate": "2026-08-27",
+  "lastKajianCheckDate": "2026-08-28",
   "maintenanceReports": [],
   "maintenanceTopicKey": null,
   "maintenanceSchedules": [],
