@@ -568,6 +568,10 @@
         "223975427": {
           "name": "Pangeran Herry",
           "choice": 1
+        },
+        "451730890": {
+          "name": "Ulva Halawa",
+          "choice": 1
         }
       },
       "options": [
@@ -578,7 +582,8 @@
   },
   "puasaVoterRoster": {
     "216663781": "Edwin Prayoga",
-    "223975427": "Pangeran Herry"
+    "223975427": "Pangeran Herry",
+    "451730890": "Ulva Halawa"
   },
   "lastPuasaPollSentDate": "2026-08-27",
   "lastKajianCheckDate": "2026-08-27",
