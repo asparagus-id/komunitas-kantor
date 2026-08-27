@@ -29,7 +29,8 @@
     "time": "08:30",
     "topicKey": "puasa",
     "rekapTime": "11:00",
-    "lastRekapSentDate": "2026-08-26"
+    "lastRekapSentDate": "2026-08-26",
+    "lastVoteReminderSentDate": "2026-08-27"
   },
   "puasaVariantsPending": [
     {
@@ -562,7 +563,7 @@
       "threadId": 9028,
       "answers": {
         "121822437": {
-          "name": "â§",
+          "name": "Ã¢ÂÂ§",
           "choice": 1
         },
         "141131037": {
@@ -593,7 +594,7 @@
     }
   },
   "puasaVoterRoster": {
-    "121822437": "â§",
+    "121822437": "Ã¢ÂÂ§",
     "141131037": "Tangguh Prima Viernanto",
     "216663781": "Edwin Prayoga",
     "223975427": "Pangeran Herry",
