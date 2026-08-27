@@ -562,7 +562,7 @@
       "threadId": 9028,
       "answers": {
         "121822437": {
-          "name": "♧",
+          "name": "â§",
           "choice": 1
         },
         "141131037": {
@@ -580,6 +580,10 @@
         "451730890": {
           "name": "Ulva Halawa",
           "choice": 1
+        },
+        "1244930074": {
+          "name": "Mila Paramita",
+          "choice": 1
         }
       },
       "options": [
@@ -589,11 +593,12 @@
     }
   },
   "puasaVoterRoster": {
-    "121822437": "♧",
+    "121822437": "â§",
     "141131037": "Tangguh Prima Viernanto",
     "216663781": "Edwin Prayoga",
     "223975427": "Pangeran Herry",
-    "451730890": "Ulva Halawa"
+    "451730890": "Ulva Halawa",
+    "1244930074": "Mila Paramita"
   },
   "lastPuasaPollSentDate": "2026-08-27",
   "lastKajianCheckDate": "2026-08-27",
