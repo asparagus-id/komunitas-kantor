@@ -561,6 +561,10 @@
       "pollId": "6087014611817596472",
       "threadId": 9028,
       "answers": {
+        "121822437": {
+          "name": "♧",
+          "choice": 1
+        },
         "141131037": {
           "name": "Tangguh Prima Viernanto",
           "choice": 0
@@ -585,6 +589,7 @@
     }
   },
   "puasaVoterRoster": {
+    "121822437": "♧",
     "141131037": "Tangguh Prima Viernanto",
     "216663781": "Edwin Prayoga",
     "223975427": "Pangeran Herry",
