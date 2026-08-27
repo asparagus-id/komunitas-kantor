@@ -561,6 +561,10 @@
       "pollId": "6087014611817596472",
       "threadId": 9028,
       "answers": {
+        "216663781": {
+          "name": "Edwin Prayoga",
+          "choice": 1
+        },
         "223975427": {
           "name": "Pangeran Herry",
           "choice": 1
@@ -573,6 +577,7 @@
     }
   },
   "puasaVoterRoster": {
+    "216663781": "Edwin Prayoga",
     "223975427": "Pangeran Herry"
   },
   "lastPuasaPollSentDate": "2026-08-27",
