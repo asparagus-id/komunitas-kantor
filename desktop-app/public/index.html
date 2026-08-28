@@ -721,13 +721,13 @@
 
         <div class="section-title">Buat Suara AI (ElevenLabs)</div>
         <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
-          Ketik teks apa saja, pilih suara, lalu klik "Buat &amp; Simpan" -- hasilnya otomatis tersimpan sebagai MP3 pengingat/notifikasi yang Anda pilih di bawah (dinamis, tanpa perlu unggah manual). Pakai <b>tier gratis ElevenLabs</b>: 10.000 karakter/bulan, direset tiap tanggal daftar, TANPA kartu kredit &amp; TANPA tagihan mendadak (generate cuma berhenti kalau kuota habis, selama fitur "usage-based billing" di akun ElevenLabs tidak Anda aktifkan sendiri). Daftar gratis di <b>elevenlabs.io</b> utk dapat API key.
+          Ketik teks apa saja, pilih suara, lalu klik "Buat &amp; Simpan" -- hasilnya otomatis tersimpan sebagai MP3 pengingat/notifikasi yang Anda pilih di bawah (dinamis, tanpa perlu unggah manual). Diproses lewat Worker "gus-asisten" (bukan langsung ke ElevenLabs dari komputer ini) -- API key ElevenLabs yang sesungguhnya cuma tersimpan di Worker, komputer kantor cukup pegang Token Akses.
         </div>
         <div class="hint" style="margin-top:-6px; margin-bottom:12px; color:var(--warning);">
-          ⚠️ API key tersimpan HANYA di komputer ini (localStorage), TIDAK ikut ter-bundle ke installer. Kalau app ini dipakai bersama di beberapa komputer kantor, tiap komputer perlu API key gratis miliknya sendiri.
+          ⚠️ Token Akses ini SAMA dengan token panel Admin Bot Komunitas (APP_TOKEN Worker gus-asisten) -- tersimpan HANYA di komputer ini (localStorage), TIDAK ikut ter-bundle ke installer. Kalau app ini dipakai di beberapa komputer kantor, isi token yang sama di tiap komputer.
         </div>
         <div class="field-row">
-          <div class="field"><label>API Key ElevenLabs</label><input type="password" id="elevenApiKey" placeholder="sk_..."></div>
+          <div class="field"><label>Token Akses</label><input type="password" id="elevenApiKey" placeholder="Token Worker gus-asisten"></div>
           <div class="field" style="max-width:130px; justify-content:flex-end;"><label>&nbsp;</label><button class="btn" id="elevenCheckQuotaBtn" style="width:100%;">Cek kuota</button></div>
         </div>
         <div class="hint" id="elevenQuotaStatus" style="margin-top:-8px; margin-bottom:12px;"></div>
@@ -747,6 +747,7 @@
         <button class="btn primary" id="elevenGenerateBtn" style="width:100%; margin-bottom:6px;">🎙️ Buat &amp; Simpan Suara</button>
         <div class="hint" id="elevenGenStatus"></div>
       </div>
+
 
       <!-- ---- TAB: LAINNYA ---- -->
       <div class="tab-pane" data-pane="lainnya">
@@ -874,7 +875,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.20.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
+const APP_VERSION = "1.21.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -2599,13 +2600,18 @@ async function refreshPrayerAudioStatus(){
 }
 
 /* ---------------- ElevenLabs: buat suara AI dinamis (opsional) ----------------
-   API key & pilihan suara TERSIMPAN LOKAL SAJA (localStorage komputer ini),
-   TIDAK pernah dikirim ke server lain selain api.elevenlabs.io milik
-   ElevenLabs sendiri. Hasil audio disimpan ke IndexedDB lewat mekanisme
-   idbSet/audioKeysFor yang SAMA dengan unggah MP3 manual -- jadi begitu
-   dibuat, langsung dipakai oleh checkTriggers() spt file MP3 biasa
-   (tidak perlu koneksi internet lagi sesudahnya utk memutarnya). */
-const ELEVEN_KEY_STORAGE = "elevenlabsApiKey";
+   Diproses lewat Worker "gus-asisten" (endpoint /eleven-quota, /eleven-voices,
+   /eleven-tts) -- API key ElevenLabs yang sesungguhnya HANYA tersimpan sbg
+   secret di Worker (ELEVENLABS_API_KEY), TIDAK PERNAH ada di komputer ini.
+   Yang tersimpan lokal (localStorage) cuma Token Akses (APP_TOKEN Worker,
+   SAMA dgn token panel Admin Bot Komunitas) -- dikirim sbg header
+   Authorization: Bearer <token>, persis pola endpoint Worker lain.
+   Hasil audio disimpan ke IndexedDB lewat mekanisme idbSet/audioKeysFor yang
+   SAMA dengan unggah MP3 manual -- jadi begitu dibuat, langsung dipakai oleh
+   checkTriggers() spt file MP3 biasa (tidak perlu koneksi internet lagi
+   sesudahnya utk memutarnya). */
+const ELEVEN_WORKER_URL = "https://gus-asisten.rempahecho.workers.dev";
+const ELEVEN_KEY_STORAGE = "elevenlabsWorkerToken";
 let elevenTargetsCache = [];
 function elevenTargetOptions(){
   const opts = [];
@@ -2628,24 +2634,33 @@ function setupElevenLabsTab(){
   document.getElementById("elevenQuotaStatus").textContent = "";
   document.getElementById("elevenGenStatus").textContent = "";
   document.getElementById("elevenText").value = "";
-  document.getElementById("elevenCharCount").textContent = "0 karakter (kuota gratis: 10.000/bulan)";
+  document.getElementById("elevenCharCount").textContent = "0 karakter";
   document.getElementById("elevenVoiceSelect").innerHTML = `<option value="">Klik "Cek kuota" dulu utk memuat daftar suara…</option>`;
   elevenTargetsCache = elevenTargetOptions();
   document.getElementById("elevenTargetSelect").innerHTML =
     elevenTargetsCache.map((o,i)=>`<option value="${i}">${o.label}</option>`).join("");
 }
 document.getElementById("elevenText").addEventListener("input", (e)=>{
-  document.getElementById("elevenCharCount").textContent = e.target.value.length.toLocaleString("id-ID") + " karakter (kuota gratis: 10.000/bulan)";
+  document.getElementById("elevenCharCount").textContent = e.target.value.length.toLocaleString("id-ID") + " karakter";
 });
 document.getElementById("elevenApiKey").addEventListener("change", (e)=>{
   localStorage.setItem(ELEVEN_KEY_STORAGE, e.target.value.trim());
 });
-async function loadElevenVoices(key){
+// Baca pesan error dari Worker (format {"error":"..."}); null kalau body bukan JSON.
+async function elevenWorkerErrorMessage(res){
+  try{
+    const data = await res.json();
+    return (data && data.error) ? data.error : null;
+  }catch(_e){
+    return null;
+  }
+}
+async function loadElevenVoices(token){
   const sel = document.getElementById("elevenVoiceSelect");
   sel.innerHTML = `<option value="">Memuat daftar suara…</option>`;
   try{
-    const res = await fetch("https://api.elevenlabs.io/v1/voices", { headers:{ "xi-api-key": key } });
-    if(!res.ok) throw new Error("HTTP "+res.status);
+    const res = await fetch(`${ELEVEN_WORKER_URL}/eleven-voices`, { headers:{ "Authorization": "Bearer " + token } });
+    if(!res.ok) throw new Error((await elevenWorkerErrorMessage(res)) || "HTTP "+res.status);
     const data = await res.json();
     const voices = data.voices || [];
     sel.innerHTML = voices.length
@@ -2656,31 +2671,34 @@ async function loadElevenVoices(key){
   }
 }
 document.getElementById("elevenCheckQuotaBtn").addEventListener("click", async ()=>{
-  const key = document.getElementById("elevenApiKey").value.trim();
+  const token = document.getElementById("elevenApiKey").value.trim();
   const statusEl = document.getElementById("elevenQuotaStatus");
-  if(!key){ statusEl.textContent = "❌ Isi API key dulu (daftar gratis di elevenlabs.io)."; return; }
-  localStorage.setItem(ELEVEN_KEY_STORAGE, key);
+  if(!token){ statusEl.textContent = "❌ Isi Token Akses dulu (sama dgn token panel Admin Bot Komunitas)."; return; }
+  localStorage.setItem(ELEVEN_KEY_STORAGE, token);
   statusEl.textContent = "Memeriksa kuota…";
   try{
-    const res = await fetch("https://api.elevenlabs.io/v1/user/subscription", { headers:{ "xi-api-key": key } });
-    if(!res.ok) throw new Error(res.status === 401 ? "API key salah/tidak valid." : ("HTTP "+res.status));
+    const res = await fetch(`${ELEVEN_WORKER_URL}/eleven-quota`, { headers:{ "Authorization": "Bearer " + token } });
+    if(!res.ok){
+      const detail = await elevenWorkerErrorMessage(res);
+      throw new Error(detail || (res.status === 401 ? "Token Akses salah/tidak valid." : ("HTTP "+res.status)));
+    }
     const data = await res.json();
     const used = data.character_count || 0, limit = data.character_limit || 0;
     const sisa = Math.max(0, limit - used);
     statusEl.textContent = `✓ Kuota bulan ini: ${used.toLocaleString("id-ID")} / ${limit.toLocaleString("id-ID")} karakter terpakai -- sisa ${sisa.toLocaleString("id-ID")} karakter (reset otomatis tiap bulan).`;
-    await loadElevenVoices(key);
+    await loadElevenVoices(token);
   }catch(e){
     statusEl.textContent = "❌ Gagal memeriksa kuota: " + e.message;
   }
 });
 document.getElementById("elevenGenerateBtn").addEventListener("click", async ()=>{
-  const key = document.getElementById("elevenApiKey").value.trim();
+  const token = document.getElementById("elevenApiKey").value.trim();
   const voiceId = document.getElementById("elevenVoiceSelect").value;
   const text = document.getElementById("elevenText").value.trim();
   const targetSel = document.getElementById("elevenTargetSelect");
   const target = elevenTargetsCache[parseInt(targetSel.value,10)];
   const statusEl = document.getElementById("elevenGenStatus");
-  if(!key){ statusEl.textContent = "❌ Isi API key dulu."; return; }
+  if(!token){ statusEl.textContent = "❌ Isi Token Akses dulu."; return; }
   if(!voiceId){ statusEl.textContent = "❌ Pilih suara dulu (klik \"Cek kuota\" utk memuat daftar suara)."; return; }
   if(!text){ statusEl.textContent = "❌ Isi teks dulu."; return; }
   if(!target){ statusEl.textContent = "❌ Pilih mau disimpan sebagai apa dulu."; return; }
@@ -2688,16 +2706,17 @@ document.getElementById("elevenGenerateBtn").addEventListener("click", async ()=
   btn.disabled = true; btn.textContent = "Membuat suara…";
   statusEl.textContent = "";
   try{
-    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+    const res = await fetch(`${ELEVEN_WORKER_URL}/eleven-tts`, {
       method: "POST",
-      headers: { "xi-api-key": key, "Content-Type": "application/json", "Accept": "audio/mpeg" },
-      body: JSON.stringify({ text, model_id: "eleven_multilingual_v2" })
+      headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
+      body: JSON.stringify({ voiceId, text })
     });
     if(!res.ok){
-      const pesan = res.status === 401 ? "API key salah/tidak valid."
+      const detail = await elevenWorkerErrorMessage(res);
+      const fallback = res.status === 401 ? "Token Akses salah/tidak valid."
         : res.status === 429 ? "Kuota bulanan ElevenLabs sudah habis (reset tiap bulan)."
         : `HTTP ${res.status}`;
-      throw new Error(pesan);
+      throw new Error(detail || fallback);
     }
     const blob = await res.blob();
     const { idbKey, urlKey } = audioKeysFor(target.kind, target.key);
