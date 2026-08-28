@@ -1,6 +1,6 @@
 [package]
 name = "pengingat-sholat-desktop"
-version = "1.17.1"
+version = "1.17.3"
 description = "Pengingat waktu adzan untuk layar kantor"
 authors = ["Edwin Prayoga"]
 edition = "2021"
