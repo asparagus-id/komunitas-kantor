@@ -29,6 +29,13 @@
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Inter+Tight:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<!-- SDK resmi Telegram Web App -- AMAN dimuat walau halaman ini dibuka
+     dari browser biasa (bukan dari dalam Telegram): objek window.Telegram
+     tetap ada tapi Telegram.WebApp.initData kosong, jadi semua pemakaian
+     di bawah SENGAJA dibungkus cek "ada initData atau tidak" supaya
+     mode browser biasa TIDAK terganggu sama sekali (lihat blok
+     TELEGRAM WEB APP di bawah). -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
   :root, [data-theme="dark"]{
     --bg:#081619; --panel:#0e2a2f; --panel-2:#12363d; --line:#1e4a52;
@@ -58,21 +65,26 @@
   }
   *{box-sizing:border-box;}
   html,body{margin:0; padding:0;}
-  body{min-height:100vh; background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif; transition:background .25s, color .25s;}
+  /* --tg-vh: diisi via JS dari Telegram.WebApp.viewportStableHeight kalau
+     dibuka sbg Telegram Web App (lihat blok TELEGRAM WEB APP di bawah) --
+     100vh BIASA sering salah ukur di WebView Telegram (terutama pas
+     keyboard muncul/tutup). Fallback "100vh" dipakai apa adanya kalau
+     dibuka dari browser biasa (var kedua tidak pernah di-set). */
+  body{min-height:var(--tg-vh, 100vh); background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif; transition:background .25s, color .25s;}
   h1,h2,h3{font-family:'Inter Tight',sans-serif;}
 
-  .gate-wrap{min-height:100vh; display:flex; align-items:center; justify-content:center; background:radial-gradient(ellipse 120% 80% at 50% -10%, var(--bg-glow), var(--bg) 60%); padding:20px;}
+  .gate-wrap{min-height:var(--tg-vh, 100vh); display:flex; align-items:center; justify-content:center; background:radial-gradient(ellipse 120% 80% at 50% -10%, var(--bg-glow), var(--bg) 60%); padding:20px;}
   .gate{max-width:420px; width:100%; text-align:center;}
   .gate h1{font-size:22px; margin:0 0 4px;}
   .gate .sub{color:var(--muted); font-size:13px; margin-bottom:24px;}
   .gate input{margin-bottom:10px;}
   .hidden{display:none !important;}
 
-  .layout{display:flex; min-height:100vh;}
+  .layout{display:flex; min-height:var(--tg-vh, 100vh);}
   .sidebar{
     width:240px; flex-shrink:0; background:var(--panel); border-right:1px solid var(--line);
     padding:18px 12px; display:flex; flex-direction:column; gap:2px;
-    position:sticky; top:0; align-self:flex-start; height:100vh; overflow-y:auto; z-index:60;
+    position:sticky; top:0; align-self:flex-start; height:var(--tg-vh, 100vh); overflow-y:auto; z-index:60;
   }
   .sidebar-brand{display:flex; align-items:center; gap:10px; padding:8px 10px 22px;}
   .sidebar-brand .emoji{font-size:26px; line-height:1;}
@@ -818,6 +830,9 @@ function showPage(id, pushHistory = true){
   localStorage.setItem("admkom_page", id);
   document.body.classList.remove("sidebar-open");
   window.scrollTo(0,0);
+  // tombol Back Telegram (kalau dibuka sbg Web App) ikut halaman aktif --
+  // lihat blok TELEGRAM WEB APP di bawah.
+  if (window.__tgSyncBackButton) window.__tgSyncBackButton(id);
   // ---------- riwayat navigasi browser -- supaya tombol/gesture "back" di
   // HP (Android/PWA) MUNDUR SELANGKAH DEMI SELANGKAH mengikuti menu yang
   // sudah dibuka, BUKAN LANGSUNG KELUAR APLIKASI. Tiap pindah menu didorong
@@ -835,6 +850,65 @@ window.addEventListener("popstate", (e)=>{
   const page = (e.state && e.state.page) || "overview";
   showPage(page, false); // false: JANGAN push lagi, ini efek DARI back, bukan navigasi baru
 });
+
+/* ============================================================
+   TELEGRAM WEB APP -- penyesuaian khusus saat panel ini dibuka LEWAT
+   Telegram (command /panel dkk di Worker_Gus_Asisten.js), BUKAN dari
+   browser biasa. window.Telegram.WebApp SELALU ada begitu script SDK
+   di <head> berhasil dimuat (bahkan di browser biasa), tapi
+   initData cuma keisi kalau BENAR dibuka dari dalam Telegram -- jadi
+   SEMUA blok di bawah dibungkus cek itu supaya mode browser biasa
+   (buka index.html langsung lewat URL) sama sekali tidak terpengaruh. ============================================================ */
+const tg = window.Telegram && window.Telegram.WebApp;
+const isTelegramWebApp = !!(tg && tg.initData);
+if (isTelegramWebApp) {
+  tg.ready();
+  tg.expand(); // langsung penuh layar, bukan bottom-sheet setengah
+  if (typeof tg.disableVerticalSwipes === "function") {
+    tg.disableVerticalSwipes(); // panel ini banyak form/tabel panjang -- cegah swipe-turun tidak sengaja nutup app pas scroll
+  }
+
+  // ---------- tinggi viewport dinamis -- lihat var CSS --tg-vh di atas.
+  // "viewportChanged" dipicu Telegram tiap tinggi WebView berubah (mis.
+  // keyboard muncul/tutup, atau app di-expand). ----------
+  function syncTgViewportHeight(){
+    const h = tg.viewportStableHeight || tg.viewportHeight;
+    if (h) document.documentElement.style.setProperty("--tg-vh", h + "px");
+  }
+  syncTgViewportHeight();
+  tg.onEvent("viewportChanged", syncTgViewportHeight);
+
+  // ---------- warna header & background WebView disamakan dgn tema
+  // panel yg lagi aktif (dipanggil ulang tiap ganti tema -- lihat
+  // applyTheme() di bawah, bagian TEMA). ----------
+  function syncTgChrome(){
+    const dark = document.documentElement.getAttribute("data-theme") !== "light";
+    const bg = dark ? "#0e2a2f" : "#ffffff";
+    if (typeof tg.setHeaderColor === "function") tg.setHeaderColor(bg);
+    if (typeof tg.setBackgroundColor === "function") tg.setBackgroundColor(bg);
+  }
+  syncTgChrome();
+  window.__tgSyncChrome = syncTgChrome; // dipanggil dari applyTheme()
+
+  // ---------- tombol Back BAWAAN TELEGRAM (pojok kiri atas WebView,
+  // BUKAN tombol back HP) -- SEBELUM ini dipasang, menu/gesture "back"
+  // Telegram (termasuk tombol back Android) LANGSUNG MENUTUP seluruh
+  // Web App, tidak peduli lagi di halaman mana di dalam panel ini.
+  // Begitu BackButton.show() dipanggil, Telegram MENGALIHKAN back
+  // (termasuk tombol back Android) jadi trigger BackButtonClicked --
+  // BUKAN nutup app -- dan kita alihkan ke history.back(), supaya
+  // mundur SATU LANGKAH mengikuti showPage()/popstate yg SUDAH ADA
+  // (lihat komentar di showPage() di atas). Cuma disembunyikan lagi
+  // kalau sudah di halaman paling awal ("overview"), supaya di situ
+  // back/gesture Telegram kembali ke perilaku normal (nutup app). ----------
+  function syncTgBackButton(pageId){
+    if (pageId === "overview") tg.BackButton.hide();
+    else tg.BackButton.show();
+  }
+  tg.BackButton.onClick(()=> history.back());
+  window.__tgSyncBackButton = syncTgBackButton; // dipanggil dari showPage() -- termasuk saat restore halaman terakhir di load awal (lihat pemanggilan showPage(savedPage,...) di bagian bawah file)
+}
+
 document.querySelectorAll(".nav-item").forEach(el=>{
   el.addEventListener("click", ()=> showPage(el.dataset.page));
 });
@@ -860,6 +934,9 @@ function applyTheme(pref){
     b.classList.toggle("active", b.dataset.themeChoice === pref);
   });
   if(data) renderOverviewPuasaChart();
+  // warna header/background WebView Telegram ikut tema (kalau dibuka
+  // sbg Web App) -- lihat blok TELEGRAM WEB APP di atas.
+  if (window.__tgSyncChrome) window.__tgSyncChrome();
 }
 let themePref = localStorage.getItem(THEME_KEY) || "auto";
 applyTheme(themePref);
