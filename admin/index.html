@@ -2033,10 +2033,15 @@ function renderBardiRowHtml(d){
   } else {
     onLabel = (d.on ? "🟡 ON" : "⚫ OFF") + (extraInfoHtml ? "<br>" + extraInfoHtml : "");
   }
+  // switchCode dp aslinya per device (mis. "switch_1"/"switch"/"power") --
+  // WAJIB dikirim balik ke Worker saat toggle, kalau tidak Worker akan
+  // fallback ke "switch_1" utk SEMUA device (lihat handleBardiToggle),
+  // yang salah utk AC/TV yang dp switch-nya bukan "switch_1".
+  const scAttr = d.switchCode ? ` data-bardi-code="${d.switchCode}"` : "";
   const actionsCell = isSensor
     ? `<span class="hint">Sensor -- tidak bisa dikontrol</span>`
-    : `<button class="btn small" data-bardi-on="${d.id}">Nyalakan</button>
-       <button class="btn small danger" data-bardi-off="${d.id}">Matikan</button>`;
+    : `<button class="btn small" data-bardi-on="${d.id}"${scAttr}>Nyalakan</button>
+       <button class="btn small danger" data-bardi-off="${d.id}"${scAttr}>Matikan</button>`;
   return `<td>${d.name}</td><td>${d.online ? "🟢 Online" : "⚪ Offline"}</td><td>${onLabel}</td>
     <td class="td-actions">${actionsCell}</td>`;
 }
@@ -2085,9 +2090,9 @@ function updateBardiTable(list){
 // di-rebuild.
 document.querySelector("#bardiTable tbody").addEventListener("click", (e)=>{
   const onBtn = e.target.closest("[data-bardi-on]");
-  if(onBtn){ bardiToggle(onBtn.dataset.bardiOn, true); return; }
+  if(onBtn){ bardiToggle(onBtn.dataset.bardiOn, true, onBtn.dataset.bardiCode); return; }
   const offBtn = e.target.closest("[data-bardi-off]");
-  if(offBtn){ bardiToggle(offBtn.dataset.bardiOff, false); return; }
+  if(offBtn){ bardiToggle(offBtn.dataset.bardiOff, false, offBtn.dataset.bardiCode); return; }
 });
 async function loadBardiDevices(){
   const badge = document.getElementById("bardiStatusBadge");
@@ -2126,9 +2131,15 @@ async function loadBardiDevices(){
     errHint.textContent = `⚠️ Gagal memuat: ${e.message}`;
   }
 }
-async function bardiToggle(deviceId, value){
+async function bardiToggle(deviceId, value, code){
   try{
-    const res = await apiAction("/bardi-toggle", { deviceId, value });
+    // Kirim `code` (dp switch ASLI device ini, mis. "switch"/"power" utk
+    // sebagian AC/TV) kalau ada -- kalau tidak dikirim, Worker fallback ke
+    // "switch_1" yang belum tentu cocok utk device ini (lihat komentar di
+    // renderBardiRowHtml & handleBardiToggle).
+    const body = { deviceId, value };
+    if(code) body.code = code;
+    const res = await apiAction("/bardi-toggle", body);
     if(res.error){ toast("Gagal: " + res.error, true); return; }
     toast("Perintah terkirim ✓");
     setTimeout(loadBardiDevices, 1500); // beri jeda sebentar biar status online/offline sempat update
