@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Bot Komunitas</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0e2a2f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AdminKomunitas">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <script>
 // Diterapkan SEBELUM CSS/halaman sempat dirender, supaya tidak ada kedipan
 // "tema salah" sesaat pas halaman baru dibuka. Baca preferensi tersimpan
@@ -37,12 +45,12 @@
   }
   [data-theme="light"]{
     --bg:#f6f7f9; --panel:#ffffff; --panel-2:#f0fdf4; --line:#e5e7eb;
-    --gold:#16a34a; --gold-soft:#15803d; --text:#0f172a; --muted:#64748b;
+    --gold:#ca8a04; --gold-soft:#a16207; --text:#0f172a; --muted:#64748b;
     --muted-dim:#94a3b8; --ok:#16a34a; --ember:#f59e0b;
     --input-bg:#ffffff; --bg-glow:#eef2f5; --on-gold-text:#ffffff;
     --toast-ok-bg:#f0fdf4; --toast-ok-border:#16a34a; --toast-ok-text:#14532d;
     --toast-err-bg:#fef2f2; --toast-err-text:#7f1d1d;
-    --line-rgb:229,231,235; --gold-rgb:22,163,74; --ember-rgb:245,158,11;
+    --line-rgb:229,231,235; --gold-rgb:202,138,4; --ember-rgb:245,158,11;
     --ok-rgb:22,163,74; --muted-dim-rgb:148,163,184;
     --warning:#f59e0b; --warning-rgb:245,158,11; --purple:#7c3aed; --purple-rgb:124,58,237;
     --shadow-color:rgba(15,23,42,.06);
@@ -143,12 +151,16 @@
   .list-item .li-sub{font-size:11.5px; color:var(--muted);}
   .list-icon{width:36px; height:36px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:15px;}
 
-  .feat-row{display:flex; gap:28px; flex-wrap:wrap;}
-  .feat-item{display:flex; align-items:center; gap:9px; font-size:13px;}
+  .feat-row{display:flex; flex-direction:column;}
+  .feat-item{display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 4px; border-bottom:1px solid var(--line);}
+  .feat-item:last-child{border-bottom:none;}
+  .feat-item-left{display:flex; align-items:center; gap:10px; min-width:0;}
+  .feat-item-left span{font-size:13.5px; font-weight:500;}
   .feat-item .fdot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
   .feat-item .fdot.on{background:var(--ok); box-shadow:0 0 5px var(--ok);}
   .feat-item .fdot.off{background:var(--muted-dim);}
-  .feat-item small{display:block; color:var(--muted); font-size:11px; font-weight:400;}
+  .feat-item small{display:block; color:var(--muted); font-size:12px; font-weight:400; text-align:right;}
+  .feat-item-left span, .feat-item small{overflow-wrap:anywhere;}
 
   .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px 22px; margin-bottom:18px;}
   .card h2{font-size:15px; margin:0 0 4px; display:flex; align-items:center; gap:8px;}
@@ -161,6 +173,11 @@
     border-radius:9px; padding:9px 11px; font-size:13.5px; font-family:inherit; width:100%;
   }
   input:focus, select:focus{outline:none; border-color:var(--gold);}
+  input:disabled, select:disabled{opacity:.55; cursor:not-allowed;}
+  .chip-days label:has(input:disabled){opacity:.55; cursor:not-allowed;}
+  .btn:disabled{opacity:.5; cursor:not-allowed;}
+  .btn:disabled:hover{border-color:var(--line);}
+  .locked-note{font-size:11.5px; color:var(--muted); margin-top:8px;}
   .btn{border:1px solid var(--line); background:var(--panel-2); color:var(--text); border-radius:9px; padding:9px 16px; font-size:13px; cursor:pointer; font-family:inherit;}
   .btn:hover{border-color:var(--gold);}
   .btn.primary{background:var(--gold); color:var(--on-gold-text); border-color:var(--gold); font-weight:700;}
@@ -175,6 +192,8 @@
   .chip-days input{width:auto; accent-color:var(--gold);}
   .chip-days label:has(input:checked){border-color:var(--gold); color:var(--gold-soft); background:rgba(var(--gold-rgb),.1);}
   table{width:100%; border-collapse:collapse; font-size:13px;}
+  .table-wrap{width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:10px;}
+  .td-actions{display:flex; gap:6px; flex-wrap:wrap;}
   th{text-align:left; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; padding:6px 8px; border-bottom:1px solid var(--line);}
   td{padding:9px 8px; border-bottom:1px solid rgba(var(--line-rgb),.5); vertical-align:top;}
   tr:last-child td{border-bottom:none;}
@@ -232,7 +251,7 @@
     <div class="card" style="text-align:left;">
       <div class="field" style="margin-bottom:14px;">
         <label>APP_TOKEN</label>
-        <input type="password" id="gateToken" placeholder="token yang Anda isi di wrangler secret / dashboard">
+        <input type="password" id="gateToken" placeholder="token yang Anda isi di Cloudflare Dashboard (Variables and Secrets)">
       </div>
       <button class="btn primary" id="gateConnect" style="width:100%;">Hubungkan</button>
       <div class="hint">Tersimpan cuma di browser ini (localStorage), tidak dikirim ke mana pun selain Worker Anda sendiri.</div>
@@ -261,6 +280,8 @@
     <div class="nav-item" data-page="kalender"><span class="ic">🗓️</span> Google Calendar</div>
     <div class="nav-item" data-page="pengingat"><span class="ic">🔔</span> Pengingat Umum</div>
     <div class="nav-item" data-page="libur"><span class="ic">🕋</span> Libur Nasional</div>
+    <div class="nav-item" data-page="perangkat"><span class="ic">💡</span> Perangkat &amp; Google Home</div>
+    <div class="nav-item" data-page="maintenance"><span class="ic">🛠️</span> Maintenance</div>
     <div class="nav-item" data-page="pengaturan"><span class="ic">⚙️</span> Pengaturan</div>
     <div class="sidebar-note">Perubahan di sini &amp; command Telegram sama-sama berlaku — tersinkron dua arah lewat data yang sama.<br><br>Panel <span id="sidebarPanelVersion">v?.?.?</span> · Worker <span id="sidebarWorkerVersion">memeriksa…</span></div>
   </aside>
@@ -356,12 +377,25 @@
         </div>
 
         <div class="panel-card">
-          <div class="panel-card-head"><h3>Status Fitur</h3></div>
-          <div class="feat-row">
-            <div class="feat-item"><span class="fdot" id="featAiDot"></span><div><span id="featAiLabel">AI (Groq/Workers)</span><small id="featAiSub">Memuat…</small></div></div>
-            <div class="feat-item"><span class="fdot" id="featCalDot"></span><div><span>Google Calendar (ontime)</span><small id="featCalSub">Memuat…</small></div></div>
-            <div class="feat-item"><span class="fdot on"></span><div><span id="featTopikLabel">0 topik terdaftar</span><small>Termasuk auto-deteksi</small></div></div>
-            <div class="feat-item"><span class="fdot on"></span><div><span id="featAdminLabel">0 admin terdaftar</span><small id="featAdminSub">Semua anggota bebas pakai perintah</small></div></div>
+          <div class="panel-card-head">
+            <h3>Status Fitur</h3>
+            <span style="font-size:11px; color:var(--muted); font-weight:600; letter-spacing:.04em; text-transform:uppercase;">Infrastruktur</span>
+          </div>
+          <div class="feat-row" id="featRow">
+            <div class="feat-item"><div class="feat-item-left"><span class="fdot" id="featAiDot"></span><span id="featAiLabel">AI (Groq/Workers)</span></div><small id="featAiSub">Memuat…</small></div>
+            <div class="feat-item"><div class="feat-item-left"><span class="fdot" id="featCalDot"></span><span>Google Calendar (ontime)</span></div><small id="featCalSub">Memuat…</small></div>
+            <!-- Item lain (GitHub, BARDI/Tuya, Cron, dst) diisi OTOMATIS oleh
+                 renderFeatureStatusRow() setelah /status-sistem selesai
+                 dimuat -- lihat FEATURE_STATUS_DEFS_DINAMIS di script.
+                 Kartu ini SENGAJA hanya menampilkan kelompok "infra" saja
+                 (Pengaturan Fitur & Ringkasan Data disembunyikan dulu atas
+                 permintaan user -- definisinya tetap ada di JS, tinggal
+                 ubah filter di renderFeatureStatusRow() kalau mau
+                 dimunculkan lagi). 2 item statis di atas (AI/Kalender)
+                 TETAP dipertahankan apa adanya (dirender lebih awal oleh
+                 renderOverview() dari data.json saja, sebelum /status-sistem
+                 sempat kejawab) supaya tidak ada jeda kosong pas halaman
+                 baru dibuka. -->
           </div>
           <div class="hint" style="margin-top:14px;">Baris ini cuma menampilkan hal yang benar-benar bisa dicek dari data bot (bukan status infrastruktur Cloudflare/GitHub live) — supaya tidak ada info yang menyesatkan.</div>
         </div>
@@ -371,7 +405,7 @@
         <div class="card">
           <h2>👮 Admin bot</h2>
           <div class="desc">ID Telegram yang boleh pakai perintah pengaturan (topik/jadwal/kajian/pengingat). Kosongkan daftar ini kalau mau semua anggota grup bebas pakai semua perintah — begitu ada 1 ID di sini, pembatasan otomatis aktif. Anggota bisa lihat ID mereka sendiri lewat <code>/id</code> di Telegram.</div>
-          <table id="adminsTable"><thead><tr><th>User ID</th><th></th></tr></thead><tbody></tbody></table>
+          <div class="table-wrap"><table id="adminsTable"><thead><tr><th>User ID</th><th></th></tr></thead><tbody></tbody></table></div>
           <div class="row" style="margin-top:12px;">
             <div class="field"><label>User ID Telegram</label><input type="number" id="newAdminId" placeholder="123456789"></div>
           </div>
@@ -383,7 +417,7 @@
         <div class="card">
           <h2>🗂️ Topik grup</h2>
           <div class="desc">Cocok dengan hasil <code>/topik_set</code> di Telegram. thread_id didapat otomatis kalau didaftarkan lewat command; di sini Anda bisa lihat, ubah nama, atau tambah manual kalau sudah tahu thread_id-nya. <b>Baru:</b> topik juga otomatis kedeteksi diam-diam dari aktivitas chat biasa di grup (lihat <code>autoRegisterTopicFromMessage</code> di Worker) — topik yang namanya masih <code>topik_&lt;angka&gt;</code> di bawah ini artinya hasil deteksi otomatis, belum di-rename manual.</div>
-          <table id="topicsTable"><thead><tr><th>Nama pendek</th><th>Label</th><th>Thread ID</th><th></th></tr></thead><tbody></tbody></table>
+          <div class="table-wrap"><table id="topicsTable"><thead><tr><th>Nama pendek</th><th>Label</th><th>Thread ID</th><th></th></tr></thead><tbody></tbody></table></div>
           <div class="row" style="margin-top:12px;">
             <div class="field"><label>Nama pendek</label><input type="text" id="newTopicKey" placeholder="puasa"></div>
             <div class="field"><label>Label</label><input type="text" id="newTopicLabel" placeholder="Puasa"></div>
@@ -422,17 +456,17 @@
         <div class="card">
           <h2>📅 Riwayat rekap puasa (14 hari terakhir)</h2>
           <div class="desc">Data lebih lama dari 14 hari otomatis dibersihkan oleh bot, jadi cuma segini yang bisa ditampilkan.</div>
-          <table id="puasaRiwayatTable"><thead><tr><th>Tanggal</th><th>Puasa</th><th>Tidak puasa</th></tr></thead><tbody></tbody></table>
+          <div class="table-wrap"><table id="puasaRiwayatTable"><thead><tr><th>Tanggal</th><th>Puasa</th><th>Tidak puasa</th></tr></thead><tbody></tbody></table></div>
         </div>
 
-        <div class="card">
+        <div class="card" style="display:none;"><!-- Menu "Varian poll puasa (AI)" disembunyikan atas permintaan admin. Fungsinya (approve/reject varian pertanyaan poll dari AI) TETAP jalan penuh lewat Telegram: /puasa_variant_generate, /puasa_variant_review, /puasa_variant_approve, /puasa_variant_reject -- ini cuma menyembunyikan tampilan kartunya di panel HTML, bukan mematikan fiturnya. Hapus "style=display:none" di <div class="card"> ini kalau suatu saat mau dimunculkan lagi. -->
           <h2>🧠 Varian poll puasa (AI) <span class="badge" id="variantBadge"></span></h2>
           <div class="desc">150 varian bawaan selalu aktif (tidak bisa dihapus). Admin bisa minta AI bikinkan varian TAMBAHAN lewat <code>/puasa_variant_generate &lt;jumlah&gt;</code> di Telegram (fitur ini butuh AI, cuma bisa dipicu dari Telegram bukan dari panel). Hasilnya masuk antrian di bawah — cek dulu maknanya benar (opsi 1 harus berarti "puasa", opsi 2 harus berarti "tidak puasa") sebelum di-approve.</div>
-          <table id="variantTable"><thead><tr><th>Pertanyaan</th><th>Opsi 1 (puasa)</th><th>Opsi 2 (tidak)</th><th></th></tr></thead><tbody></tbody></table>
+          <div class="table-wrap"><table id="variantTable"><thead><tr><th>Pertanyaan</th><th>Opsi 1 (puasa)</th><th>Opsi 2 (tidak)</th><th></th></tr></thead><tbody></tbody></table></div>
           <div class="hint" id="variantCustomCount" style="margin-top:10px;"></div>
           <div id="variantCustomListWrap" style="margin-top:14px;">
             <div class="desc" style="margin-bottom:8px;">Varian tambahan yang sudah aktif (bisa dihapus kalau ternyata salah makna):</div>
-            <table id="variantCustomTable"><thead><tr><th>Pertanyaan</th><th>Opsi 1 (puasa)</th><th>Opsi 2 (tidak)</th><th></th></tr></thead><tbody></tbody></table>
+            <div class="table-wrap"><table id="variantCustomTable"><thead><tr><th>Pertanyaan</th><th>Opsi 1 (puasa)</th><th>Opsi 2 (tidak)</th><th></th></tr></thead><tbody></tbody></table></div>
           </div>
         </div>
       </section>
@@ -453,24 +487,44 @@
             <div class="field" style="flex:2"><label>Catatan tambahan (muncul di tiap reminder)</label><input type="text" id="kajianCatatan" placeholder="Tidak wajib bawa konsumsi. Kabari petugas selanjutnya jika berhalangan."></div>
             <div class="field"><label>Kirim ke topik</label><select id="kajianTopic"><option value="">(topik bernama "kajian", kalau ada)</option></select></div>
           </div>
-          <button class="btn small" id="saveKajianSettingsBtn">Simpan pengaturan kajian</button>
-          <table id="kajianTable"><thead><tr><th>Tanggal</th><th>Pengisi</th><th>Tema</th><th></th></tr></thead><tbody></tbody></table>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn small" id="saveKajianSettingsBtn">Simpan pengaturan kajian</button>
+            <button class="btn small hidden" id="editKajianSettingsBtn">✏️ Edit pengaturan</button>
+          </div>
+          <div class="locked-note hidden" id="kajianSettingsLockedNote">Pengaturan tersimpan &amp; terkunci -- klik "Edit pengaturan" utk mengubahnya.</div>
+          <div class="table-wrap"><table id="kajianTable"><thead><tr><th>Tanggal</th><th>Pengisi</th><th>Tema</th><th></th></tr></thead><tbody></tbody></table></div>
           <div class="row" style="margin-top:14px;">
             <div class="field"><label>Tanggal</label><input type="date" id="newKajianDate"></div>
             <div class="field"><label>Pengisi</label><input type="text" id="newKajianPengisi" placeholder="Ust. Fulan"></div>
             <div class="field" style="flex:2"><label>Tema</label><input type="text" id="newKajianTema" placeholder="Fiqih Puasa Sunnah"></div>
           </div>
-          <button class="btn primary" id="addKajianBtn">+ Tambah kajian</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn primary" id="addKajianBtn">+ Tambah kajian</button>
+            <button class="btn hidden" id="cancelEditKajianBtn">Batal edit</button>
+          </div>
         </div>
 
         <div class="card">
           <h2>🗂️ Riwayat kajian</h2>
           <div class="desc">Kajian yang sudah lewat tanggalnya — cuma untuk dilihat, tidak bisa diedit dari sini (data mentah tersimpan selamanya di <code>data.kajian</code>, tapi otomatis dibersihkan dari daftar aktif setelah &gt;7 hari lewat).</div>
-          <table id="kajianRiwayatTable"><thead><tr><th>Tanggal</th><th>Pengisi</th><th>Tema</th></tr></thead><tbody></tbody></table>
+          <div class="table-wrap"><table id="kajianRiwayatTable"><thead><tr><th>Tanggal</th><th>Pengisi</th><th>Tema</th></tr></thead><tbody></tbody></table></div>
         </div>
       </section>
 
       <section class="page" id="page-kalender">
+        <div class="card">
+          <h2>📅 Tampilan Google Calendar</h2>
+          <div class="desc" id="calEmbedNote">Memuat kalender…</div>
+          <div id="calEmbedWrap" style="display:none;">
+            <div style="border-radius:10px; overflow:hidden; border:1px solid var(--border,rgba(255,255,255,.12));">
+              <iframe id="calEmbedIframe" style="width:100%; height:600px; border:0; display:block;" frameborder="0" scrolling="no"></iframe>
+            </div>
+            <div style="margin-top:10px;">
+              <a id="calEmbedOpenLink" class="btn small" href="#" target="_blank" rel="noopener">Buka di Google Calendar ↗</a>
+            </div>
+          </div>
+        </div>
+
         <div class="card">
           <h2>🗓️ Notifikasi ontime Google Calendar <span class="badge" id="calReminderBadge"></span></h2>
           <div class="desc">Sama dengan <code>/kalender_ontime</code>. Berlaku untuk SEMUA event di Google Calendar yang dipantau (bukan cuma kajian/pengingat umum yang dibuat dari bot ini) — bot kirim notifikasi <b>PAS jam yang tertulis di event</b> (bukan N menit sebelum, bukan rangkuman pagi). Bikin event jam 10:00 → notif terkirim jam 10:00, otomatis, tidak perlu atur jam manual. Fitur ini butuh ENV Google (service account) sudah diisi di Worker. Cek status koneksi lewat <code>/kalender_cek</code> di Telegram.</div>
@@ -486,13 +540,24 @@
           <button class="btn small" id="testKalenderBtn" style="margin-left:8px;">Tes koneksi</button>
           <div id="kalenderCekResult" class="hint" style="margin-top:10px;"></div>
         </div>
+
+        <div class="card">
+          <h2>🏷️ Aturan Topik Otomatis dari Kalender</h2>
+          <div class="desc">Kalau kamu input acara LANGSUNG di Google Calendar (bukan lewat bot), bot tetap bisa tahu ini acara jenis apa — dari <b>kata kunci di judul event</b>. Contoh: judul event mengandung kata "kajian" → otomatis dikirim ke topik kajian, bukan ke topik kalender default. Dicek kata UTUH (bukan sekadar mengandung huruf) &amp; urut dari atas — aturan pertama yang cocok yang dipakai. Kalau tidak ada yang cocok, tetap pakai topik default di atas.</div>
+          <div class="table-wrap"><table id="calRulesTable"><thead><tr><th>Kata kunci</th><th>Kirim ke topik</th><th></th></tr></thead><tbody></tbody></table></div>
+          <div class="row" style="margin-top:14px;">
+            <div class="field"><label>Kata kunci di judul event</label><input type="text" id="newCalRuleKeyword" placeholder="mis. kajian"></div>
+            <div class="field"><label>Kirim ke topik</label><select id="newCalRuleTopic"></select></div>
+          </div>
+          <button class="btn primary" id="addCalRuleBtn">+ Tambah aturan</button>
+        </div>
       </section>
 
       <section class="page" id="page-pengingat">
         <div class="card">
           <h2>🔔 Pengingat umum</h2>
           <div class="desc">Sama dengan <code>/ingat_tambah</code>. Bebas judul &amp; pesan, ke topik mana saja, sekali/harian/mingguan/bulanan. Otomatis tersinkron ke Google Calendar kalau sudah dikonfigurasi (termasuk sebagai recurring event asli untuk yang berulang). <b>Tips:</b> pilih topik <code>pengumuman</code> di dropdown Topik untuk bikin pengumuman — ini fitur yang SAMA PERSIS dengan command <code>/pengumuman &lt;judul&gt; | &lt;pesan&gt; | &lt;jadwal&gt;</code> di Telegram (cuma lebih singkat karena topiknya otomatis).</div>
-          <table id="remindersTable"><thead><tr><th>Judul</th><th>Jadwal</th><th>Topik</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+          <div class="table-wrap"><table id="remindersTable"><thead><tr><th>Judul</th><th>Jadwal</th><th>Topik</th><th>Status</th><th></th></tr></thead><tbody></tbody></table></div>
           <div class="row" style="margin-top:14px;">
             <div class="field"><label>Judul</label><input type="text" id="newRemTitle" placeholder="Rapat Bulanan"></div>
             <div class="field"><label>Topik</label><select id="newRemTopic"></select></div>
@@ -520,7 +585,13 @@
           <div class="row" id="remFieldMonthly" style="display:none;">
             <div class="field" style="max-width:140px;"><label>Tanggal tiap bulan</label><input type="number" id="newRemDom" min="1" max="31" value="1"></div>
           </div>
-          <button class="btn primary" id="addRemBtn">+ Tambah pengingat</button>
+          <div class="field" style="margin-top:6px;"><label><input type="checkbox" id="newRemPreEnabled"> Tambah reminder awal (opsional)</label></div>
+          <div class="row" id="remFieldPre" style="display:none;">
+            <div class="field"><label>Tanggal reminder awal</label><input type="date" id="newRemPreDate"></div>
+            <div class="field"><label>Jam reminder awal</label><input type="time" id="newRemPreTime" value="20:00"></div>
+          </div>
+          <div class="hint" id="remPreHint" style="display:none;">Dikirim 1x pada tanggal &amp; jam di atas, terpisah dari jadwal acara utama — isinya "pemberitahuan lebih awal", dibuat otomatis oleh bot supaya tidak rancu dengan pesan acara aslinya.</div>
+          <button class="btn primary" id="addRemBtn" style="margin-top:12px;">+ Tambah pengingat</button>
         </div>
       </section>
 
@@ -538,6 +609,99 @@
             <div class="field"><label>Kirim ke topik</label><select id="liburTopic"><option value="">(percakapan umum grup)</option></select></div>
           </div>
           <button class="btn small" id="saveLiburBtn">Simpan pengaturan libur nasional</button>
+        </div>
+      </section>
+
+      <section class="page" id="page-perangkat">
+        <div class="card">
+          <h2>🏠 Status hubungan Google Home <span class="badge" id="ghLinkBadge"></span></h2>
+          <div class="desc">Perangkat di bawah dikontrol lewat panel/bot ini sebagai "hub" -- begitu ditautkan, semua perangkat juga otomatis muncul di app Google Home &amp; bisa diperintah suara ("Hei Google, nyalakan [nama perangkat]"). Butuh ENV Google Home (client id/secret &amp; project) sudah diisi di Worker -- lihat panduan setup.</div>
+          <div id="ghLinkStatusBox" class="empty">Memeriksa status tautan…</div>
+          <button class="btn small" id="ghTestLinkBtn" style="margin-top:10px;">Cek status tautan</button>
+        </div>
+        <div class="card">
+          <h2>💡 Daftar perangkat</h2>
+          <div class="desc">Perangkat fisik (modul wifi seperti Shelly/ESP yang sudah diflash firmware kompatibel) yang lapor status &amp; menerima perintah lewat Worker ini. Tombol "Tes nyala/mati" di bawah untuk uji manual dari panel -- perintah suara lewat Google Home akan otomatis pakai jalur yang sama.</div>
+          <div class="table-wrap"><table id="devicesTable"><thead><tr><th>Nama</th><th>Tipe</th><th>Status</th><th>Terakhir lapor</th><th></th></tr></thead><tbody></tbody></table></div>
+          <div class="row" style="margin-top:14px;">
+            <div class="field"><label>Nama perangkat</label><input type="text" id="newDevName" placeholder="Lampu Teras Masjid"></div>
+            <div class="field"><label>Tipe</label>
+              <select id="newDevType">
+                <option value="light">Lampu (ON/OFF)</option>
+                <option value="switch">Saklar / Stopkontak (ON/OFF)</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="field"><label>ID unik perangkat</label><input type="text" id="newDevId" placeholder="lampu-teras-01"></div>
+          </div>
+          <div class="hint" style="margin-bottom:10px;">ID unik ini yang dipakai firmware ESP/Shelly saat lapor status (<code>POST /device-report</code>) &amp; ambil perintah (<code>GET /device-poll</code>). Harus sama persis dengan yang ditulis di kode firmware.</div>
+          <button class="btn primary" id="addDevBtn">+ Tambah perangkat</button>
+        </div>
+        <div class="card">
+          <h2>📖 Cara pasang (ringkas)</h2>
+          <div class="desc">
+            1) Tambah perangkat di atas dengan ID unik.<br>
+            2) Isi ID yang sama di firmware modul wifi (ESP/Shelly) supaya lapor status ke Worker.<br>
+            3) Ikuti panduan lengkap "PANDUAN-GOOGLE-HOME.md" untuk daftarkan project di Google Home Developer Console (gratis) &amp; tautkan akun dari app Google Home.<br>
+            4) Setelah tertaut, semua perangkat di tabel atas otomatis muncul di app Google Home.
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>💡 Perangkat BARDI Smart Home <span class="badge" id="bardiStatusBadge"></span></h2>
+          <div class="desc">Kontrol perangkat BARDI kamu (yang sudah tertaut ke akun Tuya) langsung dari sini, sama seperti command <code>/bardi_daftar</code>, <code>/bardi_nyala</code>, <code>/bardi_mati</code> di Telegram. Butuh ENV Tuya sudah diisi di Worker -- lihat PANDUAN-BARDI-TUYA.md.</div>
+          <div class="table-wrap"><table id="bardiTable"><thead><tr><th>Nama</th><th>Online</th><th>ON/OFF</th><th></th></tr></thead><tbody></tbody></table></div>
+          <div class="hint" id="bardiStatusErrorHint" style="color:var(--ember); margin-top:8px;"></div>
+          <button class="btn small" id="bardiReloadBtn" style="margin-top:10px;">Muat ulang daftar</button>
+        </div>
+
+        <div class="card">
+          <h2>🔔 Pemantauan Perangkat BARDI <span class="badge" id="bmStatusBadge"></span></h2>
+          <div class="desc">Pantau kumpulan perangkat BARDI (mis. "Lampu Kantor"). Bot otomatis kirim peringatan ke grup Telegram kalau <b>SEMUA</b> perangkat yang dipantau offline/terputus wifi bersamaan, atau minimal <b>2 perangkat</b> offline bersamaan — ambang batas ini otomatis, tidak perlu diatur manual. Kalau cuma 1 perangkat yang offline, diabaikan (dianggap gangguan perangkat itu sendiri, bukan listrik padam). Perangkat yang cuma dimatikan manual/saklar off TIDAK dihitung sebagai offline. Otomatis kirim pesan susulan begitu koneksi kembali normal.</div>
+
+          <div class="field" style="margin-bottom:16px;"><label><input type="checkbox" id="bmEnabled"> Aktifkan pemantauan</label></div>
+
+          <div class="row">
+            <div class="field"><label>Label (dipakai di teks pesan)</label><input type="text" id="bmLabel" placeholder="mis. Lampu Kantor"></div>
+            <div class="field"><label>Kirim ke topik</label><select id="bmTopic"><option value="">(percakapan umum grup)</option></select></div>
+          </div>
+
+          <div class="field"><label>Perangkat yang dipantau (minimal 2)</label><div class="chip-days" id="bmDeviceChecks"></div></div>
+          <div class="hint" id="bmSummary"></div>
+
+          <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn primary" id="saveBmBtn">Simpan pengaturan pemantauan</button>
+            <button class="btn small hidden" id="editBmBtn">✏️ Edit pengaturan</button>
+            <button class="btn small danger hidden" id="hapusBmBtn">🗑️ Hapus pemantauan</button>
+          </div>
+          <div class="locked-note hidden" id="bmLockedNote">Pengaturan tersimpan &amp; terkunci -- klik "Edit pengaturan" utk mengubahnya.</div>
+        </div>
+      </section>
+
+      <section class="page" id="page-maintenance">
+        <div class="card">
+          <h2>🛠️ Laporan Kerusakan <span class="badge" id="laporStatusBadge"></span></h2>
+          <div class="desc">Sama dengan <code>/lapor</code> di Telegram. Jamaah bisa lapor dari Telegram; laporan yang dicatat manual di sini juga otomatis diteruskan ke topik grup.</div>
+          <div class="table-wrap"><table id="laporTable"><thead><tr><th>Tanggal</th><th>Pelapor</th><th>Deskripsi</th><th>Status</th><th></th></tr></thead><tbody></tbody></table></div>
+          <div class="row" style="margin-top:14px;">
+            <div class="field" style="flex:2"><label>Deskripsi kerusakan</label><input type="text" id="newLaporDesc" placeholder="AC ruang utama mati total"></div>
+            <div class="field"><label>Pelapor (opsional)</label><input type="text" id="newLaporNama" placeholder="Admin (panel)"></div>
+          </div>
+          <button class="btn primary" id="addLaporBtn">+ Catat laporan</button>
+        </div>
+
+        <div class="card">
+          <h2>🔧 Jadwal Perawatan Berkala <span class="badge" id="rawatStatusBadge"></span></h2>
+          <div class="desc">Sama dengan <code>/rawat_tambah</code>. Untuk perawatan RUTIN &amp; terjadwal (mis. servis AC tiap 90 hari) -- beda dari laporan kerusakan yang insidental. Bot otomatis ingatkan tiap jatuh tempo, sekali sehari sampai ditandai selesai.</div>
+          <div class="field"><label>Kirim ke topik (default)</label><select id="maintenanceTopicSelect"><option value="">(percakapan umum grup)</option></select></div>
+          <button class="btn small" id="saveMaintenanceTopicBtn">Simpan topik default</button>
+          <div class="table-wrap" style="margin-top:14px;"><table id="rawatTable"><thead><tr><th>Judul</th><th>Interval</th><th>Terakhir dilakukan</th><th>Jatuh tempo</th><th></th></tr></thead><tbody></tbody></table></div>
+          <div class="row" style="margin-top:14px;">
+            <div class="field" style="flex:2"><label>Judul perawatan</label><input type="text" id="newRawatTitle" placeholder="Servis AC ruang utama"></div>
+            <div class="field"><label>Interval (hari)</label><input type="number" id="newRawatInterval" placeholder="90" min="1"></div>
+          </div>
+          <button class="btn primary" id="addRawatBtn">+ Tambah jadwal</button>
         </div>
       </section>
 
@@ -565,6 +729,21 @@
           <div class="desc">Sama dengan <code>/kuota</code> di Telegram — rincian lengkap, bukan cuma angka ringkas yang ada di header.</div>
           <div id="quotaDetailBox" class="empty">Memuat…</div>
         </div>
+        <div class="card">
+          <h2>🩺 Status Sistem <span class="badge" id="statusSistemBadge"></span></h2>
+          <div class="desc">Sama dengan <code>/status_sistem</code> di Telegram (khusus Super Admin) — gambaran kesehatan seluruh komponen bot dalam satu layar.</div>
+          <div id="statusSistemBox" class="empty">Memuat…</div>
+          <button class="btn small" id="reloadStatusSistemBtn" style="margin-top:10px;">Muat ulang</button>
+        </div>
+        <div class="card">
+          <h2>👮 Super Admin</h2>
+          <div class="desc">Penerima DM otomatis kalau ada kejanggalan/kegagalan TEKNIS di sistem bot (beda dari "Admin &amp; Akses" yang soal izin command grup). Cara paling umum: user ketik <code>super admin</code> langsung ke bot (DM) &amp; pilih lewat tombol -- daftar di sini cuma buat lihat/kelola manual.</div>
+          <div class="table-wrap"><table id="superAdminTable"><thead><tr><th>User ID</th><th></th></tr></thead><tbody></tbody></table></div>
+          <div class="row" style="margin-top:14px;">
+            <div class="field"><label>Tambah manual (User ID Telegram)</label><input type="number" id="newSuperAdminId" placeholder="123456789"></div>
+          </div>
+          <button class="btn primary" id="addSuperAdminBtn">+ Tambah Super Admin</button>
+        </div>
       </section>
 
     </div>
@@ -588,7 +767,7 @@ let data = null, sha = null;
 
 // Versi panel ini -- naikkan tiap kali ada perubahan berarti, cocokkan
 // dengan entri di CHANGELOG.md & WORKER_VERSION di worker-komunitas.js.
-const APP_VERSION = "2.2.2";
+const APP_VERSION = "2.14.7";
 const WORKER_URL_FOR_VERSION_CHECK = "https://gus-asisten.rempahecho.workers.dev";
 
 /* Cek versi worker LANGSUNG saat halaman dibuka, SEBELUM login (endpoint
@@ -619,13 +798,13 @@ checkVersions();
 
 
 /* ---------- NAVIGASI SIDEBAR (SPA) ---------- */
-const PAGES = ["overview","admin","topik","puasa","kajian","kalender","pengingat","libur","pengaturan"];
+const PAGES = ["overview","admin","topik","puasa","kajian","kalender","pengingat","libur","perangkat","maintenance","pengaturan"];
 const PAGE_TITLES = {
   overview:"Overview", admin:"Admin & Akses", topik:"Topik (Forum)", puasa:"Absensi Puasa",
   kajian:"Kajian", kalender:"Google Calendar", pengingat:"Pengingat Umum", libur:"Libur Nasional",
-  pengaturan:"Pengaturan"
+  perangkat:"Perangkat & Google Home", maintenance:"Maintenance & Lapor Kerusakan", pengaturan:"Pengaturan"
 };
-function showPage(id){
+function showPage(id, pushHistory = true){
   if(!PAGES.includes(id)) id = "overview";
   PAGES.forEach(p=>{
     const el = document.getElementById("page-"+p);
@@ -635,10 +814,27 @@ function showPage(id){
     el.classList.toggle("active", el.dataset.page===id);
   });
   document.getElementById("pageTitle").textContent = PAGE_TITLES[id] || id;
+  if(id === "kalender") loadCalendarEmbed();
   localStorage.setItem("admkom_page", id);
   document.body.classList.remove("sidebar-open");
   window.scrollTo(0,0);
+  // ---------- riwayat navigasi browser -- supaya tombol/gesture "back" di
+  // HP (Android/PWA) MUNDUR SELANGKAH DEMI SELANGKAH mengikuti menu yang
+  // sudah dibuka, BUKAN LANGSUNG KELUAR APLIKASI. Tiap pindah menu didorong
+  // (push) sbg entri history baru; pushHistory=false dipakai KHUSUS saat
+  // showPage() dipanggil dari event "popstate" (user menekan back) --
+  // supaya tidak ikut dorong entri baru lagi (kalau ikut didorong, "back"
+  // malah jadi tidak pernah mundur -- setiap back otomatis "dibalas" push
+  // baru). Baru kalau riwayatnya benar2 habis, gesture back akan keluar
+  // dari aplikasi seperti biasa (perilaku bawaan browser/PWA). ----------
+  if(pushHistory && (!history.state || history.state.page !== id)){
+    history.pushState({page:id}, "", "");
+  }
 }
+window.addEventListener("popstate", (e)=>{
+  const page = (e.state && e.state.page) || "overview";
+  showPage(page, false); // false: JANGAN push lagi, ini efek DARI back, bukan navigasi baru
+});
 document.querySelectorAll(".nav-item").forEach(el=>{
   el.addEventListener("click", ()=> showPage(el.dataset.page));
 });
@@ -690,6 +886,11 @@ tickClock();
 setInterval(tickClock, 1000);
 
 const WORKER_URL = "https://gus-asisten.rempahecho.workers.dev";
+// Worker RELAY (akun Cloudflare terpisah, tempat OAuth Google Home
+// beneran diproses -- lihat PANDUAN-GOOGLE-HOME.md Bagian C.5). Status
+// tautan Google Home yang AKURAT dicek dari sini, bukan dari WORKER_URL,
+// karena OAUTH_KV (tempat token tautan disimpan) ada di akun ini.
+const RELAY_WORKER_URL = "https://smarthome.halawa.id";
 let APP_TOKEN = localStorage.getItem("admkom_token") || "";
 
 function toast(msg, isError){
@@ -776,7 +977,11 @@ function renderAll(){
   renderPuasaRiwayat();
   renderReminders();
   renderCalReminder();
+  renderCalRules();
   renderLibur();
+  renderBardiMonitor();
+  renderMaintenance();
+  renderSuperAdmin();
   toggleRemFields();
   renderVariantQueue();
   renderOverview();
@@ -789,6 +994,121 @@ function getTodayKey(){
 function getUpcomingKajian(){
   const today = getTodayKey();
   return (data.kajian || []).filter(k=>k.tanggal >= today).sort((a,b)=>a.tanggal.localeCompare(b.tanggal));
+}
+/* ============================================================
+   FEATURE_STATUS_DEFS_DINAMIS -- daftar fitur TAMBAHAN yang ikut
+   ditampilkan di kartu "Status Fitur" (Overview), SELAIN 4 item statis
+   yg sudah dirender renderOverview() (AI/Kalender/Topik/Admin -- tetap
+   dipertahankan apa adanya krn butuh dirender lebih awal, sebelum
+   /status-sistem kejawab, supaya tidak ada jeda kosong).
+
+   ATURAN utk fitur baru: begitu Worker punya fitur baru yang statusnya
+   bisa dicek, TAMBAHKAN 1 objek ke array ini (jangan edit HTML manual).
+   Kalau field-nya belum ada di respons endpoint /status-sistem, tambah
+   dulu field itu di handleStatusSistem() (worker-komunitas.js), lalu
+   baca field itu di sini lewat `st.<namaField>`. Itu saja -- kartu
+   Overview & kartu detail /status-sistem otomatis ikut menyesuaikan,
+   tidak perlu sentuh markup <div class="feat-item"> di HTML lagi.
+   Tiap objek:
+     label : string TETAP, atau function(st) => string (kalau perlu
+             menyisipkan angka/nama dinamis di label-nya sendiri)
+     ok    : function(st) => boolean (true = titik hijau "on")
+     sub   : function(st) => string (baris kecil di bawah label)
+     group : "infra" | "fitur" | "ringkasan" -- menentukan kolom/kartu
+             tujuan. SAAT INI kartu Overview hanya menampilkan group
+             "infra" (permintaan user, lihat FEATURE_GROUP_TAMPIL di
+             bawah) -- item "fitur"/"ringkasan" tetap didefinisikan di
+             sini (gampang dimunculkan lagi nanti, tinggal ubah
+             FEATURE_GROUP_TAMPIL), tapi untuk saat ini tidak dirender.
+   ============================================================ */
+const FEATURE_STATUS_DEFS_DINAMIS = [
+  {
+    group: "infra",
+    label: "GitHub (database)",
+    ok: (st) => !!st.githubOk,
+    sub: (st) => st.githubOk ? "Tersambung" : "⚠️ ENV belum lengkap",
+  },
+  {
+    group: "infra",
+    label: "BARDI / Tuya Smart Home",
+    ok: (st) => !!(st.tuyaOk && !st.tuyaError),
+    sub: (st) =>
+      st.tuyaError
+        ? "⚠️ " + st.tuyaError
+        : st.tuyaOk
+        ? st.tuyaDeviceCount + " perangkat tertaut" + (st.tuyaStatusError ? " (⚠️ status gagal)" : "")
+        : "Belum tertaut (ENV Tuya kosong)",
+  },
+  {
+    group: "infra",
+    label: "Cron tick terjadwal",
+    ok: (st) => st.cronHealthy !== false,
+    sub: (st) => st.lastCronTickSuccess ? "Terakhir sukses " + new Date(st.lastCronTickSuccess).toLocaleString("id-ID") : "⚠️ Belum pernah tercatat",
+  },
+  {
+    group: "fitur",
+    label: "Polling Puasa Otomatis",
+    ok: (st) => !!st.puasaPollEnabled,
+    sub: (st) => st.puasaPollEnabled ? st.puasaPollSchedule : "Nonaktif",
+  },
+  {
+    group: "fitur",
+    label: "Rekap Otomatis Puasa",
+    ok: (st) => !!st.puasaRekapEnabled,
+    sub: (st) => st.puasaRekapEnabled ? "Jam " + st.puasaRekapTime + " WIB" : "Nonaktif",
+  },
+  {
+    group: "fitur",
+    label: "Reminder Kajian",
+    ok: (st) => !!st.kajianReminderEnabled,
+    sub: (st) => st.kajianReminderEnabled ? st.kajianReminderSchedule : "Belum diatur",
+  },
+  {
+    group: "fitur",
+    label: "Notifikasi Kalender Ontime",
+    ok: (st) => !!st.calendarOntimeEnabled,
+    sub: (st) => st.calendarOntimeEnabled ? "Aktif" : "Nonaktif",
+  },
+  {
+    group: "fitur",
+    label: "Pengingat Libur Nasional",
+    ok: (st) => !!st.liburReminderEnabled,
+    sub: (st) => st.liburReminderEnabled ? "Jam " + st.liburReminderTime + " WIB" : "Nonaktif",
+  },
+  {
+    group: "fitur",
+    label: "Pengingat Umum",
+    ok: (st) => (st.reminderUmumAktif || 0) > 0,
+    sub: (st) => (st.reminderUmumAktif || 0) + " aktif dari " + (st.reminderUmumTotal || 0) + " total",
+  },
+  {
+    group: "fitur",
+    label: "Pemantauan Perangkat BARDI",
+    ok: (st) => !!st.bardiMonitorEnabled,
+    sub: (st) => st.bardiMonitorEnabled ? "Aktif" : "Nonaktif",
+  },
+];
+// Kelompok yang ditampilkan di kartu "Status Fitur" (Overview). Ubah/tambah
+// isi array ini kalau mau memunculkan lagi "fitur" atau "ringkasan".
+const FEATURE_GROUP_TAMPIL = ["infra"];
+function renderFeatureStatusRow(st) {
+  const row = document.getElementById("featRow");
+  if (!row || !st) return;
+  // Buang item dinamis lama kalau dipanggil ulang (mis. auto-refresh
+  // berkala), sebelum tambah yg baru -- ditandai class "feat-item-dinamis"
+  // supaya item statis di atas (AI/Kalender) tidak ikut terhapus.
+  row.querySelectorAll(".feat-item-dinamis").forEach((el) => el.remove());
+  FEATURE_STATUS_DEFS_DINAMIS
+    .filter((def) => FEATURE_GROUP_TAMPIL.includes(def.group))
+    .forEach((def) => {
+      const label = typeof def.label === "function" ? def.label(st) : def.label;
+      const ok = !!def.ok(st);
+      const sub = def.sub(st);
+      const el = document.createElement("div");
+      el.className = "feat-item feat-item-dinamis";
+      el.innerHTML = `<div class="feat-item-left"><span class="fdot ${ok ? "on" : "off"}"></span><span>${label}</span></div><small>${sub}</small>`;
+      row.appendChild(el);
+    });
 }
 function renderOverview(){
   if(!data) return;
@@ -890,11 +1210,19 @@ function renderOverview(){
   document.getElementById("featAiSub").textContent = aiConfigured ? "Siap dipakai" : "Belum dikonfigurasi";
   document.getElementById("featCalDot").className = "fdot " + (data.calendarOntimeEnabled ? "on" : "off");
   document.getElementById("featCalSub").textContent = data.calendarOntimeEnabled ? "Notifikasi ontime aktif" : "Notifikasi ontime nonaktif";
+  // featTopikLabel/featAdminLabel/featAdminSub sengaja tidak diisi lagi --
+  // kartu "Status Fitur" (Overview) saat ini hanya menampilkan kelompok
+  // "infra" (lihat FEATURE_GROUP_TAMPIL), jadi elemen Topik & Admin sudah
+  // tidak ada di HTML. Pakai optional chaining (?.) jaga-jaga kalau
+  // elemennya dimunculkan lagi nanti tanpa perlu ubah baris ini.
   const topicCount = Object.keys(data.topics || {}).length;
-  document.getElementById("featTopikLabel").textContent = topicCount + " topik terdaftar";
+  const topikEl = document.getElementById("featTopikLabel");
+  if (topikEl) topikEl.textContent = topicCount + " topik terdaftar";
   const adminCount = (data.adminUserIds || []).length;
-  document.getElementById("featAdminLabel").textContent = adminCount + " admin terdaftar";
-  document.getElementById("featAdminSub").textContent = adminCount ? "Perintah pengaturan dibatasi" : "Semua anggota bebas pakai perintah";
+  const adminLabelEl = document.getElementById("featAdminLabel");
+  if (adminLabelEl) adminLabelEl.textContent = adminCount + " admin terdaftar";
+  const adminSubEl = document.getElementById("featAdminSub");
+  if (adminSubEl) adminSubEl.textContent = adminCount ? "Perintah pengaturan dibatasi" : "Semua anggota bebas pakai perintah";
 }
 
 let puasaChartInstance = null;
@@ -980,7 +1308,7 @@ function renderTopics(){
       <td><code>${k}</code>${isAuto ? ' <span class="badge off" title="Terdeteksi otomatis dari chat biasa, belum di-rename">Auto</span>' : ''}</td>
       <td>${t.label || "-"}</td>
       <td>${t.threadId}</td>
-      <td style="white-space:nowrap;">
+      <td class="td-actions">
         ${isAuto ? `<button class="btn small" data-rename-topic="${k}">Ganti nama</button>` : ''}
         <button class="btn small danger" data-del-topic="${k}">Hapus</button>
       </td>
@@ -1077,7 +1405,7 @@ function renderVariantQueue(){
       <td>${v.q}</td>
       <td>${v.opts[0]}</td>
       <td>${v.opts[1]}</td>
-      <td style="white-space:nowrap;">
+      <td class="td-actions">
         <button class="btn small primary" data-approve-variant="${v.id}">Approve</button>
         <button class="btn small danger" data-reject-variant="${v.id}">Tolak</button>
       </td>
@@ -1195,6 +1523,7 @@ function renderKajian(){
   document.getElementById("kajianLokasi").value = ks.lokasi || "";
   document.getElementById("kajianCatatan").value = ks.catatan || "";
   document.getElementById("kajianTopic").value = ks.topicKey || "";
+  kajianSettingsSetLocked(kajianSettingsIsConfigured());
   const tbody = document.querySelector("#kajianTable tbody");
   const list = getUpcomingKajian();
   tbody.innerHTML = list.length ? "" : `<tr><td colspan="4" class="empty">Belum ada jadwal kajian mendatang.</td></tr>`;
@@ -1204,7 +1533,10 @@ function renderKajian(){
       <td>${fmtTanggalID(k.tanggal)}</td>
       <td>${k.pengisi}</td>
       <td>${k.tema}</td>
-      <td><button class="btn small danger" data-del-kajian="${k.id}">Hapus</button></td>
+      <td class="td-actions">
+        <button class="btn small" data-edit-kajian="${k.id}">Edit</button>
+        <button class="btn small danger" data-del-kajian="${k.id}">Hapus</button>
+      </td>
     `;
     tbody.appendChild(tr);
   });
@@ -1218,7 +1550,50 @@ function renderKajian(){
       }catch(e){ toast("Gagal hapus: " + e.message, true); }
     });
   });
+  tbody.querySelectorAll("[data-edit-kajian]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = Number(btn.dataset.editKajian);
+      const k = (data.kajian || []).find(x=>x.id === id);
+      if(!k) return;
+      startEditKajian(k);
+    });
+  });
   renderKajianRiwayat();
+}
+/* Pengaturan kajian dianggap "tersimpan" (layak dikunci) kalau minimal
+   jam pengingat atau jam mulai acara sudah pernah diisi. */
+function kajianSettingsIsConfigured(){
+  const ks = data.kajianSettings || {};
+  return !!(ks.time || ks.jamAcara || (ks.offsetsDays && ks.offsetsDays.length));
+}
+function kajianSettingsSetLocked(locked){
+  ["kajianOffsets","kajianTime","kajianJamAcara","kajianLokasi","kajianCatatan","kajianTopic"].forEach(id=>{
+    document.getElementById(id).disabled = locked;
+  });
+  document.getElementById("saveKajianSettingsBtn").classList.toggle("hidden", locked);
+  document.getElementById("editKajianSettingsBtn").classList.toggle("hidden", !locked);
+  document.getElementById("kajianSettingsLockedNote").classList.toggle("hidden", !locked);
+}
+/* Mode edit form "+ Tambah kajian" -- dipakai ulang utk tambah BARU
+   maupun EDIT kajian yang sudah ada (supaya tidak duplikasi form). Saat
+   edit, id kajian yg sedang diedit disimpan di dataset tombol Simpan. */
+let kajianEditingId = null;
+function startEditKajian(k){
+  kajianEditingId = k.id;
+  document.getElementById("newKajianDate").value = k.tanggal;
+  document.getElementById("newKajianPengisi").value = k.pengisi;
+  document.getElementById("newKajianTema").value = k.tema;
+  document.getElementById("addKajianBtn").textContent = "Simpan perubahan";
+  document.getElementById("cancelEditKajianBtn").classList.remove("hidden");
+  document.getElementById("newKajianDate").scrollIntoView({ behavior:"smooth", block:"center" });
+}
+function cancelEditKajian(){
+  kajianEditingId = null;
+  document.getElementById("newKajianDate").value = "";
+  document.getElementById("newKajianPengisi").value = "";
+  document.getElementById("newKajianTema").value = "";
+  document.getElementById("addKajianBtn").textContent = "+ Tambah kajian";
+  document.getElementById("cancelEditKajianBtn").classList.add("hidden");
 }
 /* Kajian yang tanggalnya SUDAH LEWAT -- cuma tampilan, tidak ada tombol
    hapus/edit (mengikuti pola read-only). Diurutkan terbaru dulu supaya
@@ -1253,20 +1628,69 @@ document.getElementById("saveKajianSettingsBtn").addEventListener("click", async
   };
   if(await saveData()) renderKajian();
 });
+document.getElementById("editKajianSettingsBtn").addEventListener("click", ()=> kajianSettingsSetLocked(false));
 document.getElementById("addKajianBtn").addEventListener("click", async ()=>{
   const tanggal = document.getElementById("newKajianDate").value;
   const pengisi = document.getElementById("newKajianPengisi").value.trim();
   const tema = document.getElementById("newKajianTema").value.trim();
   if(!tanggal || !pengisi || !tema){ toast("Isi tanggal, pengisi, dan tema dulu.", true); return; }
   try{
-    const res = await apiAction("/kajian-tambah", { tanggal, pengisi, tema });
-    toast(res.kajian && res.kajian.googleEventId ? "Tersimpan ✓ 🗓️ tersinkron ke Google Calendar." : "Tersimpan ✓");
+    if(kajianEditingId !== null){
+      const res = await apiAction("/kajian-edit", { id: kajianEditingId, tanggal, pengisi, tema });
+      toast(res.kajian && res.kajian.googleEventId ? "Perubahan tersimpan ✓ 🗓️ event Google Calendar ikut diperbarui." : "Perubahan tersimpan ✓");
+      cancelEditKajian();
+    } else {
+      const res = await apiAction("/kajian-tambah", { tanggal, pengisi, tema });
+      toast(res.kajian && res.kajian.googleEventId ? "Tersimpan ✓ 🗓️ tersinkron ke Google Calendar." : "Tersimpan ✓");
+      document.getElementById("newKajianDate").value = "";
+      document.getElementById("newKajianPengisi").value = "";
+      document.getElementById("newKajianTema").value = "";
+    }
     await loadData();
-    document.getElementById("newKajianDate").value = "";
-    document.getElementById("newKajianPengisi").value = "";
-    document.getElementById("newKajianTema").value = "";
   }catch(e){ toast("Gagal simpan: " + e.message, true); }
 });
+document.getElementById("cancelEditKajianBtn").addEventListener("click", cancelEditKajian);
+
+/* ---------- GOOGLE CALENDAR: EMBED TAMPILAN KALENDER ---------- */
+// Nampilin kalender Google asli (iframe embed) di halaman menu "Google
+// Calendar", pakai Calendar ID PERTAMA dari GOOGLE_CALENDAR_ID (kalender
+// utama) -- id-nya diambil dari endpoint /kalender-cek yang sudah ada
+// (sama yg dipakai tombol "Tes koneksi" di bawah), jadi tidak perlu
+// hardcode ID di sini.
+//
+// CATATAN PENTING: iframe embed Google Calendar ini HANYA jalan kalau
+// kalendernya di-set "Available to public" di pengaturan sharing Google
+// Calendar (Settings and sharing -> Access permissions -> Make available
+// to public). Akses service account (utk fitur notifikasi/sinkron) TIDAK
+// cukup utk bikin iframe publik ini muncul -- itu dua izin yang beda.
+// Kalau kalender masih private, iframe akan nampilin halaman kosong/error
+// dari Google sendiri (bukan bug di sini).
+let __calEmbedLoaded = false;
+async function loadCalendarEmbed(){
+  if(__calEmbedLoaded) return;
+  const note = document.getElementById("calEmbedNote");
+  const wrap = document.getElementById("calEmbedWrap");
+  try{
+    const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/kalender-cek", { headers:{ "Authorization":"Bearer " + APP_TOKEN }, cache:"no-store" });
+    const j = await res.json();
+    if(j.connected && (j.calendarIds||[]).length){
+      const calId = j.calendarIds[0];
+      const params = new URLSearchParams({ src: calId, ctz: "Asia/Jakarta" });
+      const embedSrc = "https://calendar.google.com/calendar/embed?" + params.toString();
+      document.getElementById("calEmbedIframe").src = embedSrc;
+      document.getElementById("calEmbedOpenLink").href = "https://calendar.google.com/calendar/u/0?cid=" + encodeURIComponent(calId);
+      note.textContent = "Menampilkan kalender utama: " + calId + ". Kalau kotak di bawah kosong/error, kalender ini belum di-set \"Available to public\" di pengaturan sharing Google Calendar.";
+      wrap.style.display = "";
+      __calEmbedLoaded = true;
+    } else if(j.missingEnv){
+      note.textContent = "Google Calendar belum dikonfigurasi -- ENV berikut belum diisi di Worker: " + j.missingEnv.join(", ") + ".";
+    } else {
+      note.textContent = "Belum bisa memuat kalender: " + (j.error || "gagal konek ke Google Calendar") + ".";
+    }
+  }catch(e){
+    note.textContent = "Gagal memuat kalender: " + e.message;
+  }
+}
 
 /* ---------- GOOGLE CALENDAR: NOTIFIKASI ONTIME PER-EVENT ---------- */
 function renderCalReminder(){
@@ -1289,7 +1713,16 @@ document.getElementById("testKalenderBtn").addEventListener("click", async ()=>{
     const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/kalender-cek", { headers:{ "Authorization":"Bearer " + APP_TOKEN }, cache:"no-store" });
     const j = await res.json();
     if(j.connected){
-      box.innerHTML = `✅ Tersambung dengan baik.<br>Kalender: <code>${j.calendarId}</code><br>Event dalam 2 hari ke depan: ${j.eventCount2Hari}`;
+      const calList = (j.calendarIds || []).map(id=>`<code>${id}</code>`).join(", ") || "(kosong)";
+      // Tempelkan nama kalender asal tiap event KALAU lebih dari 1 kalender
+      // dipantau -- biar kelihatan jelas event ini kedeteksi dari kalender
+      // yang mana (mis. verifikasi cepat: "kok event X dari kalender lain
+      // tidak muncul?" -> berarti kalender itu belum ditambahkan/di-share).
+      const multiKal = (j.calendarIds || []).length > 1;
+      const daftarEvent = (j.eventNames && j.eventNames.length)
+        ? "<br>" + j.eventNames.map((n,i)=>"• "+n + (multiKal && j.eventCalendarIds && j.eventCalendarIds[i] ? ` <span style="color:var(--muted); font-size:11px;">(${j.eventCalendarIds[i]})</span>` : "")).join("<br>")
+        : "<br><span style=\"color:var(--muted)\">(tidak ada event dlm 2 hari ke depan di kalender-kalender ini)</span>";
+      box.innerHTML = `✅ Tersambung dengan baik.<br>Kalender dipantau (${(j.calendarIds||[]).length}): ${calList}<br>Event dalam 2 hari ke depan: ${j.eventCount2Hari}${daftarEvent}`;
     } else if(j.missingEnv){
       box.innerHTML = `❌ Belum tersambung -- ENV berikut belum diisi di Worker:<br>${j.missingEnv.map(e=>"• "+e).join("<br>")}`;
     } else {
@@ -1297,6 +1730,40 @@ document.getElementById("testKalenderBtn").addEventListener("click", async ()=>{
     }
   }catch(e){
     box.textContent = "Gagal menguji: " + e.message;
+  }
+});
+
+/* ---------- Aturan Topik Otomatis dari Kalender (kata kunci judul) ---------- */
+function renderCalRules(){
+  const tbody = document.querySelector("#calRulesTable tbody");
+  if(!tbody) return;
+  const rules = data.calendarTopicRules || [];
+  tbody.innerHTML = rules.length ? "" : `<tr><td colspan="3" class="empty">Belum ada aturan -- semua event dikirim ke topik default di atas.</td></tr>`;
+  rules.forEach(r=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td><code>${r.keyword}</code></td><td>${r.topicKey}</td>
+      <td class="td-actions"><button class="btn small danger" data-del-calrule="${r.id}">Hapus</button></td>`;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll("[data-del-calrule]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = Number(btn.dataset.delCalrule);
+      data.calendarTopicRules = (data.calendarTopicRules||[]).filter(x=>x.id!==id);
+      if(await saveData()) renderCalRules();
+    });
+  });
+}
+document.getElementById("addCalRuleBtn").addEventListener("click", async ()=>{
+  const keyword = document.getElementById("newCalRuleKeyword").value.trim();
+  const topicKey = document.getElementById("newCalRuleTopic").value;
+  if(!keyword){ toast("Isi kata kuncinya dulu.", true); return; }
+  if(!topicKey){ toast("Pilih topik tujuannya dulu.", true); return; }
+  data.calendarTopicRules = data.calendarTopicRules || [];
+  data.calendarTopicRules.push({ id: Date.now(), keyword, topicKey });
+  if(await saveData()){
+    toast("Aturan tersimpan ✓");
+    document.getElementById("newCalRuleKeyword").value = "";
+    renderCalRules();
   }
 });
 
@@ -1313,7 +1780,9 @@ function populateTopicSelect(){
   }
   [["puasaTopic", '(topik bernama "puasa", kalau ada)'],
    ["kajianTopic", '(topik bernama "kajian", kalau ada)'],
-   ["calReminderTopic", '(topik bernama "kalender", kalau ada)']
+   ["calReminderTopic", '(topik bernama "kalender", kalau ada)'],
+   ["bmTopic", '(percakapan umum grup)'],
+   ["maintenanceTopicSelect", '(percakapan umum grup)'],
   ].forEach(([id, placeholderLabel])=>{
     const s = document.getElementById(id);
     if(!s) return;
@@ -1321,6 +1790,12 @@ function populateTopicSelect(){
     s.innerHTML = `<option value="">${placeholderLabel}</option>` + keys.map(k=>`<option value="${k}">${k}</option>`).join("");
     s.value = current;
   });
+  const calRuleSel = document.getElementById("newCalRuleTopic");
+  if(calRuleSel){
+    const current = calRuleSel.value;
+    calRuleSel.innerHTML = keys.length ? keys.map(k=>`<option value="${k}">${k}</option>`).join("") : `<option value="">(belum ada topik)</option>`;
+    calRuleSel.value = current;
+  }
 }
 function renderLibur(){
   populateTopicSelect();
@@ -1363,10 +1838,10 @@ function renderReminders(){
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${r.title}${r.googleEventId ? ' <span title="Tersinkron Google Calendar">🗓️</span>':''}</td>
-      <td>${formatJadwalUmum(r.schedule)}</td>
+      <td>${formatJadwalUmum(r.schedule)}${r.preReminder ? `<br><span class="hint" style="margin:0;">⏳ awal: ${formatPreReminderHtml(r.preReminder)}${r.preReminder.sent?' (terkirim)':''}</span>` : ''}</td>
       <td><code>${r.topicKey}</code></td>
       <td><span class="badge ${r.enabled?"on":"off"}">${r.enabled?"Aktif":"Nonaktif"}</span></td>
-      <td style="white-space:nowrap;">
+      <td class="td-actions">
         <button class="btn small" data-toggle-rem="${r.id}">${r.enabled?"Matikan":"Aktifkan"}</button>
         <button class="btn small danger" data-del-rem="${r.id}">Hapus</button>
       </td>
@@ -1399,6 +1874,15 @@ function formatJadwalUmum(s){
   if(s.type==="monthly") return `Tanggal ${s.dayOfMonth} tiap bulan jam ${s.time}`;
   return "-";
 }
+function formatPreReminderHtml(p){
+  const [y,m,d] = p.date.split("-");
+  return `${d}-${m}-${y} jam ${p.time}`;
+}
+document.getElementById("newRemPreEnabled").addEventListener("change", (e)=>{
+  const show = e.target.checked;
+  document.getElementById("remFieldPre").style.display = show ? "flex" : "none";
+  document.getElementById("remPreHint").style.display = show ? "block" : "none";
+});
 document.getElementById("addRemBtn").addEventListener("click", async ()=>{
   const title = document.getElementById("newRemTitle").value.trim();
   const message = document.getElementById("newRemMessage").value.trim();
@@ -1421,12 +1905,450 @@ document.getElementById("addRemBtn").addEventListener("click", async ()=>{
     const dom = parseInt(document.getElementById("newRemDom").value,10) || 1;
     schedule = { type:"monthly", time, dayOfMonth: dom };
   }
+  let preReminder = null;
+  if(document.getElementById("newRemPreEnabled").checked){
+    const preDate = document.getElementById("newRemPreDate").value;
+    const preTime = document.getElementById("newRemPreTime").value || "20:00";
+    if(!preDate){ toast("Isi tanggal reminder awal dulu (atau matikan centangnya kalau tidak perlu).", true); return; }
+    preReminder = { date: preDate, time: preTime };
+  }
   try{
-    const res = await apiAction("/reminder-tambah", { title, message, topicKey, schedule });
+    const res = await apiAction("/reminder-tambah", { title, message, topicKey, schedule, preReminder });
     toast(res.reminder && res.reminder.googleEventId ? "Tersimpan ✓ 🗓️ tersinkron ke Google Calendar." : "Tersimpan ✓");
     await loadData();
     document.getElementById("newRemTitle").value = "";
     document.getElementById("newRemMessage").value = "";
+    document.getElementById("newRemPreEnabled").checked = false;
+    document.getElementById("remFieldPre").style.display = "none";
+    document.getElementById("remPreHint").style.display = "none";
+    document.getElementById("newRemPreDate").value = "";
+  }catch(e){ toast("Gagal simpan: " + e.message, true); }
+});
+
+/* ---------- Perangkat & Google Home ---------- */
+async function loadDevices(){
+  const tbody = document.querySelector("#devicesTable tbody");
+  try{
+    const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/device-list", { headers:{ "Authorization":"Bearer " + APP_TOKEN } });
+    const j = await res.json();
+    const list = (j && j.devices) || [];
+    if(!list.length){
+      tbody.innerHTML = `<tr><td colspan="5" class="empty">Belum ada perangkat. Tambah lewat form di bawah.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = "";
+    list.forEach(d=>{
+      const tr = document.createElement("tr");
+      const lapor = d.lastSeen ? new Date(d.lastSeen).toLocaleString("id-ID") : "belum pernah";
+      tr.innerHTML = `<td>${d.name}</td><td>${d.type==="light"?"Lampu":"Saklar"}</td>
+        <td>${d.on ? "🟢 Nyala" : "⚪ Mati"}</td><td>${lapor}</td>
+        <td class="td-actions">
+          <button class="btn small" data-toggle-dev="${d.id}">${d.on?"Matikan":"Nyalakan"}</button>
+          <button class="btn small danger" data-del-dev="${d.id}">Hapus</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+    tbody.querySelectorAll("[data-toggle-dev]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        try{
+          await apiAction("/device-toggle", { id: btn.dataset.toggleDev });
+          toast("Perintah terkirim ✓");
+          await loadDevices();
+        }catch(e){ toast("Gagal: " + e.message, true); }
+      });
+    });
+    tbody.querySelectorAll("[data-del-dev]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        try{
+          await apiAction("/device-hapus", { id: btn.dataset.delDev });
+          toast("Perangkat dihapus ✓");
+          await loadDevices();
+        }catch(e){ toast("Gagal: " + e.message, true); }
+      });
+    });
+  }catch(e){
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">Gagal memuat (cek apakah endpoint /device-list sudah aktif di Worker).</td></tr>`;
+  }
+}
+document.getElementById("addDevBtn").addEventListener("click", async ()=>{
+  const name = document.getElementById("newDevName").value.trim();
+  const type = document.getElementById("newDevType").value;
+  const id = document.getElementById("newDevId").value.trim();
+  if(!name || !id){ toast("Isi nama dan ID unik dulu.", true); return; }
+  try{
+    await apiAction("/device-tambah", { id, name, type });
+    toast("Perangkat ditambahkan ✓");
+    document.getElementById("newDevName").value = "";
+    document.getElementById("newDevId").value = "";
+    await loadDevices();
+  }catch(e){ toast("Gagal: " + e.message, true); }
+});
+async function loadGoogleHomeStatus(){
+  const box = document.getElementById("ghLinkStatusBox");
+  const badge = document.getElementById("ghLinkBadge");
+  try{
+    // Cek ke Worker RELAY (bukan WORKER_URL) -- di situlah OAuth Google
+    // Home beneran diproses & status tautan yang asli tersimpan.
+    const res = await fetch(RELAY_WORKER_URL.replace(/\/$/,"") + "/googlehome-status", { headers:{ "Authorization":"Bearer " + APP_TOKEN } });
+    const j = await res.json();
+    if(j.configured && j.linked){
+      badge.textContent = "Tertaut"; badge.className = "badge on";
+      box.className = ""; box.textContent = "Akun Google Home sudah tertaut. Perintah suara & app siap dipakai.";
+    } else if(j.configured){
+      badge.textContent = "Belum ditautkan"; badge.className = "badge off";
+      box.className = ""; box.innerHTML = "ENV Google Home sudah diisi, tapi belum ditautkan dari app Google Home. Buka app Google Home → avatar profil → Tautkan aplikasi atau layanan → Kompatibel dengan Google → cari 'Komunitas Admin Panel' → login pakai APP_TOKEN kamu.";
+    } else {
+      badge.textContent = "Belum dikonfigurasi"; badge.className = "badge off";
+      box.className = "empty"; box.textContent = "ENV Google Home (Client ID/Secret, OAUTH_KV) belum lengkap diisi di Worker relay. Ikuti PANDUAN-GOOGLE-HOME.md dulu.";
+    }
+  }catch(e){
+    badge.textContent = "?"; box.className = "empty";
+    box.textContent = "Gagal cek status tautan ke Worker relay (" + RELAY_WORKER_URL + "). Pastikan Worker relay sudah live.";
+  }
+}
+document.getElementById("ghTestLinkBtn").addEventListener("click", loadGoogleHomeStatus);
+
+/* ---------- BARDI Smart Home (via Tuya, lewat Worker utama) ---------- */
+let bardiDevicesCache = []; // dipakai bareng oleh kartu pemantauan grup di bawah
+// Bikin baris tabel (innerHTML SATU <tr>) dari data 1 perangkat -- dipisah
+// jadi fungsi sendiri supaya dipakai baik saat render baris baru MAUPUN
+// saat membandingkan apakah baris yang sudah ada perlu diupdate (lihat
+// updateBardiTable).
+function renderBardiRowHtml(d){
+  // hasSwitch === false -> PASTI bukan device switch (dipastikan dari
+  // status lengkapnya di Worker, bukan tebakan) -- tampilkan info
+  // tambahan (kalau ada) & JANGAN tampilkan tombol Nyalakan/Matikan.
+  // hasSwitch === null -> BENAR-BENAR tidak ada data status sama
+  // sekali (mis. remote IR universal) -- beda dari "sensor", tetap
+  // tampilkan tombol kontrol (siapa tahu sebenarnya bisa, cuma
+  // status-nya yang tidak terbaca).
+  const isSensor = d.hasSwitch === false;
+  const isUnknown = d.hasSwitch === null;
+  const extraInfoHtml = (d.extraInfo && d.extraInfo.length) ? d.extraInfo.join("<br>") : "";
+  let onLabel;
+  if (isSensor) {
+    onLabel = extraInfoHtml || "<span class=\"empty\">(bukan switch, tidak ada info terbaca)</span>";
+  } else if (isUnknown) {
+    onLabel = "<span class=\"empty\">❔ tidak ada data status</span>";
+  } else {
+    onLabel = (d.on ? "🟡 ON" : "⚫ OFF") + (extraInfoHtml ? "<br>" + extraInfoHtml : "");
+  }
+  const actionsCell = isSensor
+    ? `<span class="hint">Sensor -- tidak bisa dikontrol</span>`
+    : `<button class="btn small" data-bardi-on="${d.id}">Nyalakan</button>
+       <button class="btn small danger" data-bardi-off="${d.id}">Matikan</button>`;
+  return `<td>${d.name}</td><td>${d.online ? "🟢 Online" : "⚪ Offline"}</td><td>${onLabel}</td>
+    <td class="td-actions">${actionsCell}</td>`;
+}
+// Update tabel TANPA mengosongkan lalu membangun ulang semua baris --
+// baris yang isinya TIDAK berubah dibiarkan apa adanya (DOM node yang
+// sama), cuma baris yang benar2 beda datanya yang di-update innerHTML-nya.
+// Ini yang bikin auto-refresh berkala tidak kelihatan "berkelip" (flicker)
+// walau daftar perangkat ikut berubah kalau ada yang dinyala/dimatikan
+// dari luar (command Telegram, app BARDI/Tuya langsung, dll).
+function updateBardiTable(list){
+  const tbody = document.querySelector("#bardiTable tbody");
+  if(!list.length){
+    if(tbody.children.length !== 1 || !tbody.querySelector(".empty")){
+      tbody.innerHTML = `<tr><td colspan="4" class="empty">Belum ada perangkat BARDI terdeteksi.</td></tr>`;
+    }
+    return;
+  }
+  // buang placeholder "kosong"/error dari render sebelumnya kalau ada
+  if(tbody.querySelector(".empty") && !tbody.querySelector("tr[data-device-id]")) tbody.innerHTML = "";
+
+  const existingRows = {};
+  tbody.querySelectorAll("tr[data-device-id]").forEach(tr=>{ existingRows[tr.dataset.deviceId] = tr; });
+
+  let prevNode = null; // dipakai buat jaga urutan baris sesuai urutan `list`
+  list.forEach(d=>{
+    const newHtml = renderBardiRowHtml(d);
+    let tr = existingRows[d.id];
+    if(tr){
+      if(tr.innerHTML !== newHtml) tr.innerHTML = newHtml; // cuma tulis ulang kalau memang beda
+      delete existingRows[d.id];
+    } else {
+      tr = document.createElement("tr");
+      tr.dataset.deviceId = d.id;
+      tr.innerHTML = newHtml;
+    }
+    const wantedNext = prevNode ? prevNode.nextSibling : tbody.firstChild;
+    if(wantedNext !== tr) tbody.insertBefore(tr, wantedNext);
+    prevNode = tr;
+  });
+  // baris perangkat yang sudah tidak ada lagi di daftar terbaru -> hapus
+  Object.values(existingRows).forEach(tr=> tr.remove());
+}
+// Event delegation SATU KALI di tbody (bukan pasang listener ulang tiap
+// render) -- supaya baris yang di-reuse oleh updateBardiTable tidak perlu
+// listener baru, dan tombol tetap responsif walau baris itu tidak
+// di-rebuild.
+document.querySelector("#bardiTable tbody").addEventListener("click", (e)=>{
+  const onBtn = e.target.closest("[data-bardi-on]");
+  if(onBtn){ bardiToggle(onBtn.dataset.bardiOn, true); return; }
+  const offBtn = e.target.closest("[data-bardi-off]");
+  if(offBtn){ bardiToggle(offBtn.dataset.bardiOff, false); return; }
+});
+async function loadBardiDevices(){
+  const badge = document.getElementById("bardiStatusBadge");
+  const errHint = document.getElementById("bardiStatusErrorHint");
+  try{
+    const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/bardi-devices", { headers:{ "Authorization":"Bearer " + APP_TOKEN } });
+    const j = await res.json();
+    if(j.error){
+      badge.textContent = "Belum dikonfigurasi"; badge.className = "badge off";
+      updateBardiTable([]);
+      bardiDevicesCache = [];
+      renderBardiMonitorDeviceChecks();
+      return;
+    }
+    const list = j.devices || [];
+    bardiDevicesCache = list;
+    const badgeText = list.length + " perangkat";
+    if(badge.textContent !== badgeText){ badge.textContent = badgeText; badge.className = "badge on"; }
+    // Kolom ON/OFF semua tampil "?" -> kemungkinan besar bukan per-device,
+    // tapi 1 panggilan status BATCH ke Tuya yang gagal (mis. Cloud Project
+    // belum subscribe service "Device Status Notification", atau scope
+    // API belum lengkap). j.statusError berisi pesan asli dari Tuya /
+    // Worker supaya kelihatan alasannya, bukan cuma "?" tanpa penjelasan.
+    const errText = j.statusError ? `⚠️ Status ON/OFF gagal diambil: ${j.statusError}` : "";
+    if(errHint.textContent !== errText) errHint.textContent = errText;
+    updateBardiTable(list);
+    renderBardiMonitorDeviceChecks();
+    renderBardiMonitor(); // nama perangkat di tabel grup ikut ter-update
+  }catch(e){
+    // Auto-refresh berkala GAGAL (mis. jaringan putus sesaat) -- JANGAN
+    // timpa tabel yang sudah kebaca sebelumnya dengan pesan error, biar
+    // panel tidak "berkelip" nampilin data lalu ilang lalu balik lagi.
+    // Cukup tandain di badge & error hint, tabel dibiarkan seperti
+    // kondisi terakhir yang berhasil dimuat.
+    badge.textContent = "Gagal muat";
+    errHint.textContent = `⚠️ Gagal memuat: ${e.message}`;
+  }
+}
+async function bardiToggle(deviceId, value){
+  try{
+    const res = await apiAction("/bardi-toggle", { deviceId, value });
+    if(res.error){ toast("Gagal: " + res.error, true); return; }
+    toast("Perintah terkirim ✓");
+    setTimeout(loadBardiDevices, 1500); // beri jeda sebentar biar status online/offline sempat update
+  }catch(e){ toast("Gagal: " + e.message, true); }
+}
+document.getElementById("bardiReloadBtn").addEventListener("click", loadBardiDevices);
+
+// ---------- AUTO-REFRESH berkala ----------
+// Supaya panel ikut ter-update otomatis kalau perangkat dinyala/dimatikan
+// dari LUAR panel ini (command Telegram /bardi_nyala /bardi_mati, atau
+// langsung dari app BARDI/Tuya), tanpa perlu klik "Muat ulang daftar"
+// manual. Dipoll tiap 20 detik -- interval AJAX biasa (BUKAN
+// location.reload()/refresh halaman penuh), dan updateBardiTable()
+// di atas cuma menulis ulang baris yang datanya benar2 berubah, jadi
+// halaman tidak "berkelip-kelip" walau update jalan terus di background.
+let bardiPollTimer = null;
+function startBardiAutoRefresh(){
+  if(bardiPollTimer) return;
+  bardiPollTimer = setInterval(()=>{
+    // skip kalau tab lagi tidak aktif dilihat -- hemat request & kuota API
+    if(document.visibilityState === "visible") loadBardiDevices();
+  }, 20000);
+}
+document.addEventListener("visibilitychange", ()=>{
+  // begitu tab dibuka/di-fokus lagi, langsung refresh sekali biar tidak
+  // nunggu sampai interval 20 detik berikutnya
+  if(document.visibilityState === "visible") loadBardiDevices();
+});
+startBardiAutoRefresh();
+
+
+/* ---------- Pemantauan Perangkat BARDI ---------- */
+function renderBardiMonitorDeviceChecks(){
+  const box = document.getElementById("bmDeviceChecks");
+  if(!box) return;
+  const selected = new Set((data.bardiMonitor && data.bardiMonitor.deviceIds) || []);
+  box.innerHTML = bardiDevicesCache.length
+    ? bardiDevicesCache.map(d=>`<label><input type="checkbox" value="${d.id}" ${selected.has(d.id)?"checked":""}> ${d.name}</label>`).join("")
+    : `<span class="empty">Muat daftar perangkat BARDI dulu (kartu di atas).</span>`;
+}
+// Pengaturan pemantauan dianggap "tersimpan" (layak dikunci) kalau label
+// atau perangkat yang dipilih sudah pernah diisi -- bukan cuma cek
+// `enabled`, supaya pengaturan yang sengaja dinonaktifkan sementara pun
+// tetap kelihatan sbg "tersimpan" (terkunci), bukan balik ke form kosong.
+function bmIsConfigured(){
+  const m = data.bardiMonitor || {};
+  return !!(m.label || (m.deviceIds && m.deviceIds.length));
+}
+function bmSetLocked(locked){
+  ["bmEnabled","bmLabel","bmTopic"].forEach(id=>{ document.getElementById(id).disabled = locked; });
+  document.querySelectorAll("#bmDeviceChecks input").forEach(el=>{ el.disabled = locked; });
+  document.getElementById("saveBmBtn").classList.toggle("hidden", locked);
+  document.getElementById("editBmBtn").classList.toggle("hidden", !locked);
+  document.getElementById("hapusBmBtn").classList.toggle("hidden", !locked);
+  document.getElementById("bmLockedNote").classList.toggle("hidden", !locked);
+}
+function renderBardiMonitor(){
+  populateTopicSelect();
+  data.bardiMonitor = data.bardiMonitor || { enabled:false, deviceIds:[], label:"", topicKey:null, alerted:false };
+  const m = data.bardiMonitor;
+  document.getElementById("bmEnabled").checked = !!m.enabled;
+  document.getElementById("bmLabel").value = m.label || "";
+  document.getElementById("bmTopic").value = m.topicKey || "";
+  renderBardiMonitorDeviceChecks();
+  bmSetLocked(bmIsConfigured());
+
+  const badge = document.getElementById("bmStatusBadge");
+  if(!m.enabled){
+    badge.textContent = "Nonaktif"; badge.className = "badge off";
+  } else if(m.alerted){
+    badge.textContent = "⚠️ Peringatan aktif"; badge.className = "badge off"; badge.style.color = "var(--ember)"; badge.style.background = "rgba(var(--ember-rgb),.15)";
+  } else {
+    badge.textContent = "Aktif — normal"; badge.className = "badge on"; badge.style.color = ""; badge.style.background = "";
+  }
+
+  const summary = document.getElementById("bmSummary");
+  const n = (m.deviceIds||[]).length;
+  summary.textContent = n
+    ? `${n} perangkat dipilih • peringatan terkirim kalau semua offline bersamaan, atau minimal 2 dari ${n} offline bersamaan`
+    : "Belum ada perangkat dipilih.";
+}
+document.getElementById("saveBmBtn").addEventListener("click", async ()=>{
+  const enabled = document.getElementById("bmEnabled").checked;
+  const label = document.getElementById("bmLabel").value.trim();
+  const deviceIds = Array.from(document.querySelectorAll("#bmDeviceChecks input:checked")).map(el=>el.value);
+  const topicKey = document.getElementById("bmTopic").value || null;
+  if(enabled){
+    if(!label){ toast("Isi label dulu.", true); return; }
+    if(deviceIds.length < 2){ toast("Pilih minimal 2 perangkat.", true); return; }
+  }
+  data.bardiMonitor = {
+    enabled, label, deviceIds, topicKey,
+    alerted: enabled ? (data.bardiMonitor.alerted || false) : false, // reset kalau dimatikan
+  };
+  if(await saveData()) renderBardiMonitor();
+});
+document.getElementById("editBmBtn").addEventListener("click", ()=> bmSetLocked(false));
+document.getElementById("hapusBmBtn").addEventListener("click", async ()=>{
+  if(!confirm("Hapus pengaturan pemantauan perangkat BARDI ini?")) return;
+  data.bardiMonitor = { enabled:false, deviceIds:[], label:"", topicKey:null, alerted:false };
+  if(await saveData()){ toast("Pengaturan pemantauan dihapus ✓"); renderBardiMonitor(); }
+});
+
+/* ---------- Maintenance & Lapor Kerusakan ---------- */
+function fmtTanggalIDPanel(iso){
+  // iso bisa "YYYY-MM-DD" ATAU ISO datetime penuh (createdAt) -- ambil 10
+  // karakter pertama biar konsisten.
+  const [y,m,d] = iso.slice(0,10).split("-").map(Number);
+  const bulan = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  return `${d} ${bulan[m-1]} ${y}`;
+}
+function addDaysToDateStrPanel(dateStr, days){
+  const [y,m,d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m-1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,"0")}-${String(dt.getUTCDate()).padStart(2,"0")}`;
+}
+function renderMaintenance(){
+  // ---- Laporan kerusakan ----
+  const laporList = data.maintenanceReports || [];
+  const laporOpen = laporList.filter(r=>r.status!=="selesai");
+  document.getElementById("laporStatusBadge").textContent = laporOpen.length ? laporOpen.length + " terbuka" : "Semua beres";
+  document.getElementById("laporStatusBadge").className = laporOpen.length ? "badge off" : "badge on";
+  const laporTbody = document.querySelector("#laporTable tbody");
+  const laporSorted = [...laporList].sort((a,b)=> (a.status==="selesai") - (b.status==="selesai") || b.createdAt.localeCompare(a.createdAt));
+  laporTbody.innerHTML = laporSorted.length ? "" : `<tr><td colspan="5" class="empty">Belum ada laporan kerusakan.</td></tr>`;
+  laporSorted.forEach(r=>{
+    const tr = document.createElement("tr");
+    const statusBadge = r.status==="selesai" ? `<span class="badge on">Selesai</span>` : `<span class="badge off">Terbuka</span>`;
+    tr.innerHTML = `
+      <td>${fmtTanggalIDPanel(r.createdAt)}</td>
+      <td>${r.reporterName}</td>
+      <td>${r.description}</td>
+      <td>${statusBadge}</td>
+      <td class="td-actions">
+        ${r.status!=="selesai" ? `<button class="btn small" data-lapor-selesai="${r.id}">Selesai</button>` : ""}
+        <button class="btn small danger" data-lapor-hapus="${r.id}">Hapus</button>
+      </td>`;
+    laporTbody.appendChild(tr);
+  });
+  laporTbody.querySelectorAll("[data-lapor-selesai]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      try{ await apiAction("/lapor-selesai", { id: Number(btn.dataset.laporSelesai) }); toast("Ditandai selesai ✓"); await loadData(); }
+      catch(e){ toast("Gagal: " + e.message, true); }
+    });
+  });
+  laporTbody.querySelectorAll("[data-lapor-hapus]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      if(!confirm("Hapus laporan ini?")) return;
+      try{ await apiAction("/lapor-hapus", { id: Number(btn.dataset.laporHapus) }); toast("Laporan dihapus ✓"); await loadData(); }
+      catch(e){ toast("Gagal: " + e.message, true); }
+    });
+  });
+
+  // ---- Jadwal perawatan berkala ----
+  document.getElementById("maintenanceTopicSelect").value = data.maintenanceTopicKey || "";
+  const rawatList = data.maintenanceSchedules || [];
+  const today = getTodayKey();
+  const rawatJatuhTempo = rawatList.filter(s => !s.lastDoneDate || today >= addDaysToDateStrPanel(s.lastDoneDate, s.intervalDays));
+  document.getElementById("rawatStatusBadge").textContent = rawatJatuhTempo.length ? rawatJatuhTempo.length + " jatuh tempo" : "Semua terjadwal";
+  document.getElementById("rawatStatusBadge").className = rawatJatuhTempo.length ? "badge off" : "badge on";
+  const rawatTbody = document.querySelector("#rawatTable tbody");
+  rawatTbody.innerHTML = rawatList.length ? "" : `<tr><td colspan="5" class="empty">Belum ada jadwal perawatan berkala.</td></tr>`;
+  rawatList.forEach(s=>{
+    const tr = document.createElement("tr");
+    const terakhir = s.lastDoneDate ? fmtTanggalIDPanel(s.lastDoneDate) : "Belum pernah";
+    const nextDate = s.lastDoneDate ? addDaysToDateStrPanel(s.lastDoneDate, s.intervalDays) : today;
+    const jatuhTempo = !s.lastDoneDate || today >= nextDate;
+    const jatuhTempoLabel = jatuhTempo ? `<span class="badge off">Jatuh tempo</span>` : fmtTanggalIDPanel(nextDate);
+    tr.innerHTML = `
+      <td>${s.title}</td>
+      <td>tiap ${s.intervalDays} hari</td>
+      <td>${terakhir}</td>
+      <td>${jatuhTempoLabel}</td>
+      <td class="td-actions">
+        <button class="btn small" data-rawat-selesai="${s.id}">Tandai selesai</button>
+        <button class="btn small danger" data-rawat-hapus="${s.id}">Hapus</button>
+      </td>`;
+    rawatTbody.appendChild(tr);
+  });
+  rawatTbody.querySelectorAll("[data-rawat-selesai]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      try{ await apiAction("/rawat-selesai", { id: Number(btn.dataset.rawatSelesai) }); toast("Ditandai selesai hari ini ✓"); await loadData(); }
+      catch(e){ toast("Gagal: " + e.message, true); }
+    });
+  });
+  rawatTbody.querySelectorAll("[data-rawat-hapus]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      if(!confirm("Hapus jadwal perawatan ini?")) return;
+      try{ await apiAction("/rawat-hapus", { id: Number(btn.dataset.rawatHapus) }); toast("Jadwal dihapus ✓"); await loadData(); }
+      catch(e){ toast("Gagal: " + e.message, true); }
+    });
+  });
+}
+document.getElementById("addLaporBtn").addEventListener("click", async ()=>{
+  const description = document.getElementById("newLaporDesc").value.trim();
+  const reporterName = document.getElementById("newLaporNama").value.trim();
+  if(!description){ toast("Isi deskripsi kerusakan dulu.", true); return; }
+  try{
+    await apiAction("/lapor-tambah", { description, reporterName });
+    toast("Laporan tercatat ✓ (diteruskan ke topik grup)");
+    document.getElementById("newLaporDesc").value = "";
+    document.getElementById("newLaporNama").value = "";
+    await loadData();
+  }catch(e){ toast("Gagal simpan: " + e.message, true); }
+});
+document.getElementById("saveMaintenanceTopicBtn").addEventListener("click", async ()=>{
+  data.maintenanceTopicKey = document.getElementById("maintenanceTopicSelect").value || null;
+  if(await saveData()) toast("Topik default tersimpan ✓");
+});
+document.getElementById("addRawatBtn").addEventListener("click", async ()=>{
+  const title = document.getElementById("newRawatTitle").value.trim();
+  const intervalDays = parseInt(document.getElementById("newRawatInterval").value, 10);
+  if(!title || !intervalDays || intervalDays <= 0){ toast("Isi judul & interval hari (angka positif) dulu.", true); return; }
+  try{
+    await apiAction("/rawat-tambah", { title, intervalDays, topicKey: data.maintenanceTopicKey || null });
+    toast("Jadwal perawatan ditambahkan ✓");
+    document.getElementById("newRawatTitle").value = "";
+    document.getElementById("newRawatInterval").value = "";
+    await loadData();
   }catch(e){ toast("Gagal simpan: " + e.message, true); }
 });
 
@@ -1452,17 +2374,26 @@ async function boot(){
   document.getElementById("app").classList.remove("hidden");
   document.getElementById("settingsWorkerUrl").value = WORKER_URL;
   document.getElementById("settingsTokenStatus").value = "Tersambung (token tersimpan di browser ini)";
-  const savedPage = localStorage.getItem("admkom_page");
-  if(savedPage) showPage(savedPage);
+  const savedPage = localStorage.getItem("admkom_page") || "overview";
+  // replaceState (BUKAN showPage biasa yg pushState) -- ini entri AWAL
+  // riwayat navigasi, jadi tombol back PERTAMA KALI dari halaman pembuka
+  // tetap keluar aplikasi spt wajarnya, bukan "nyangkut" ke riwayat kosong.
+  history.replaceState({page: savedPage}, "", "");
+  showPage(savedPage, false); // false: riwayat awal sudah diatur manual barusan, jangan didorong dobel
   await loadData();
   loadAiQuota();
   loadCalendarEvents();
+  loadDevices();
+  loadGoogleHomeStatus();
+  loadBardiDevices();
+  loadStatusSistem();
   setInterval(async ()=>{
     try{ const res = await api("GET"); data = res.data; sha = res.sha; renderRekap(); renderOverview(); setConn("ok"); }
     catch(e){ /* diam, jangan ganggu kalau kebetulan gagal sesaat */ }
   }, 60000);
   setInterval(loadAiQuota, 300000);
   setInterval(loadCalendarEvents, 300000);
+  setInterval(loadStatusSistem, 120000);
 }
 async function loadAiQuota(){
   const chipEl = document.getElementById("aiQuotaChipVal");
@@ -1501,6 +2432,83 @@ async function loadAiQuota(){
     if(detailEl){ detailEl.className = "empty"; detailEl.textContent = "Gagal memuat: " + e.message; }
   }
 }
+/* Sama dgn /status_sistem di Telegram -- tapi via endpoint panel (tidak
+   perlu jadi Super Admin di Telegram, akses panel = APP_TOKEN sudah
+   setara admin penuh). */
+async function loadStatusSistem(){
+  const badge = document.getElementById("statusSistemBadge");
+  const box = document.getElementById("statusSistemBox");
+  box.className = "empty"; box.textContent = "Memuat…";
+  try{
+    const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/status-sistem", { headers:{ "Authorization":"Bearer " + APP_TOKEN }, cache:"no-store" });
+    const st = await res.json();
+    renderFeatureStatusRow(st); // isi item DINAMIS di kartu "Status Fitur" (Overview) -- lihat FEATURE_STATUS_DEFS_DINAMIS
+    const masalah = [];
+    if(!st.githubOk) masalah.push("GitHub");
+    if(!st.googleCalendarOk) masalah.push("Google Calendar");
+    if(st.tuyaError || st.tuyaStatusError) masalah.push("Tuya/BARDI");
+    if(st.cronHealthy === false) masalah.push("Cron tick");
+    badge.textContent = masalah.length ? masalah.length + " butuh perhatian" : "Semua sehat";
+    badge.className = masalah.length ? "badge off" : "badge on";
+    const baris = [];
+    const row = (label, ok, extra) => `<div style="margin-bottom:6px;"><b>${label}:</b> ${ok ? "✅" : "❌"} ${extra||""}</div>`;
+    baris.push(row("Worker", true, "v"+st.workerVersion));
+    baris.push(row("GitHub (database)", st.githubOk, st.githubOk ? "dikonfigurasi" : "ENV belum lengkap"));
+    if(st.githubRateLimitRemaining != null) baris.push(`<div class="hint" style="margin:-2px 0 6px;">Rate limit GitHub: ${st.githubRateLimitRemaining} / ${st.githubRateLimitLimit} tersisa jam ini${st.dataSizeBytes!=null ? " · ukuran data.json: " + (st.dataSizeBytes/1024).toFixed(1) + " KB" : ""}</div>`);
+    baris.push(row("AI (Groq/Workers AI)", st.aiConfigured, st.aiConfigured ? (st.groqCooldown ? "⚠️ Groq cooldown, pakai Workers AI" : "dikonfigurasi") : "belum dikonfigurasi"));
+    baris.push(row("Google Calendar", st.googleCalendarOk, st.googleCalendarOk ? (st.googleCalendarIds||[]).length + " kalender dipantau: " + (st.googleCalendarIds||[]).map(id=>`<code>${id}</code>`).join(", ") : "ENV belum lengkap"));
+    baris.push(row("Tuya/BARDI", st.tuyaOk && !st.tuyaError, st.tuyaError ? "⚠️ " + st.tuyaError : (st.tuyaOk ? st.tuyaDeviceCount + " perangkat" + (st.tuyaStatusError ? " (⚠️ status gagal: " + st.tuyaStatusError + ")" : "") : "ENV belum lengkap")));
+    if(st.tuyaOfflineDevices && st.tuyaOfflineDevices.length) baris.push(`<div class="hint" style="margin:-2px 0 6px; color:var(--ember);">⚠️ Offline: ${st.tuyaOfflineDevices.join(", ")}</div>`);
+    baris.push(row("Cron tick terjadwal", st.cronHealthy !== false, st.lastCronTickSuccess ? "terakhir sukses " + new Date(st.lastCronTickSuccess).toLocaleString("id-ID") : "belum pernah tercatat (KV DEVICES_KV belum diisi?)"));
+    if(st.usage && st.usage.tracked) baris.push(`<div style="margin-top:4px; font-size:13px;">📨 Pesan diproses hari ini: <b>${st.usage.messagesProcessed}</b> · Command dijalankan: <b>${st.usage.commandsExecuted}</b></div>`);
+    baris.push(`<div style="margin-top:10px; display:flex; gap:18px; flex-wrap:wrap; font-size:13px;">
+      <div>🛠️ Laporan terbuka: <b>${st.laporOpen}</b></div>
+      <div>🔧 Perawatan jatuh tempo: <b>${st.rawatJatuhTempo}</b></div>
+      <div>👮 Admin grup: <b>${st.adminCount}</b></div>
+      <div>👑 Super Admin: <b>${st.superAdminCount}</b></div>
+      <div>🗂️ Topik: <b>${st.topicCount}</b></div>
+    </div>`);
+    if(st.errorLog && st.errorLog.length){
+      baris.push(`<div style="margin-top:14px; font-weight:700;">📋 Riwayat error terakhir</div>`);
+      baris.push('<div class="table-wrap"><table><thead><tr><th>Waktu</th><th>Konteks</th><th>Pesan</th></tr></thead><tbody>' +
+        st.errorLog.map(e=>`<tr><td>${new Date(e.timestamp).toLocaleString("id-ID")}</td><td><code>${e.context}</code></td><td>${e.message}</td></tr>`).join("") +
+        '</tbody></table></div>');
+    }
+    box.className = "";
+    box.innerHTML = baris.join("");
+  }catch(e){
+    badge.textContent = "Gagal"; badge.className = "badge off";
+    box.className = "empty"; box.textContent = "Gagal memuat: " + e.message;
+  }
+}
+document.getElementById("reloadStatusSistemBtn").addEventListener("click", loadStatusSistem);
+/* ---------- Super Admin ---------- */
+function renderSuperAdmin(){
+  data.superAdminIds = data.superAdminIds || [];
+  const tbody = document.querySelector("#superAdminTable tbody");
+  tbody.innerHTML = data.superAdminIds.length ? "" : `<tr><td colspan="2" class="empty">Belum ada Super Admin -- notifikasi kejanggalan sistem belum ada penerimanya.</td></tr>`;
+  data.superAdminIds.forEach(id=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td><code>${id}</code></td><td><button class="btn small danger" data-del-superadmin="${id}">Hapus</button></td>`;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll("[data-del-superadmin]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      try{ await apiAction("/superadmin-hapus", { id: Number(btn.dataset.delSuperadmin) }); toast("Super Admin dihapus ✓"); await loadData(); }
+      catch(e){ toast("Gagal: " + e.message, true); }
+    });
+  });
+}
+document.getElementById("addSuperAdminBtn").addEventListener("click", async ()=>{
+  const id = parseInt(document.getElementById("newSuperAdminId").value, 10);
+  if(!id){ toast("Isi User ID yang valid dulu (angka dari command /id di Telegram).", true); return; }
+  try{
+    await apiAction("/superadmin-tambah", { id });
+    toast("Super Admin ditambahkan ✓");
+    document.getElementById("newSuperAdminId").value = "";
+    await loadData();
+  }catch(e){ toast("Gagal: " + e.message, true); }
+});
 /* Ambil agenda Google Calendar mendatang dari Worker (endpoint
    /kalender-mendatang) -- panel tidak punya kredensial Google sendiri,
    jadi WAJIB lewat Worker. Hasilnya dipakai kartu "Pengingat Mendatang"
@@ -1520,6 +2528,12 @@ async function loadCalendarEvents(){
 
 if(APP_TOKEN){
   boot();
+}
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
 }
 </script>
 </body>
