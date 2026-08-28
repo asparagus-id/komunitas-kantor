@@ -822,7 +822,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.17.1"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
+const APP_VERSION = "1.17.3"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -898,11 +898,31 @@ let scheduleDateStr = null; // "YYYY-MM-DD" yang lagi dipakai
 let triggeredLog = loadTriggerLog(); // {"2026-08-23:Fajr:reminder": true, ...}
 let wakeLock = null;
 
+/* PENTING: pakai DEEP merge utk field bersarang (prayerSettings,
+   correctionMinutes), BUKAN Object.assign dangkal di top-level saja.
+   Kalau cuma dangkal: begitu ada field BARU ditambahkan ke DEFAULTS di
+   dalam prayerSettings.* (mis. "fridayMinutes" utk fitur Jumatan ini),
+   pengguna LAMA yang sudah pernah menyimpan settings SEBELUM field itu
+   ada akan kehilangan field tsb selamanya -- karena Object.assign di
+   top-level mengganti SELURUH object "prayerSettings" dari data lama
+   apa adanya, bukan menggabung per-field. Akibatnya ps.fridayMinutes
+   jadi undefined terus & reminder Jumat diam-diam balik ke menit biasa
+   (10 menit), padahal sudah pernah diisi 30 menit di Pengaturan. */
 function loadSettings(){
   try{
     const raw = localStorage.getItem("adzan_settings");
     if(!raw) return structuredClone(DEFAULTS);
-    return Object.assign(structuredClone(DEFAULTS), JSON.parse(raw));
+    const saved = JSON.parse(raw);
+    const merged = structuredClone(DEFAULTS);
+    Object.assign(merged, saved); // field top-level yang sederhana (city, lat, volume, dst.)
+    merged.prayerSettings = structuredClone(DEFAULTS.prayerSettings);
+    if(saved.prayerSettings){
+      for(const key of Object.keys(merged.prayerSettings)){
+        if(saved.prayerSettings[key]) Object.assign(merged.prayerSettings[key], saved.prayerSettings[key]);
+      }
+    }
+    merged.correctionMinutes = Object.assign(structuredClone(DEFAULTS.correctionMinutes), saved.correctionMinutes || {});
+    return merged;
   }catch(e){ return structuredClone(DEFAULTS); }
 }
 function saveSettings(){
@@ -2212,8 +2232,8 @@ function renderPrayerRows(){
       ${[1,2,3].map(n=>`
       <div class="pa-row">
         <span class="pa-icon">🕌</span>
-        <span class="pa-status" id="paStat_reminder_DhuhrJumat${n}">…</span>
-        <label class="pa-upload-btn" for="paFile_reminder_DhuhrJumat${n}" title="Unggah MP3 Jumat bagian ${n}">⬆ Bagian ${n}</label>
+        <span class="pa-status">Bagian ${n}: <span id="paStat_reminder_DhuhrJumat${n}">…</span></span>
+        <label class="pa-upload-btn" for="paFile_reminder_DhuhrJumat${n}" title="Unggah MP3 Jumat bagian ${n}">⬆</label>
         <input type="file" id="paFile_reminder_DhuhrJumat${n}" class="pa-file-input" accept="audio/*" data-pa-kind="reminder" data-pa-key="DhuhrJumat${n}">
         <button class="pa-mini-btn" data-test-audio="reminder_DhuhrJumat${n}" data-pa-test-kind="reminder" data-pa-test-key="DhuhrJumat${n}" title="Uji coba bagian ${n}">▶</button>
         <button class="pa-mini-btn" data-pa-reset-kind="reminder" data-pa-reset-key="DhuhrJumat${n}" title="Kembali ke default">↺</button>
@@ -2221,7 +2241,7 @@ function renderPrayerRows(){
       <div class="pa-row">
         <span class="pa-icon">⛓️</span>
         <span class="pa-status">Bagian 1 → 2 → 3 berurutan</span>
-        <button class="pa-mini-btn" id="testJumatChainBtn" data-test-audio="reminder_JumatChain" title="Uji coba ketiga bagian berurutan, dari awal">▶ Uji rantai penuh</button>
+        <button class="pa-mini-btn" id="testJumatChainBtn" data-test-audio="reminder_JumatChain" title="Uji coba ketiga bagian berurutan, dari awal" style="width:auto; padding:0 10px; white-space:nowrap; gap:4px;">▶ Uji rantai penuh</button>
       </div>
       <div class="hint" style="margin:0 0 8px;">Ketiga MP3 di atas diputar BERURUTAN: begitu bagian 1 selesai, otomatis lanjut bagian 2, lalu bagian 3 (bagian yang belum diisi dilewati). Waktu Dzuhur sendiri TIDAK berubah -- yang otomatis menyesuaikan cuma seberapa cepat pengingat mulai dibunyikan sebelum Dzuhur, supaya rantainya pas selesai di waktu Dzuhur. Kalau ketiganya masih kosong, dipakai menit manual (fallback) ini:
         <input type="number" class="fridayInput" min="0" max="120" value="${ps.fridayMinutes!=null?ps.fridayMinutes:20}" style="width:56px;"> menit
