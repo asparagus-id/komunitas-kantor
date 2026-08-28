@@ -468,7 +468,7 @@
       "preReminder": {
         "date": "2026-08-28",
         "time": "09:00",
-        "sent": false
+        "sent": true
       },
       "googleEventId": "ea0ek9gam6ql36kni0r1svh8l0"
     }
@@ -477,7 +477,7 @@
     "enabled": true,
     "time": "09:00",
     "topicKey": "pengumuman",
-    "lastSentDate": "2026-08-27"
+    "lastSentDate": "2026-08-28"
   },
   "bardiMonitor": {
     "enabled": true,
