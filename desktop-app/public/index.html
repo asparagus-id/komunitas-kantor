@@ -503,10 +503,10 @@
     <!-- Bar pengingat (mode popup) -- hidden default, cuma tampil kalau
          html punya class "is-popup" (lihat CSS & deteksi di atas). -->
     <div id="reminderBar">
-      <i class="rb-icon">🕌</i>
+      <i class="rb-icon" id="popupIcon">🕌</i>
       <div class="rb-name" id="popupPrayerName">—</div>
       <div class="rb-countdown" id="popupCountdown">--:--:--</div>
-      <div class="rb-sub">menuju adzan</div>
+      <div class="rb-sub" id="popupSub">menuju adzan</div>
       <button class="rb-close" id="popupCloseBtn" title="Tutup">&times;</button>
     </div>
     <div class="main-col">
@@ -554,6 +554,10 @@
           <div class="iicn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg></div>
           <div><div class="ititle">Status</div><div class="ival" id="cardStatusVal">—</div><div class="isub" id="footnote">Memuat jadwal…</div></div>
         </div>
+        <div class="info-card">
+          <div class="iicn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
+          <div><div class="ititle">Jam Kerja Berikutnya</div><div class="ival" id="cardWorkVal">—</div><div class="isub" id="cardWorkSub">Belum diatur</div></div>
+        </div>
       </div>
 
       <div class="quote-box ramadan-banner" id="ramadanBanner" style="display:none;">
@@ -581,6 +585,7 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="lokasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Lokasi</button>
       <button class="tab-btn" data-tab="jadwal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Jadwal</button>
+      <button class="tab-btn" data-tab="kerja"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>Jam Kerja</button>
       <button class="tab-btn" data-tab="audio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>Audio</button>
       <button class="tab-btn" data-tab="lainnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>Lainnya</button>
     </div>
@@ -652,6 +657,25 @@
         <div class="day-grid" id="correctionRows"></div>
       </div>
 
+      <!-- ---- TAB: JAM KERJA ---- -->
+      <div class="tab-pane" data-pane="kerja">
+        <div class="sub">Pengingat jam masuk &amp; jam pulang kerja, memakai sistem yang sama dengan pengingat sholat (bar popup &amp; suara) tapi menunya terpisah. Diatur sendiri-sendiri untuk tiap hari Senin-Sabtu (Minggu dianggap libur, tidak ada pengingat).</div>
+
+        <div class="audio-block" style="margin-bottom:14px;">
+          <div class="atitle">Salin cepat</div>
+          <div class="astat">Atur jam &amp; menit pengingat hari <b>Senin</b> di bawah dulu, lalu klik tombol ini untuk menyalinnya ke Selasa-Sabtu -- sesudahnya tetap bisa diubah manual per hari kalau ada yang beda (mis. Sabtu pulang lebih awal).</div>
+          <button class="btn" id="applyWorkToAllDaysBtn" style="width:100%; margin-top:10px;">Salin Senin ke Selasa - Sabtu</button>
+        </div>
+
+        <div id="workRows"></div>
+
+        <div class="section-title">Suara khusus Jam Masuk &amp; Jam Pulang</div>
+        <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
+          Opsional. Kalau dikosongkan, jam masuk/pulang tetap memakai suara pengingat/notifikasi <b>default</b> di tab Audio (termasuk kalau default itu hasil suara AI ElevenLabs). Isi di sini kalau mau suara yang BEDA khusus utk jam masuk/pulang -- mis. bikin di tab "Suara AI" teks "Selamat pagi, saatnya presensi masuk" lalu simpan sebagai "Jam Masuk Kerja -- Pengingat".
+        </div>
+        <div id="workAudioRows"></div>
+      </div>
+
       <!-- ---- TAB: AUDIO ---- -->
       <div class="tab-pane" data-pane="audio">
         <div class="sub">Unggah file MP3 sendiri, atau ambil dari link. Kosongkan untuk pakai nada default.</div>
@@ -694,6 +718,34 @@
             <span id="volumeVal" style="font-size:12.5px;color:var(--muted);width:36px;">80%</span>
           </div>
         </div>
+
+        <div class="section-title">Buat Suara AI (ElevenLabs)</div>
+        <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
+          Ketik teks apa saja, pilih suara, lalu klik "Buat &amp; Simpan" -- hasilnya otomatis tersimpan sebagai MP3 pengingat/notifikasi yang Anda pilih di bawah (dinamis, tanpa perlu unggah manual). Pakai <b>tier gratis ElevenLabs</b>: 10.000 karakter/bulan, direset tiap tanggal daftar, TANPA kartu kredit &amp; TANPA tagihan mendadak (generate cuma berhenti kalau kuota habis, selama fitur "usage-based billing" di akun ElevenLabs tidak Anda aktifkan sendiri). Daftar gratis di <b>elevenlabs.io</b> utk dapat API key.
+        </div>
+        <div class="hint" style="margin-top:-6px; margin-bottom:12px; color:var(--warning);">
+          ⚠️ API key tersimpan HANYA di komputer ini (localStorage), TIDAK ikut ter-bundle ke installer. Kalau app ini dipakai bersama di beberapa komputer kantor, tiap komputer perlu API key gratis miliknya sendiri.
+        </div>
+        <div class="field-row">
+          <div class="field"><label>API Key ElevenLabs</label><input type="password" id="elevenApiKey" placeholder="sk_..."></div>
+          <div class="field" style="max-width:130px; justify-content:flex-end;"><label>&nbsp;</label><button class="btn" id="elevenCheckQuotaBtn" style="width:100%;">Cek kuota</button></div>
+        </div>
+        <div class="hint" id="elevenQuotaStatus" style="margin-top:-8px; margin-bottom:12px;"></div>
+        <div class="field-row">
+          <div class="field"><label>Suara</label><select id="elevenVoiceSelect"><option value="">Klik "Cek kuota" dulu utk memuat daftar suara…</option></select></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Simpan sebagai</label><select id="elevenTargetSelect"></select></div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Teks</label>
+            <textarea id="elevenText" rows="3" placeholder="Contoh: Sepuluh menit lagi memasuki waktu Dzuhur, mohon bersiap." style="resize:vertical; padding:10px 12px; border-radius:10px; border:1.5px solid var(--muted-dim); background:var(--surface); color:var(--text); font-family:inherit; font-size:13px;"></textarea>
+          </div>
+        </div>
+        <div class="hint" id="elevenCharCount" style="margin-top:-8px; margin-bottom:10px;">0 karakter</div>
+        <button class="btn primary" id="elevenGenerateBtn" style="width:100%; margin-bottom:6px;">🎙️ Buat &amp; Simpan Suara</button>
+        <div class="hint" id="elevenGenStatus"></div>
       </div>
 
       <!-- ---- TAB: LAINNYA ---- -->
@@ -822,7 +874,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.17.3"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
+const APP_VERSION = "1.20.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -860,7 +912,22 @@ const DEFAULTS = {
   // masih kurang 0-1 menit dari jadwal rujukan Anda. Field ini TETAP bisa
   // diubah manual lewat Pengaturan > Jadwal kalau perlu pas-kan lebih presisi.
   correctionMinutes: { Fajr:2, Sunrise:0, Dhuhr:2, Asr:2, Maghrib:2, Isha:2 },
-  volume: 0.8
+  volume: 0.8,
+  // Pengingat Jam Kerja (masuk & pulang) -- sistem terpisah dari sholat,
+  // tapi pakai mesin yang sama (checkTriggers, bar popup, suara reminder/
+  // azan). Diatur PER HARI (Senin=1 .. Sabtu=6, key = Date.getDay()),
+  // supaya tiap hari boleh beda jam (mis. Jumat/Sabtu pulang lebih awal).
+  // Minggu (0) sengaja tidak ada -- dianggap libur, tidak pernah diingatkan.
+  workHours: {
+    perDay: {
+      1: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} },
+      2: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} },
+      3: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} },
+      4: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} },
+      5: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} },
+      6: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} }
+    }
+  }
 };
 
 /* Ubah angka Latin (0-9) jadi angka Arab (٠-٩) -- dipakai buat tampilan
@@ -890,6 +957,30 @@ function displayLabel(key, date){
 const REMINDABLE = ["Fajr","Dhuhr","Asr","Maghrib","Isha"];
 const DISPLAY_ORDER = ["Fajr","Sunrise","Dhuhr","Asr","Maghrib","Isha"];
 const DAY_NAMES = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
+
+/* ---------------- Jam Kerja (masuk/pulang) -- konstanta & helper ----------------
+   WORK_DAYS pakai konvensi Date.getDay() (1=Senin .. 6=Sabtu), SAMA dgn
+   key di settings.workHours.perDay, supaya tidak perlu konversi bolak-balik. */
+const WORK_DAYS = [1,2,3,4,5,6];
+const WORK_DAY_LABEL = {1:"Senin", 2:"Selasa", 3:"Rabu", 4:"Kamis", 5:"Jumat", 6:"Sabtu"};
+const WORK_ITEMS = ["masuk","pulang"];
+const WORK_ITEM_LABEL = {masuk:"Jam Masuk Kerja", pulang:"Jam Pulang Kerja"};
+const WORK_ITEM_EMOJI = {masuk:"💼", pulang:"🏃"};
+function parseHHMM(str){
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(str||"").trim());
+  if(!m) return null;
+  const h = parseInt(m[1],10), mi = parseInt(m[2],10);
+  if(h>23 || mi>59) return null;
+  return { h, m: mi };
+}
+/* Bikin objek Date utk jam kerja HARI INI (tanggal diambil dari `now`,
+   jam:menit dari string "HH:MM" tersimpan) -- sama pola dgn todaySchedule
+   utk sholat, cuma dihitung manual (bukan dari API AlAdhan). */
+function workTimeToday(now, hhmm){
+  const t = parseHHMM(hhmm);
+  if(!t) return null;
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), t.h, t.m, 0, 0);
+}
 
 let settings = loadSettings();
 let todaySchedule = null;   // {Fajr:Date, ...}
@@ -922,6 +1013,16 @@ function loadSettings(){
       }
     }
     merged.correctionMinutes = Object.assign(structuredClone(DEFAULTS.correctionMinutes), saved.correctionMinutes || {});
+    merged.workHours = structuredClone(DEFAULTS.workHours);
+    if(saved.workHours && saved.workHours.perDay){
+      for(const day of WORK_DAYS){
+        const savedDay = saved.workHours.perDay[day];
+        if(!savedDay) continue;
+        for(const item of WORK_ITEMS){
+          if(savedDay[item]) Object.assign(merged.workHours.perDay[day][item], savedDay[item]);
+        }
+      }
+    }
     return merged;
   }catch(e){ return structuredClone(DEFAULTS); }
 }
@@ -1698,6 +1799,39 @@ function nextPrayerInfo(now){
   return null;
 }
 
+/* Cari item Jam Kerja (masuk/pulang) BERIKUTNYA yang masih aktif
+   (azanEnabled) mulai dari HARI INI, menoleh ke depan sampai 7 hari
+   (jaga-jaga kalau mis. hari ini & besok semua nonaktif) -- dipakai
+   murni utk kartu info di dashboard, TIDAK dipakai oleh checkTriggers(). */
+function nextWorkInfo(now){
+  for(let offset=0; offset<7; offset++){
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate()+offset);
+    const cfg = settings.workHours && settings.workHours.perDay && settings.workHours.perDay[d.getDay()];
+    if(!cfg) continue;
+    for(const item of WORK_ITEMS){
+      const wc = cfg[item];
+      if(!wc || !wc.azanEnabled) continue;
+      const target = workTimeToday(d, wc.time);
+      if(!target) continue;
+      if(target.getTime() > now.getTime()) return { item, date: target, isToday: offset===0 };
+    }
+  }
+  return null;
+}
+function updateWorkInfoCard(now){
+  const valEl = document.getElementById("cardWorkVal");
+  const subEl = document.getElementById("cardWorkSub");
+  if(!valEl || !subEl) return;
+  const info = nextWorkInfo(now);
+  if(!info){
+    valEl.textContent = "—";
+    subEl.textContent = "Belum diatur";
+    return;
+  }
+  valEl.textContent = WORK_ITEM_LABEL[info.item] + " " + info.date.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});
+  subEl.textContent = info.isToday ? "Hari ini" : info.date.toLocaleDateString("id-ID",{weekday:"long"});
+}
+
 function fmtCountdown(ms){
   if(ms<0) ms=0;
   const s = Math.floor(ms/1000);
@@ -1746,6 +1880,7 @@ function tick(){
   }
 
   renderSchedule(now);
+  updateWorkInfoCard(now);
   checkTriggers(now);
 }
 
@@ -1798,6 +1933,44 @@ function checkTriggers(now){
       }
     }
   }
+
+  // ---- Pengingat JAM KERJA (masuk/pulang) -- sistem TERPISAH dari sholat
+  // (menu pengaturan sendiri, toggle sendiri per hari), tapi pakai mesin
+  // trigger & bar popup yang SAMA (showActivePopup / playSound). Diatur
+  // per hari Senin-Sabtu; Minggu (getDay()===0) otomatis tidak ada
+  // konfigurasinya jadi dilewati begitu saja. ----
+  const hariIni = now.getDay();
+  const cfgHariIni = settings.workHours && settings.workHours.perDay && settings.workHours.perDay[hariIni];
+  if(cfgHariIni){
+    for(const item of WORK_ITEMS){
+      const wc = cfgHariIni[item];
+      if(!wc) continue;
+      const target = workTimeToday(now, wc.time);
+      if(!target) continue;
+      const targetMs = target.getTime();
+
+      // ---- Pengingat SEBELUM jam masuk/pulang -- toggle sendiri (wc.enabled) ----
+      if(wc.enabled){
+        const remMin = Math.max(0, wc.minutes || 0);
+        const remindAt = targetMs - remMin*60000;
+        const remLogKey = `${key}:work:${item}:reminder`;
+        if(!triggeredLog[remLogKey] && now.getTime() >= remindAt && now.getTime() < targetMs){
+          triggeredLog[remLogKey] = true; saveTriggerLog();
+          playSound("reminder", item); // pakai suara KHUSUS jam masuk/pulang kalau ada, kalau tidak jatuh ke default global (sama spt sholat)
+          showWorkPopup(item, targetMs);
+        }
+      }
+      // ---- Notifikasi saat jam masuk/pulang TIBA -- toggle sendiri (wc.azanEnabled) ----
+      if(wc.azanEnabled){
+        const arrLogKey = `${key}:work:${item}:arrival`;
+        if(!triggeredLog[arrLogKey] && now.getTime() >= targetMs && now.getTime() < targetMs + 60000){
+          triggeredLog[arrLogKey] = true; saveTriggerLog();
+          playSound("azan", item); // pakai suara KHUSUS jam masuk/pulang kalau ada, kalau tidak jatuh ke default global (sama spt sholat)
+          document.getElementById("nextLabel").innerHTML = `WAKTU ${WORK_ITEM_LABEL[item].toUpperCase()} TELAH TIBA`;
+        }
+      }
+    }
+  }
 }
 function flashNowBadge(key, prayerTimeMs){
   const label = displayLabel(key, prayerTimeMs != null ? new Date(prayerTimeMs) : null);
@@ -1820,10 +1993,17 @@ function flashNowBadge(key, prayerTimeMs){
    Tauri cuma hide(), bukan destroy() -- jadi dia dengarkan event
    "storage" utk langsung update begitu ada trigger BARU sementara dia
    masih idle di background dari trigger sebelumnya. */
-async function showReminderPopup(prayerKey, prayerTimeMs){
+/* showActivePopup() digeneralisasi supaya bar popup yang SAMA (jendela
+   "reminder" di Tauri) bisa dipakai baik utk pengingat SHOLAT maupun
+   pengingat JAM KERJA -- cuma beda "type" & "key" yang disimpan, lalu
+   dibaca lagi oleh updatePopupCountdown() di dalam jendela popup itu
+   sendiri utk menentukan judul/ikon yang benar. */
+async function showActivePopup(type, itemKey, targetTimeMs){
   try{
     localStorage.setItem("adzan_active_popup", JSON.stringify({
-      prayerKey, targetTime: new Date(prayerTimeMs).toISOString()
+      type: type || "prayer",
+      prayerKey: itemKey, // nama field dipertahankan (kompatibel lama) -- dipakai jg utk key jam kerja ("masuk"/"pulang")
+      targetTime: new Date(targetTimeMs).toISOString()
     }));
   }catch(e){ /* localStorage penuh/diblokir -- popup tetap dicoba tampil, cuma tanpa data tersimpan */ }
   try{
@@ -1833,6 +2013,12 @@ async function showReminderPopup(prayerKey, prayerTimeMs){
       if (w){ await w.show(); await w.setFocus(); }
     }
   }catch(e){ console.log("Gagal tampilkan popup pengingat:", e); }
+}
+async function showReminderPopup(prayerKey, prayerTimeMs){
+  return showActivePopup("prayer", prayerKey, prayerTimeMs);
+}
+async function showWorkPopup(workKey, targetTimeMs){
+  return showActivePopup("work", workKey, targetTimeMs);
 }
 /* Logika di DALAM jendela popup itu sendiri -- cuma jalan kalau memang
    lagi di mode popup (class "is-popup" di <html>). */
@@ -1855,11 +2041,16 @@ async function showReminderPopup(prayerKey, prayerTimeMs){
     }catch(e){ return; }
     const target = new Date(info.targetTime).getTime();
     const diff = target - Date.now();
-    if (diff <= 0){ tutupPopup(); return; } // waktu adzan sudah tiba -- selesai tugas popup ini
+    if (diff <= 0){ tutupPopup(); return; } // waktu (adzan/jam kerja) sudah tiba -- selesai tugas popup ini
+    const isWork = info.type === "work";
     const nameEl = document.getElementById("popupPrayerName");
     const cdEl = document.getElementById("popupCountdown");
-    if(nameEl) nameEl.textContent = displayLabel(info.prayerKey, new Date(info.targetTime)) || "-";
+    const subEl = document.getElementById("popupSub");
+    const iconEl = document.getElementById("popupIcon");
+    if(nameEl) nameEl.textContent = isWork ? (WORK_ITEM_LABEL[info.prayerKey] || "-") : (displayLabel(info.prayerKey, new Date(info.targetTime)) || "-");
     if(cdEl) cdEl.textContent = fmtCountdown(diff);
+    if(subEl) subEl.textContent = isWork ? "menuju " + (WORK_ITEM_LABEL[info.prayerKey] || "jam kerja").toLowerCase() : "menuju adzan";
+    if(iconEl) iconEl.textContent = isWork ? (WORK_ITEM_EMOJI[info.prayerKey] || "💼") : "🕌";
   }
   document.getElementById("popupCloseBtn").addEventListener("click", tutupPopup);
   // begitu jendela ini DITAMPILKAN LAGI dari trigger baru (sementara JS-nya
@@ -1921,12 +2112,15 @@ function openSettings(){
   document.getElementById("inDuhaMinutes").value = settings.duhaMinutesAfterSunrise || 15;
   renderPrayerRows();
   renderCorrectionRows();
+  renderWorkRows();
+  renderWorkAudioRows();
   refreshAudioStatus();
   document.getElementById("urlReminder").value = localStorage.getItem("reminderAudioUrl") || "";
   document.getElementById("urlAzan").value = localStorage.getItem("azanAudioUrl") || "";
   document.getElementById("linkStatusReminder").textContent = "";
   document.getElementById("linkStatusAzan").textContent = "";
   refreshOfflineCoverage();
+  setupElevenLabsTab();
   switchTab("lokasi");
   overlay.classList.add("open");
 }
@@ -2344,12 +2538,27 @@ function renderPrayerRows(){
 function labelForAudioKey(key){
   if(JUMAT_KEYS.includes(key)) return `Jumat Bagian ${key.slice(-1)}`;
   if(key === JUMAT_AZAN_KEY) return "Adzan Jumatan";
+  if(WORK_ITEMS.includes(key)) return WORK_ITEM_LABEL[key];
   return PRAYER_LABEL[key];
 }
 /* Isi teks status tiap baris audio per-sholat -- "Khusus: nama.mp3" kalau
    ada override, atau "Pakai default" kalau masih ikut yg global. */
 async function refreshPrayerAudioStatus(){
   for(const key of REMINDABLE){
+    for(const kind of ["reminder","azan"]){
+      const el = document.getElementById(`paStat_${kind}_${key}`);
+      if(!el) continue;
+      const { idbKey, urlKey } = audioKeysFor(kind, key);
+      const blob = await idbGet(idbKey).catch(()=>null);
+      if(blob){ el.textContent = "Khusus ✓"; continue; }
+      const url = localStorage.getItem(urlKey);
+      if(url){ el.textContent = "Khusus (link) ✓"; continue; }
+      el.textContent = "Pakai default";
+    }
+  }
+  // Status audio khusus jam masuk/pulang (kunci "masuk"/"pulang") -- sama
+  // polanya dgn loop REMINDABLE di atas, cuma sumber daftar kuncinya WORK_ITEMS.
+  for(const key of WORK_ITEMS){
     for(const kind of ["reminder","azan"]){
       const el = document.getElementById(`paStat_${kind}_${key}`);
       if(!el) continue;
@@ -2388,6 +2597,122 @@ async function refreshPrayerAudioStatus(){
   }
   updateJumatAutoInfo();
 }
+
+/* ---------------- ElevenLabs: buat suara AI dinamis (opsional) ----------------
+   API key & pilihan suara TERSIMPAN LOKAL SAJA (localStorage komputer ini),
+   TIDAK pernah dikirim ke server lain selain api.elevenlabs.io milik
+   ElevenLabs sendiri. Hasil audio disimpan ke IndexedDB lewat mekanisme
+   idbSet/audioKeysFor yang SAMA dengan unggah MP3 manual -- jadi begitu
+   dibuat, langsung dipakai oleh checkTriggers() spt file MP3 biasa
+   (tidak perlu koneksi internet lagi sesudahnya utk memutarnya). */
+const ELEVEN_KEY_STORAGE = "elevenlabsApiKey";
+let elevenTargetsCache = [];
+function elevenTargetOptions(){
+  const opts = [];
+  opts.push({label:"Default -- Pengingat (semua sholat & jam kerja)", kind:"reminder", key:null});
+  opts.push({label:"Default -- Notifikasi/Adzan (semua sholat & jam kerja)", kind:"azan", key:null});
+  REMINDABLE.forEach(k=>{
+    opts.push({label:PRAYER_LABEL[k]+" -- Pengingat", kind:"reminder", key:k});
+    opts.push({label:PRAYER_LABEL[k]+" -- Notifikasi/Adzan", kind:"azan", key:k});
+  });
+  JUMAT_KEYS.forEach((k,i)=> opts.push({label:`Jumatan Bagian ${i+1} -- Pengingat`, kind:"reminder", key:k}));
+  opts.push({label:"Jumatan -- Notifikasi/Adzan (menggantikan Dzuhur)", kind:"azan", key:JUMAT_AZAN_KEY});
+  WORK_ITEMS.forEach(item=>{
+    opts.push({label:WORK_ITEM_LABEL[item]+" -- Pengingat (sebelum jam tiba)", kind:"reminder", key:item});
+    opts.push({label:WORK_ITEM_LABEL[item]+" -- Notifikasi (saat jam tiba)", kind:"azan", key:item});
+  });
+  return opts;
+}
+function setupElevenLabsTab(){
+  document.getElementById("elevenApiKey").value = localStorage.getItem(ELEVEN_KEY_STORAGE) || "";
+  document.getElementById("elevenQuotaStatus").textContent = "";
+  document.getElementById("elevenGenStatus").textContent = "";
+  document.getElementById("elevenText").value = "";
+  document.getElementById("elevenCharCount").textContent = "0 karakter (kuota gratis: 10.000/bulan)";
+  document.getElementById("elevenVoiceSelect").innerHTML = `<option value="">Klik "Cek kuota" dulu utk memuat daftar suara…</option>`;
+  elevenTargetsCache = elevenTargetOptions();
+  document.getElementById("elevenTargetSelect").innerHTML =
+    elevenTargetsCache.map((o,i)=>`<option value="${i}">${o.label}</option>`).join("");
+}
+document.getElementById("elevenText").addEventListener("input", (e)=>{
+  document.getElementById("elevenCharCount").textContent = e.target.value.length.toLocaleString("id-ID") + " karakter (kuota gratis: 10.000/bulan)";
+});
+document.getElementById("elevenApiKey").addEventListener("change", (e)=>{
+  localStorage.setItem(ELEVEN_KEY_STORAGE, e.target.value.trim());
+});
+async function loadElevenVoices(key){
+  const sel = document.getElementById("elevenVoiceSelect");
+  sel.innerHTML = `<option value="">Memuat daftar suara…</option>`;
+  try{
+    const res = await fetch("https://api.elevenlabs.io/v1/voices", { headers:{ "xi-api-key": key } });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const data = await res.json();
+    const voices = data.voices || [];
+    sel.innerHTML = voices.length
+      ? voices.map(v=>`<option value="${v.voice_id}">${v.name}</option>`).join("")
+      : `<option value="">Tidak ada suara ditemukan di akun ini.</option>`;
+  }catch(e){
+    sel.innerHTML = `<option value="">Gagal memuat daftar suara.</option>`;
+  }
+}
+document.getElementById("elevenCheckQuotaBtn").addEventListener("click", async ()=>{
+  const key = document.getElementById("elevenApiKey").value.trim();
+  const statusEl = document.getElementById("elevenQuotaStatus");
+  if(!key){ statusEl.textContent = "❌ Isi API key dulu (daftar gratis di elevenlabs.io)."; return; }
+  localStorage.setItem(ELEVEN_KEY_STORAGE, key);
+  statusEl.textContent = "Memeriksa kuota…";
+  try{
+    const res = await fetch("https://api.elevenlabs.io/v1/user/subscription", { headers:{ "xi-api-key": key } });
+    if(!res.ok) throw new Error(res.status === 401 ? "API key salah/tidak valid." : ("HTTP "+res.status));
+    const data = await res.json();
+    const used = data.character_count || 0, limit = data.character_limit || 0;
+    const sisa = Math.max(0, limit - used);
+    statusEl.textContent = `✓ Kuota bulan ini: ${used.toLocaleString("id-ID")} / ${limit.toLocaleString("id-ID")} karakter terpakai -- sisa ${sisa.toLocaleString("id-ID")} karakter (reset otomatis tiap bulan).`;
+    await loadElevenVoices(key);
+  }catch(e){
+    statusEl.textContent = "❌ Gagal memeriksa kuota: " + e.message;
+  }
+});
+document.getElementById("elevenGenerateBtn").addEventListener("click", async ()=>{
+  const key = document.getElementById("elevenApiKey").value.trim();
+  const voiceId = document.getElementById("elevenVoiceSelect").value;
+  const text = document.getElementById("elevenText").value.trim();
+  const targetSel = document.getElementById("elevenTargetSelect");
+  const target = elevenTargetsCache[parseInt(targetSel.value,10)];
+  const statusEl = document.getElementById("elevenGenStatus");
+  if(!key){ statusEl.textContent = "❌ Isi API key dulu."; return; }
+  if(!voiceId){ statusEl.textContent = "❌ Pilih suara dulu (klik \"Cek kuota\" utk memuat daftar suara)."; return; }
+  if(!text){ statusEl.textContent = "❌ Isi teks dulu."; return; }
+  if(!target){ statusEl.textContent = "❌ Pilih mau disimpan sebagai apa dulu."; return; }
+  const btn = document.getElementById("elevenGenerateBtn");
+  btn.disabled = true; btn.textContent = "Membuat suara…";
+  statusEl.textContent = "";
+  try{
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: "POST",
+      headers: { "xi-api-key": key, "Content-Type": "application/json", "Accept": "audio/mpeg" },
+      body: JSON.stringify({ text, model_id: "eleven_multilingual_v2" })
+    });
+    if(!res.ok){
+      const pesan = res.status === 401 ? "API key salah/tidak valid."
+        : res.status === 429 ? "Kuota bulanan ElevenLabs sudah habis (reset tiap bulan)."
+        : `HTTP ${res.status}`;
+      throw new Error(pesan);
+    }
+    const blob = await res.blob();
+    const { idbKey, urlKey } = audioKeysFor(target.kind, target.key);
+    await idbSet(idbKey, blob);
+    localStorage.removeItem(urlKey);
+    statusEl.textContent = "✅ Berhasil dibuat & disimpan sebagai: " + target.label;
+    showToast("Suara AI berhasil dibuat & disimpan.", "ok");
+    refreshAudioStatus();
+    refreshPrayerAudioStatus();
+  }catch(e){
+    statusEl.textContent = "❌ Gagal membuat suara: " + e.message;
+    showToast("Gagal membuat suara AI: " + e.message, "err");
+  }
+  btn.disabled = false; btn.textContent = "🎙️ Buat & Simpan Suara";
+});
 
 function readPrayerRowsIntoSettings(){
   document.querySelectorAll(".prayer-row").forEach(row=>{
@@ -2447,6 +2772,161 @@ function readCorrectionRowsIntoSettings(){
   });
 }
 
+/* ---------------- Pengaturan Jam Kerja (masuk/pulang), per hari Senin-Sabtu ----------------
+   Pola markup & event-nya sengaja dibuat MIRIP dgn renderPrayerRows() di
+   atas (pakai class "prayer-row" yang sama) supaya konsisten secara visual,
+   tapi datanya sepenuhnya terpisah (settings.workHours), bukan
+   settings.prayerSettings. */
+const WORK_LABEL_SHORT = { masuk:"jam masuk", pulang:"jam pulang" };
+function renderWorkRows(){
+  const box = document.getElementById("workRows");
+  if(!box) return;
+  box.innerHTML = "";
+  WORK_DAYS.forEach(day=>{
+    const cfg = settings.workHours.perDay[day];
+    const row = document.createElement("div");
+    const adaYangAktif = WORK_ITEMS.some(item=> cfg[item].enabled || cfg[item].azanEnabled);
+    row.className = "prayer-row" + (adaYangAktif ? "" : " off");
+    row.dataset.day = day;
+    row.innerHTML = `
+      <div class="prayer-row-top">
+        <div class="prayer-row-name">${WORK_DAY_LABEL[day]}</div>
+      </div>
+      ${WORK_ITEMS.map(item=>{
+        const wc = cfg[item];
+        return `
+      <div class="prayer-row-sub" style="justify-content:space-between; flex-wrap:wrap; margin-top:${item==="masuk"?"10px":"14px"}; ${item==="pulang"?"border-top:1px dashed var(--line); padding-top:10px;":""}">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; flex-wrap:wrap;">
+          <span class="switch"><input type="checkbox" class="workReminderEnable" data-item="${item}" ${wc.enabled?"checked":""}><span class="switch-track"></span></span>
+          ${WORK_ITEM_EMOJI[item]} ${WORK_LABEL_SHORT[item]} pukul
+          <input type="time" class="workTimeInput" data-item="${item}" value="${wc.time}" style="width:96px; text-align:left; padding-left:8px;">
+          -- pengingat <input type="number" class="workMinutesInput" data-item="${item}" min="0" max="120" value="${wc.minutes}"> menit sebelum
+        </label>
+      </div>
+      <div class="prayer-row-sub">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+          <span class="switch"><input type="checkbox" class="workAzanEnable" data-item="${item}" ${wc.azanEnabled?"checked":""}><span class="switch-track"></span></span>
+          Notifikasi saat ${WORK_LABEL_SHORT[item]} tiba
+        </label>
+      </div>`;
+      }).join("")}
+    `;
+    const updateOffState = ()=>{
+      const anyOn = Array.from(row.querySelectorAll(".workReminderEnable, .workAzanEnable")).some(el=>el.checked);
+      row.classList.toggle("off", !anyOn);
+    };
+    row.querySelectorAll(".workReminderEnable, .workAzanEnable").forEach(el=> el.addEventListener("change", updateOffState));
+    box.appendChild(row);
+  });
+}
+function readWorkRowsIntoSettings(){
+  document.querySelectorAll("#workRows .prayer-row").forEach(row=>{
+    const day = row.dataset.day;
+    WORK_ITEMS.forEach(item=>{
+      const timeEl = row.querySelector(`.workTimeInput[data-item="${item}"]`);
+      const minEl = row.querySelector(`.workMinutesInput[data-item="${item}"]`);
+      const remEl = row.querySelector(`.workReminderEnable[data-item="${item}"]`);
+      const azanEl = row.querySelector(`.workAzanEnable[data-item="${item}"]`);
+      const wc = settings.workHours.perDay[day][item];
+      wc.time = parseHHMM(timeEl.value) ? timeEl.value : wc.time;
+      wc.minutes = Math.max(0, parseInt(minEl.value,10) || 0);
+      wc.enabled = remEl.checked;
+      wc.azanEnabled = azanEl.checked;
+    });
+  });
+}
+/* Tombol "Salin Senin ke Selasa-Sabtu" -- baca dulu isian Senin yang ADA
+   DI FORM (belum tersimpan), lalu tempelkan ke baris Selasa..Sabtu di
+   form yang sama. Tetap perlu klik "Simpan & tutup" sesudahnya spt biasa. */
+document.getElementById("applyWorkToAllDaysBtn").addEventListener("click", ()=>{
+  const seninRow = document.querySelector('#workRows .prayer-row[data-day="1"]');
+  if(!seninRow) return;
+  WORK_DAYS.filter(d=>d!==1).forEach(day=>{
+    const targetRow = document.querySelector(`#workRows .prayer-row[data-day="${day}"]`);
+    if(!targetRow) return;
+    WORK_ITEMS.forEach(item=>{
+      const srcTime = seninRow.querySelector(`.workTimeInput[data-item="${item}"]`);
+      const srcMin = seninRow.querySelector(`.workMinutesInput[data-item="${item}"]`);
+      const srcRem = seninRow.querySelector(`.workReminderEnable[data-item="${item}"]`);
+      const srcAzan = seninRow.querySelector(`.workAzanEnable[data-item="${item}"]`);
+      targetRow.querySelector(`.workTimeInput[data-item="${item}"]`).value = srcTime.value;
+      targetRow.querySelector(`.workMinutesInput[data-item="${item}"]`).value = srcMin.value;
+      targetRow.querySelector(`.workReminderEnable[data-item="${item}"]`).checked = srcRem.checked;
+      targetRow.querySelector(`.workAzanEnable[data-item="${item}"]`).checked = srcAzan.checked;
+    });
+    targetRow.classList.toggle("off", !Array.from(targetRow.querySelectorAll(".workReminderEnable, .workAzanEnable")).some(el=>el.checked));
+  });
+  showToast("Jam Senin disalin ke Selasa-Sabtu -- klik \"Simpan & tutup\" untuk menyimpan.", "ok");
+});
+
+/* ---------------- Suara khusus per-item Jam Masuk/Pulang ----------------
+   Beda dari renderWorkRows() (yang mengulang per HARI Senin-Sabtu),
+   audio-nya cuma 2 baris SAJA (satu utk "masuk", satu utk "pulang") --
+   sengaja TIDAK ikut per-hari, karena kuncinya (audioKeysFor) memang
+   cuma dibedakan per item, bukan per hari. Markup & event-nya dibuat
+   MIRIP pa-row di renderPrayerRows() supaya konsisten (unggah manual,
+   uji coba, reset ke default) -- dan kunci yang sama ("masuk"/"pulang")
+   inilah yang juga dipakai elevenTargetOptions() supaya suara AI
+   ElevenLabs bisa langsung disimpan ke sini. */
+function renderWorkAudioRows(){
+  const box = document.getElementById("workAudioRows");
+  if(!box) return;
+  box.innerHTML = WORK_ITEMS.map(item=>`
+      <div class="pa-row">
+        <span class="pa-icon">${WORK_ITEM_EMOJI[item]}</span>
+        <span class="pa-status">${WORK_ITEM_LABEL[item]} -- Pengingat: <span id="paStat_reminder_${item}">…</span></span>
+        <label class="pa-upload-btn" for="paFile_reminder_${item}" title="Unggah MP3 khusus">⬆</label>
+        <input type="file" id="paFile_reminder_${item}" class="pa-file-input" accept="audio/*" data-pa-kind="reminder" data-pa-key="${item}">
+        <button class="pa-mini-btn" data-test-audio="reminder_${item}" data-pa-test-kind="reminder" data-pa-test-key="${item}" title="Uji coba">▶</button>
+        <button class="pa-mini-btn" data-pa-reset-kind="reminder" data-pa-reset-key="${item}" title="Kembali ke default">↺</button>
+      </div>
+      <div class="pa-row">
+        <span class="pa-icon">${WORK_ITEM_EMOJI[item]}</span>
+        <span class="pa-status">${WORK_ITEM_LABEL[item]} -- Notifikasi: <span id="paStat_azan_${item}">…</span></span>
+        <label class="pa-upload-btn" for="paFile_azan_${item}" title="Unggah MP3 khusus">⬆</label>
+        <input type="file" id="paFile_azan_${item}" class="pa-file-input" accept="audio/*" data-pa-kind="azan" data-pa-key="${item}">
+        <button class="pa-mini-btn" data-test-audio="azan_${item}" data-pa-test-kind="azan" data-pa-test-key="${item}" title="Uji coba">▶</button>
+        <button class="pa-mini-btn" data-pa-reset-kind="azan" data-pa-reset-key="${item}" title="Kembali ke default">↺</button>
+      </div>
+  `).join("");
+  // Event delegation SAMA polanya dgn renderPrayerRows() -- tapi kunci di
+  // sini ("masuk"/"pulang") bukan kunci semu Jumat, jadi tidak perlu cek
+  // isKunciSemuJumat / recalcJumatDuration seperti di sana.
+  box.querySelectorAll(".pa-file-input").forEach(inp=>{
+    inp.addEventListener("change", async (e)=>{
+      const f = e.target.files[0]; if(!f) return;
+      if(!f.type.startsWith("audio")){
+        showToast("File yang dipilih bukan berkas audio.", "err");
+        e.target.value = ""; return;
+      }
+      const kind = inp.dataset.paKind, key = inp.dataset.paKey;
+      const { idbKey, urlKey } = audioKeysFor(kind, key);
+      try{
+        await idbSet(idbKey, f);
+        localStorage.removeItem(urlKey);
+        showToast(`MP3 ${kind==="reminder"?"pengingat":"notifikasi"} khusus ${labelForAudioKey(key)} diunggah: ${f.name}`, "ok");
+        refreshPrayerAudioStatus();
+      }catch(err){ showToast("Gagal menyimpan file: " + String(err.message||err), "err"); }
+    });
+  });
+  box.querySelectorAll("[data-pa-test-kind]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const kind = btn.dataset.paTestKind, key = btn.dataset.paTestKey;
+      toggleUjiCoba(kind, key, key);
+    });
+  });
+  box.querySelectorAll("[data-pa-reset-kind]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const kind = btn.dataset.paResetKind, key = btn.dataset.paResetKey;
+      const { idbKey, urlKey } = audioKeysFor(kind, key);
+      await idbDelete(idbKey).catch(()=>{});
+      localStorage.removeItem(urlKey);
+      showToast(`MP3 ${kind==="reminder"?"pengingat":"notifikasi"} ${labelForAudioKey(key)} dikembalikan ke default.`, "ok");
+      refreshPrayerAudioStatus();
+    });
+  });
+  refreshPrayerAudioStatus();
+}
 function refreshAudioStatus(){
   idbGet("reminderAudio").then(b=>{
     const urlSaved = localStorage.getItem("reminderAudioUrl");
@@ -2677,6 +3157,7 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
   settings.duhaMinutesAfterSunrise = Math.max(1, parseInt(document.getElementById("inDuhaMinutes").value,10) || 15);
   readPrayerRowsIntoSettings();
   readCorrectionRowsIntoSettings();
+  readWorkRowsIntoSettings();
   saveSettings();
   closeSettings();
   scheduleDateStr = null;
