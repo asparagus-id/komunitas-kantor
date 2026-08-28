@@ -875,7 +875,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.21.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
+const APP_VERSION = "1.21.1"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -2734,7 +2734,7 @@ document.getElementById("elevenGenerateBtn").addEventListener("click", async ()=
 });
 
 function readPrayerRowsIntoSettings(){
-  document.querySelectorAll(".prayer-row").forEach(row=>{
+  document.querySelectorAll("#prayerRows .prayer-row").forEach(row=>{
     const key = row.dataset.key;
     const enabled = row.querySelector(".reminderEnableInput").checked;
     const azanEnabled = row.querySelector(".azanEnableInput").checked;
@@ -2753,7 +2753,7 @@ function readPrayerRowsIntoSettings(){
 document.getElementById("applyDefaultToAllBtn").addEventListener("click", ()=>{
   const defReminder = document.getElementById("defaultReminderEnabled").checked;
   const defAzan = document.getElementById("defaultAzanEnabled").checked;
-  document.querySelectorAll(".prayer-row").forEach(row=>{
+  document.querySelectorAll("#prayerRows .prayer-row").forEach(row=>{
     row.querySelector(".reminderEnableInput").checked = defReminder;
     row.querySelector(".azanEnableInput").checked = defAzan;
     row.classList.toggle("off", !defReminder && !defAzan);
@@ -3169,19 +3169,26 @@ document.getElementById("resetBtn").addEventListener("click", ()=>{
   openSettings();
 });
 document.getElementById("saveBtn").addEventListener("click", async ()=>{
-  settings.city = document.getElementById("inCity").value.trim() || DEFAULTS.city;
-  settings.lat = parseFloat(document.getElementById("inLat").value) || DEFAULTS.lat;
-  settings.lng = parseFloat(document.getElementById("inLng").value) || DEFAULTS.lng;
-  settings.volume = parseInt(document.getElementById("inVolume").value,10)/100;
-  settings.duhaMinutesAfterSunrise = Math.max(1, parseInt(document.getElementById("inDuhaMinutes").value,10) || 15);
-  readPrayerRowsIntoSettings();
-  readCorrectionRowsIntoSettings();
-  readWorkRowsIntoSettings();
-  saveSettings();
-  closeSettings();
-  scheduleDateStr = null;
-  await ensureScheduleForToday();
-  refreshOfflineCoverage();
+  try{
+    settings.city = document.getElementById("inCity").value.trim() || DEFAULTS.city;
+    settings.lat = parseFloat(document.getElementById("inLat").value) || DEFAULTS.lat;
+    settings.lng = parseFloat(document.getElementById("inLng").value) || DEFAULTS.lng;
+    settings.volume = parseInt(document.getElementById("inVolume").value,10)/100;
+    settings.duhaMinutesAfterSunrise = Math.max(1, parseInt(document.getElementById("inDuhaMinutes").value,10) || 15);
+    readPrayerRowsIntoSettings();
+    readCorrectionRowsIntoSettings();
+    readWorkRowsIntoSettings();
+    saveSettings();
+    closeSettings();
+    showToast("Pengaturan berhasil disimpan.", "ok");
+    scheduleDateStr = null;
+    await ensureScheduleForToday();
+    refreshOfflineCoverage();
+  }catch(err){
+    console.error("Gagal menyimpan pengaturan:", err);
+    closeSettings();
+    showToast("Gagal menyimpan pengaturan, coba lagi.", "err");
+  }
 });
 
 /* ---------------- Init ---------------- */
