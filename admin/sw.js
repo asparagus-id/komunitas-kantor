@@ -13,7 +13,7 @@
   supaya klien lama otomatis ambil versi baru (pola sama seperti sw.js
   di aplikasi Habit).
 */
-const CACHE_VERSION = "admkom-v5";
+const CACHE_VERSION = "admkom-v6";
 const APP_SHELL = [
   "./",
   "./index.html",
