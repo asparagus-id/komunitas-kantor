@@ -654,10 +654,6 @@
           <div class="table-wrap"><table id="bardiTable"><thead><tr><th>Nama</th><th>Online</th><th>ON/OFF</th><th></th></tr></thead><tbody></tbody></table></div>
           <div class="hint" id="bardiStatusErrorHint" style="color:var(--ember); margin-top:8px;"></div>
           <button class="btn small" id="bardiReloadBtn" style="margin-top:10px;">Muat ulang daftar</button>
-          <div id="bardiInfoWrap" class="hidden" style="margin-top:14px;">
-            <button class="btn small" id="bardiInfoCopyBtn" style="margin-bottom:6px;">📋 Salin</button>
-            <pre id="bardiInfoBox" style="max-height:360px; overflow:auto; background:var(--input-bg); border:1px solid var(--line); border-radius:10px; padding:12px; font-size:11.5px; white-space:pre-wrap; word-break:break-all;"></pre>
-          </div>
         </div>
 
         <div class="card">
@@ -2039,14 +2035,21 @@ function renderBardiRowHtml(d){
   }
   // switchCode dp aslinya per device (mis. "switch_1"/"switch"/"power") --
   // WAJIB dikirim balik ke Worker saat toggle, kalau tidak Worker akan
-  // fallback ke "switch_1" utk SEMUA device (lihat handleBardiToggle),
-  // yang salah utk AC/TV yang dp switch-nya bukan "switch_1".
+  // fallback ke "switch_1" utk SEMUA device (lihat handleBardiToggle).
   const scAttr = d.switchCode ? ` data-bardi-code="${d.switchCode}"` : "";
+  // AC & TV (device virtual di belakang hub Universal IR Remote, kategori
+  // Tuya "infrared_ac"/"infrared_tv") TIDAK BISA dikontrol lewat command
+  // switch biasa (selalu ditolak Tuya) -- jadi utk kategori ini panel
+  // HANYA menampilkan status, tombol Nyalakan/Matikan/Info sengaja tidak
+  // ditampilkan sama sekali. Lampu & kipas (kategori lain) TIDAK
+  // terpengaruh, tetap dapat tombol kontrol penuh seperti biasa.
+  const isIrVirtual = d.category === "infrared_ac" || d.category === "infrared_tv";
   const actionsCell = isSensor
     ? `<span class="hint">Sensor -- tidak bisa dikontrol</span>`
+    : isIrVirtual
+    ? `<span class="hint">Pemantauan saja -- tidak bisa dikontrol dari panel</span>`
     : `<button class="btn small" data-bardi-on="${d.id}"${scAttr}>Nyalakan</button>
-       <button class="btn small danger" data-bardi-off="${d.id}"${scAttr}>Matikan</button>
-       <button class="btn small" data-bardi-info="${d.id}" title="Diagnostik: lihat skema asli device ini di Tuya (buat device yang gagal ditoggle)">🔍 Info</button>`;
+       <button class="btn small danger" data-bardi-off="${d.id}"${scAttr}>Matikan</button>`;
   return `<td>${d.name}</td><td>${d.online ? "🟢 Online" : "⚪ Offline"}</td><td>${onLabel}</td>
     <td class="td-actions">${actionsCell}</td>`;
 }
@@ -2098,42 +2101,6 @@ document.querySelector("#bardiTable tbody").addEventListener("click", (e)=>{
   if(onBtn){ bardiToggle(onBtn.dataset.bardiOn, true, onBtn.dataset.bardiCode); return; }
   const offBtn = e.target.closest("[data-bardi-off]");
   if(offBtn){ bardiToggle(offBtn.dataset.bardiOff, false, offBtn.dataset.bardiCode); return; }
-  const infoBtn = e.target.closest("[data-bardi-info]");
-  if(infoBtn){ bardiShowInfo(infoBtn.dataset.bardiInfo); return; }
-});
-// Diagnostik: tampilkan skema ASLI 1 device Tuya (fungsi/dp yang beneran
-// didukung, kategori device, & info hub IR kalau ada) -- dipakai buat
-// device yang gagal ditoggle (mis. "command or value not support") biar
-// kelihatan kenapa, bukan tebak2an lagi. Lihat handleBardiDeviceInfo di
-// Worker.
-async function bardiShowInfo(deviceId){
-  const wrap = document.getElementById("bardiInfoWrap");
-  const box = document.getElementById("bardiInfoBox");
-  wrap.classList.remove("hidden");
-  box.textContent = "Memuat info device…";
-  try{
-    const res = await fetch(WORKER_URL.replace(/\/$/,"") + "/bardi-device-info?deviceId=" + encodeURIComponent(deviceId), { headers:{ "Authorization":"Bearer " + APP_TOKEN } });
-    const j = await res.json();
-    if(j.error){ box.textContent = "Gagal: " + j.error; return; }
-    box.textContent = JSON.stringify(j, null, 2);
-  }catch(e){ box.textContent = "Gagal memuat: " + e.message; }
-}
-document.getElementById("bardiInfoCopyBtn").addEventListener("click", async ()=>{
-  const text = document.getElementById("bardiInfoBox").textContent;
-  if(!text){ return; }
-  try{
-    await navigator.clipboard.writeText(text);
-    toast("Disalin ke clipboard ✓");
-  }catch(e){
-    // Fallback kalau Clipboard API diblokir (mis. bukan HTTPS/izin ditolak)
-    // -- select teksnya biar user bisa Ctrl+C manual.
-    const range = document.createRange();
-    range.selectNodeContents(document.getElementById("bardiInfoBox"));
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
-    toast("Gagal salin otomatis -- teks sudah diseleksi, tekan Ctrl+C", true);
-  }
 });
 async function loadBardiDevices(){
   const badge = document.getElementById("bardiStatusBadge");
