@@ -875,7 +875,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.21.1"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
+const APP_VERSION = "1.22.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -1310,6 +1310,44 @@ function updateJumatAutoInfo(){
     el.textContent = "Belum ada MP3 Jumat yang diisi -- pakai menit manual (fallback) di bawah.";
   }
 }
+/* ---------------- Auto-durasi pengingat per-sholat (GENERALISASI dari
+   fitur Jumat di atas) ----------------
+   Sama seperti rantai 3 MP3 Jumat, TIAP sholat (Subuh/Dzuhur non-Jumat/
+   Ashar/Maghrib/Isya) juga boleh punya 1 MP3 pengingat khusus. Kalau
+   diisi, menit pengingat TIDAK lagi pakai angka manual ("Pengingat N
+   menit sebelum") -- otomatis dihitung dari DURASI file itu sendiri,
+   supaya file selesai diputar TEPAT pas azan tiba (sama seperti niat
+   fitur Jumatan). Kalau file dikosongkan lagi (direset), otomatis balik
+   ke angka manual seperti biasa.
+   Dikecualikan: kunci semu Jumat (JUMAT_KEYS "DhuhrJumat1/2/3") --
+   itu sudah ditangani sendiri oleh recalcJumatDuration() di atas, dan
+   Dzuhur DI HARI JUMAT tetap pakai rantai/menit Jumat (lihat
+   reminderMinutesFor()), bukan durasi file "Dhuhr" biasa ini. */
+function reminderDurCacheKey(key){ return "adzan_reminder_dur_" + key; }
+async function recalcReminderDuration(key){
+  const src = await resolveJumatOverrideOnly("reminder", key); // generik, bukan cuma Jumat (lihat komentar fungsinya)
+  const cacheKey = reminderDurCacheKey(key);
+  if(!src){ localStorage.removeItem(cacheKey); updateReminderAutoInfo(key); return null; }
+  const audioSrc = src.blob ? URL.createObjectURL(src.blob) : src.url;
+  const detik = await loadAudioDuration(audioSrc);
+  if(detik > 0) localStorage.setItem(cacheKey, String(detik));
+  else localStorage.removeItem(cacheKey);
+  updateReminderAutoInfo(key);
+  return detik > 0 ? detik : null;
+}
+function updateReminderAutoInfo(key){
+  const el = document.getElementById(`reminderAutoInfo_${key}`);
+  if(!el) return;
+  const totalSec = parseFloat(localStorage.getItem(reminderDurCacheKey(key)));
+  const labelHari = key === "Dhuhr" ? "Dzuhur hari biasa (Senin-Kamis & Sabtu, bukan Jumat)" : (PRAYER_LABEL[key]||key);
+  if(totalSec > 0){
+    const menit = Math.floor(totalSec/60), detik = Math.round(totalSec%60);
+    el.innerHTML = `⏱️ Otomatis <b>${menit>0? menit+" mnt " : ""}${detik} dtk</b> sebelum ${labelHari} (durasi MP3 pengingat khusus di atas).`;
+  } else {
+    el.textContent = key === "Dhuhr" ? "Belum ada MP3 khusus -- pakai menit manual di atas (hari Jumat tetap pakai pengaturan Jumatan di atas)." : "Belum ada MP3 khusus -- pakai menit manual di atas.";
+  }
+}
+
 /* Sekali dipanggil saat init() -- pindahkan file/link MP3 Jumat LAMA
    (kunci tunggal "DhuhrJumat", dari versi sebelum fitur 3-bagian ini
    ada) supaya jadi "bagian 1", biar pengguna lama tidak kehilangan MP3
@@ -1643,7 +1681,16 @@ function reminderMinutesFor(prayerKey, dateObj){
     const totalSec = parseFloat(localStorage.getItem(JUMAT_DURATION_CACHE_KEY));
     if(totalSec > 0) return Math.ceil(totalSec/60);
     if(ps.fridayMinutes != null) return ps.fridayMinutes;
+    return ps.minutes;
   }
+  // ---- Sholat lain (& Dzuhur di HARI BIASA, bukan Jumat) -- kalau ada
+  // MP3 pengingat KHUSUS yang sudah diunggah utk sholat ini, menit
+  // pengingat dihitung OTOMATIS dari durasi file itu (di-cache oleh
+  // recalcReminderDuration(), sama pola dengan fitur Jumat di atas),
+  // supaya file selesai diputar TEPAT pas azan tiba. Kalau belum ada
+  // file khusus, jatuh ke angka manual "minutes" seperti biasa. ----
+  const durSec = parseFloat(localStorage.getItem(reminderDurCacheKey(prayerKey)));
+  if(durSec > 0) return Math.ceil(durSec/60);
   return ps.minutes;
 }
 /* Duha TIDAK ada di respons AlAdhan -- dihitung manual dari Terbit + N
@@ -2461,6 +2508,7 @@ function renderPrayerRows(){
         <button class="pa-mini-btn" data-test-audio="reminder_${key}" data-pa-test-kind="reminder" data-pa-test-key="${key}" title="Uji coba">▶</button>
         <button class="pa-mini-btn" data-pa-reset-kind="reminder" data-pa-reset-key="${key}" title="Kembali ke default">↺</button>
       </div>
+      <div id="reminderAutoInfo_${key}" class="hint" style="margin:0 0 8px;">…</div>
       <div class="pa-row">
         <span class="pa-icon">📢</span>
         <span class="pa-status" id="paStat_azan_${key}">…</span>
@@ -2495,6 +2543,7 @@ function renderPrayerRows(){
         localStorage.removeItem(urlKey);
         showToast(`MP3 ${kind==="reminder"?"pengingat":"adzan"} khusus ${labelForAudioKey(key)} diunggah: ${f.name}`, "ok");
         if(JUMAT_KEYS.includes(key)) await recalcJumatDuration();
+        else if(kind === "reminder" && REMINDABLE.includes(key)) await recalcReminderDuration(key);
         refreshPrayerAudioStatus();
       }catch(err){ showToast("Gagal menyimpan file: " + String(err.message||err), "err"); }
     });
@@ -2528,6 +2577,7 @@ function renderPrayerRows(){
       localStorage.removeItem(urlKey);
       showToast(`MP3 ${kind==="reminder"?"pengingat":"adzan"} ${labelForAudioKey(key)} dikembalikan ke default.`, "ok");
       if(JUMAT_KEYS.includes(key)) await recalcJumatDuration();
+      else if(kind === "reminder" && REMINDABLE.includes(key)) await recalcReminderDuration(key);
       refreshPrayerAudioStatus();
     });
   });
@@ -2597,6 +2647,7 @@ async function refreshPrayerAudioStatus(){
     }
   }
   updateJumatAutoInfo();
+  REMINDABLE.forEach(k => updateReminderAutoInfo(k));
 }
 
 /* ---------------- ElevenLabs: buat suara AI dinamis (opsional) ----------------
@@ -3234,6 +3285,7 @@ function registerServiceWorker(){
   requestWakeLock();
   await migrateJumatAudioLama(); // pindahkan MP3 Jumat versi lama (1 file) -> "Bagian 1"
   recalcJumatDuration(); // isi cache durasi Jumat kalau belum ada (tidak perlu ditunggu)
+  REMINDABLE.forEach(k => recalcReminderDuration(k)); // isi cache durasi pengingat tiap sholat kalau ada MP3 khusus (tidak perlu ditunggu)
   document.getElementById("cityLabel").textContent = settings.city || "Lokasi belum diatur";
   updateInfoCards();
   await ensureScheduleForToday();
