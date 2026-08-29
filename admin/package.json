@@ -1,0 +1,11 @@
+{
+  "name": "pengingat-sholat-desktop",
+  "version": "1.21.1",
+  "private": true,
+  "scripts": {
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^1.6.0"
+  }
+}
