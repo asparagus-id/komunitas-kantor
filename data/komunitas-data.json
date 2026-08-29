@@ -464,8 +464,8 @@
         "date": "2026-08-29",
         "time": "08:00"
       },
-      "enabled": true,
-      "lastSentDate": null,
+      "enabled": false,
+      "lastSentDate": "2026-08-29",
       "preReminder": {
         "date": "2026-08-28",
         "time": "09:00",
