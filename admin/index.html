@@ -861,8 +861,47 @@ window.addEventListener("popstate", (e)=>{
    (buka index.html langsung lewat URL) sama sekali tidak terpengaruh. ============================================================ */
 const tg = window.Telegram && window.Telegram.WebApp;
 const isTelegramWebApp = !!(tg && tg.initData);
+
+/* ---------- ID Telegram user yang lagi buka panel ini ----------
+   Diisi dari tg.initDataUnsafe.user kalau panel dibuka LEWAT Telegram.
+   Di mode browser biasa, ini tetap null (tidak ada efek apa pun).
+
+   CATATAN KEAMANAN: initDataUnsafe gampang dipalsukan kalau HTML ini
+   dibuka manual di luar Telegram (bukan dari WebView Telegram beneran).
+   AMAN dipakai untuk auto-isi form (kemudahan UI). TIDAK BOLEH dipakai
+   sebagai satu-satunya dasar otorisasi di Worker -- kalau suatu saat
+   perlu itu, Worker harus validasi tg.initData (string mentah + hash)
+   pakai bot token, bukan percaya window.myTelegramId begitu saja.
+
+   CARA PAKAI untuk input baru yang butuh ID Telegram user sendiri:
+   cukup tambahkan atribut data-tg-autofill="id" (isi angka ID) atau
+   data-tg-autofill="name" (isi nama tampilan) ke <input>/<textarea>
+   itu -- otomatis keisi begitu panel dibuka dari Telegram, tidak perlu
+   tulis kode baru tiap kali nambah field. Lihat autofillTelegramFields()
+   di bawah. -------------------------------------------------------- */
+window.myTelegramId = null;
+window.myTelegramUser = null; // { id, first_name, last_name, username, ... }
+function autofillTelegramFields(root){
+  if(!window.myTelegramId) return;
+  (root || document).querySelectorAll("[data-tg-autofill]").forEach(el=>{
+    if(el.value) return; // jangan timpa kalau sudah ada isinya
+    const kind = el.dataset.tgAutofill;
+    if(kind === "id") el.value = window.myTelegramId;
+    else if(kind === "name" && window.myTelegramUser){
+      el.value = [window.myTelegramUser.first_name, window.myTelegramUser.last_name].filter(Boolean).join(" ")
+        || window.myTelegramUser.username || "";
+    }
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+}
+
 if (isTelegramWebApp) {
   tg.ready();
+  if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+    window.myTelegramUser = tg.initDataUnsafe.user;
+    window.myTelegramId = tg.initDataUnsafe.user.id;
+  }
+  autofillTelegramFields(document); // isi field yg sudah ada di halaman awal
   tg.expand(); // langsung penuh layar, bukan bottom-sheet setengah
   if (typeof tg.disableVerticalSwipes === "function") {
     tg.disableVerticalSwipes(); // panel ini banyak form/tabel panjang -- cegah swipe-turun tidak sengaja nutup app pas scroll
