@@ -12,7 +12,7 @@
    versi yang tampil di layar (lewat window.APP_VERSION di halaman)
    selalu sinkron dengan cache yang sedang dipakai.
    ============================================================ */
-const APP_VERSION = "1.22.0";
+const APP_VERSION = "1.22.1";
 const CACHE_NAME = "pengingat-sholat-" + APP_VERSION;
 
 // Cache TERPISAH untuk aset pihak ketiga yang memang tidak pernah
