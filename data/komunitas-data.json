@@ -576,7 +576,12 @@
     "2026-08-31": {
       "pollId": "6100469812348061688",
       "threadId": 9028,
-      "answers": {},
+      "answers": {
+        "216663781": {
+          "name": "Edwin Prayoga",
+          "choice": 1
+        }
+      },
       "options": [
         "Ikut",
         "Tidak ikut"
