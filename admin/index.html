@@ -838,7 +838,7 @@ let data = null, sha = null;
 
 // Versi panel ini -- naikkan tiap kali ada perubahan berarti, cocokkan
 // dengan entri di CHANGELOG.md & WORKER_VERSION di worker-komunitas.js.
-const APP_VERSION = "2.17.0"; // naik dari 2.16.1 -- TAMBAH field "Jam kirim (WIB)" utk DM H-3 closing bulanan otomatis (cbaTime)
+const APP_VERSION = "2.18.0"; // naik dari 2.17.0 -- renderRekap() (kartu Overview) sekarang ikut tampilkan "Belum isi" (roster puasaVoterRoster), konsisten dgn rekap yg dikirim ke grup Telegram
 const WORKER_URL_FOR_VERSION_CHECK = "https://gus-asisten.rempahecho.workers.dev";
 
 /* Cek versi worker LANGSUNG saat halaman dibuka, SEBELUM login (endpoint
@@ -1640,19 +1640,25 @@ function renderVariantQueue(){
 function renderRekap(){
   const key = getTodayKey();
   const log = (data.puasaLog || {})[key];
+  const answers = (log && log.answers) || {};
   const box = document.getElementById("puasaRekap");
-  if(!log || Object.keys(log.answers||{}).length === 0){
+  const roster = data.puasaVoterRoster || {};
+  const sudahIsi = new Set(Object.keys(answers));
+  const belum = Object.entries(roster).filter(([uid])=> !sudahIsi.has(uid));
+  if(Object.keys(answers).length === 0 && belum.length === 0){
     box.className = "empty"; box.textContent = "Belum ada jawaban untuk hari ini.";
     return;
   }
-  const puasa = Object.values(log.answers).filter(a=>a.choice===0);
-  const tidak = Object.values(log.answers).filter(a=>a.choice===1);
+  const puasa = Object.values(answers).filter(a=>a.choice===0);
+  const tidak = Object.values(answers).filter(a=>a.choice===1);
   box.className = "";
   box.innerHTML = `
     <div style="display:flex; gap:24px; flex-wrap:wrap;">
       <div><b style="color:var(--ok)">Puasa (${puasa.length})</b><br>${puasa.map(a=>a.name).join("<br>") || "-"}</div>
       <div><b style="color:var(--muted)">Tidak puasa (${tidak.length})</b><br>${tidak.map(a=>a.name).join("<br>") || "-"}</div>
+      <div><b style="color:var(--warning)">Belum isi (${belum.length})</b><br>${belum.map(([,nama])=>nama).join("<br>") || "-"}</div>
     </div>
+    <div class="hint" style="margin-top:8px;">"Belum isi" cuma mencakup orang yg pernah jawab poll puasa sebelumnya (bot tidak bisa lihat semua anggota grup demi keterbatasan Telegram).</div>
   `;
 }
 /* Ringkasan 14 hari terakhir (angka saja, bukan nama-nama) -- data.puasaLog

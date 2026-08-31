@@ -13,7 +13,7 @@
   supaya klien lama otomatis ambil versi baru (pola sama seperti sw.js
   di aplikasi Habit).
 */
-const CACHE_VERSION = "admkom-v12"; // naik dari v11 -- tambah field jam kirim DM H-3 closing bulanan
+const CACHE_VERSION = "admkom-v13"; // naik dari v12 -- kartu Overview rekap puasa ikut tampilkan "Belum isi"
 const APP_SHELL = [
   "./",
   "./index.html",
