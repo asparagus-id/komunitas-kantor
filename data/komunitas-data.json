@@ -623,7 +623,7 @@
     "enabled": true,
     "reminderAdminId": 141131037,
     "reminderDaysBefore": 3,
-    "lastReminderMonthKey": null
+    "lastReminderMonthKey": "2026-08"
   },
   "closingBulananPengumuman": {
     "enabled": true,
