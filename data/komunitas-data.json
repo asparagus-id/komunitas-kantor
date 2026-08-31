@@ -618,5 +618,17 @@
   "maintenanceReports": [],
   "maintenanceTopicKey": null,
   "maintenanceSchedules": [],
-  "systemErrorLog": []
+  "systemErrorLog": [],
+  "closingBulananAuto": {
+    "enabled": true,
+    "reminderAdminId": 141131037,
+    "reminderDaysBefore": 3,
+    "lastReminderMonthKey": null
+  },
+  "closingBulananPengumuman": {
+    "enabled": true,
+    "time": "07:00",
+    "topicKey": "kopi_pagi",
+    "lastSentDate": null
+  }
 }
