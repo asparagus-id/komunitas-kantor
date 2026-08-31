@@ -363,8 +363,7 @@
     30,
     59,
     2,
-    221,
-    132
+    221
   ],
   "puasaVariantQueuePoolSize": 249,
   "kajian": [
@@ -438,7 +437,8 @@
     "15hu576b8tkkr7crjbaovqkmrv_20260826T073000Z",
     "ea0ek9gam6ql36kni0r1svh8l0",
     "69ckd0j6a4tiqnk6cp6ptk955n_20260829T013000Z",
-    "5462021tm6q0vf5uadpil6jqk9_20260830T013000Z"
+    "5462021tm6q0vf5uadpil6jqk9_20260830T013000Z",
+    "4qj2c0h5vv5cisav8n89lu5gn9_20260831T013000Z"
   ],
   "calendarTopicKey": "pengumuman",
   "calendarTopicRules": [],
@@ -572,6 +572,15 @@
         "Sertai",
         "Tak sertai"
       ]
+    },
+    "2026-08-31": {
+      "pollId": "6100469812348061688",
+      "threadId": 9028,
+      "answers": {},
+      "options": [
+        "Ikut",
+        "Tidak ikut"
+      ]
     }
   },
   "puasaVoterRoster": {
@@ -582,7 +591,7 @@
     "451730890": "Ulva Halawa",
     "1244930074": "Mila Paramita"
   },
-  "lastPuasaPollSentDate": "2026-08-27",
+  "lastPuasaPollSentDate": "2026-08-31",
   "lastKajianCheckDate": "2026-08-31",
   "maintenanceReports": [],
   "maintenanceTopicKey": null,
