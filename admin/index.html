@@ -643,6 +643,21 @@
         </div>
 
         <div class="card">
+          <h2>📢 Pengumuman closing bulanan ke grup (hari-H)</h2>
+          <div class="desc">Pesan TERPISAH dari DM admin H-3 di atas -- ini dikirim ke GRUP/topik PAS tanggal closing itu sendiri (bukan wajib 10 menit sebelum, itu urusan suara di app "Pengingat Sholat" kantor yang independen total). Cuma terkirim kalau ada entri closing bulanan aktif untuk tanggal hari itu (lihat tabel "Closing bulanan (tercatat)" di bawah).</div>
+          <div class="row">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
+              <input type="checkbox" id="cbpEnabled" style="width:auto;"> Aktifkan pengumuman hari-H
+            </label>
+          </div>
+          <div class="row">
+            <div class="field"><label>Jam kirim (WIB)</label><input type="time" id="cbpTime"></div>
+            <div class="field"><label>Kirim ke topik</label><select id="cbpTopic"><option value="">(percakapan umum grup)</option></select></div>
+          </div>
+          <button class="btn small" id="saveCbpBtn">Simpan pengaturan pengumuman hari-H</button>
+        </div>
+
+        <div class="card">
           <h2>🏃 Jam pulang khusus</h2>
           <div class="desc">Sama dengan <code>/jampulang_khusus</code>. Dipakai app "Pengingat Sholat" kantor: geser jam pulang HARI TERTENTU SAJA (mis. jam pulang dimajukan). App polling data ini otomatis, tidak ada pengiriman apa pun lewat Telegram.</div>
           <div class="row">
@@ -820,7 +835,7 @@ let data = null, sha = null;
 
 // Versi panel ini -- naikkan tiap kali ada perubahan berarti, cocokkan
 // dengan entri di CHANGELOG.md & WORKER_VERSION di worker-komunitas.js.
-const APP_VERSION = "2.15.1"; // naik dari 2.15.0 -- tabel Closing Bulanan cuma tampilkan 3 bulan terakhir
+const APP_VERSION = "2.16.1"; // naik dari 2.16.0 -- FIX BUG: "pulangclosing" belum terdaftar di array PAGES, jadi menu "Jam Pulang & Closing Bulanan" diklik tidak merespons (selalu balik ke Overview)
 const WORKER_URL_FOR_VERSION_CHECK = "https://gus-asisten.rempahecho.workers.dev";
 
 /* Cek versi worker LANGSUNG saat halaman dibuka, SEBELUM login (endpoint
@@ -851,10 +866,11 @@ checkVersions();
 
 
 /* ---------- NAVIGASI SIDEBAR (SPA) ---------- */
-const PAGES = ["overview","admin","topik","puasa","kajian","kalender","pengingat","libur","perangkat","maintenance","pengaturan"];
+const PAGES = ["overview","admin","topik","puasa","kajian","kalender","pengingat","libur","pulangclosing","perangkat","maintenance","pengaturan"];
 const PAGE_TITLES = {
   overview:"Overview", admin:"Admin & Akses", topik:"Topik (Forum)", puasa:"Absensi Puasa",
   kajian:"Kajian", kalender:"Google Calendar", pengingat:"Pengingat Umum", libur:"Libur Nasional",
+  pulangclosing:"Jam Pulang & Closing Bulanan",
   perangkat:"Perangkat & Google Home", maintenance:"Maintenance & Lapor Kerusakan", pengaturan:"Pengaturan"
 };
 function showPage(id, pushHistory = true){
@@ -1941,6 +1957,7 @@ function populateTopicSelect(){
    ["calReminderTopic", '(topik bernama "kalender", kalau ada)'],
    ["bmTopic", '(percakapan umum grup)'],
    ["maintenanceTopicSelect", '(percakapan umum grup)'],
+   ["cbpTopic", '(percakapan umum grup)'],
   ].forEach(([id, placeholderLabel])=>{
     const s = document.getElementById(id);
     if(!s) return;
@@ -2000,6 +2017,12 @@ function renderPulangClosing(){
   document.getElementById("cbaAdminId").value = cba.reminderAdminId || "";
   document.getElementById("cbaDaysBefore").value = cba.reminderDaysBefore || 3;
 
+  data.closingBulananPengumuman = data.closingBulananPengumuman || {enabled:true, time:"07:00", topicKey:null, lastSentDate:null};
+  const cbp = data.closingBulananPengumuman;
+  document.getElementById("cbpEnabled").checked = !!cbp.enabled;
+  document.getElementById("cbpTime").value = cbp.time || "07:00";
+  document.getElementById("cbpTopic").value = cbp.topicKey || "";
+
   renderJpTable();
   renderCbTable();
 }
@@ -2010,6 +2033,13 @@ document.getElementById("saveCbaBtn").addEventListener("click", async ()=>{
   const reminderDaysBefore = Math.max(1, parseInt(document.getElementById("cbaDaysBefore").value,10) || 3);
   if(enabled && !reminderAdminId){ toast("Isi ID Telegram penerima DM dulu.", true); return; }
   data.closingBulananAuto = { ...(data.closingBulananAuto||{}), enabled, reminderAdminId, reminderDaysBefore };
+  if(await saveData()) renderPulangClosing();
+});
+document.getElementById("saveCbpBtn").addEventListener("click", async ()=>{
+  const enabled = document.getElementById("cbpEnabled").checked;
+  const time = document.getElementById("cbpTime").value || "07:00";
+  const topicKey = document.getElementById("cbpTopic").value || null;
+  data.closingBulananPengumuman = { ...(data.closingBulananPengumuman||{}), enabled, time, topicKey };
   if(await saveData()) renderPulangClosing();
 });
 
