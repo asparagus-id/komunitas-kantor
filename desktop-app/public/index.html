@@ -667,9 +667,25 @@
           <button class="btn" id="applyWorkToAllDaysBtn" style="width:100%; margin-top:10px;">Salin Senin ke Selasa - Sabtu</button>
         </div>
 
+        <div class="audio-block" style="margin-bottom:14px;">
+          <div class="atitle">🔒 Closing bulanan &amp; jam pulang otomatis</div>
+          <div class="astat">Jam pulang khusus (kalau ada pengumuman "pulang dimajukan") &amp; jadwal closing bulanan diambil otomatis dari Bot Komunitas "gus-asisten" -- admin/AI mendeteksinya dari topik "Pengingat Umum" atau Google Calendar, tanggal closing bulanan dihitung sendiri tiap bulan oleh bot. App ini cuma polling datanya secara berkala, PAKAI TOKEN AKSES YANG SAMA dengan tab Audio &gt; Buat Suara AI (tidak perlu isi lagi di sini).</div>
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:10px;">
+            <span class="switch"><input type="checkbox" id="closingBulananEnabled"><span class="switch-track"></span></span>
+            Aktifkan closing bulanan &amp; jam pulang otomatis
+          </label>
+          <div class="prayer-row-sub" style="margin-top:10px;">
+            Peringatan <input type="number" id="closingBulananMenit" min="0" max="120" style="width:60px;"> menit sebelum jam closing bulanan
+          </div>
+          <div class="audio-controls" style="margin-top:10px;">
+            <button class="btn" id="closingBulananSyncBtn">Sinkronkan data sekarang</button>
+          </div>
+          <div class="hint" id="closingBulananStatus" style="margin-top:8px;">Belum pernah disinkronkan.</div>
+        </div>
+
         <div id="workRows"></div>
 
-        <div class="section-title">Suara khusus Jam Masuk &amp; Jam Pulang</div>
+        <div class="section-title">Suara khusus Jam Masuk, Jam Pulang &amp; Closing Bulanan</div>
         <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
           Opsional. Kalau dikosongkan, jam masuk/pulang tetap memakai suara pengingat/notifikasi <b>default</b> di tab Audio (termasuk kalau default itu hasil suara AI ElevenLabs). Isi di sini kalau mau suara yang BEDA khusus utk jam masuk/pulang -- mis. bikin di tab "Suara AI" teks "Selamat pagi, saatnya presensi masuk" lalu simpan sebagai "Jam Masuk Kerja -- Pengingat".
         </div>
@@ -875,7 +891,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.22.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru
+const APP_VERSION = "1.23.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.22.0: TAMBAH Closing Bulanan & Jam Pulang Otomatis (tab Jam Kerja)
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -928,6 +944,19 @@ const DEFAULTS = {
       5: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} },
       6: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} }
     }
+  },
+  // ---------- Closing Bulanan & Jam Pulang Khusus (BARU) ----------
+  // Data jamPulangKhusus[] & closingBulanan[] DITENTUKAN & DISIMPAN oleh
+  // Worker Bot Komunitas "gus-asisten" (command /jampulang_khusus &
+  // /closing_bulanan -- termasuk otomatis dari bahasa bebas di topik
+  // "Pengingat Umum"/Google Calendar via AI, & tanggal closing bulanan
+  // dihitung sendiri oleh Worker tiap bulan). App ini CUMA polling GET
+  // /data secara berkala -- pakai Worker & Token Akses YANG SAMA dgn
+  // fitur Suara AI ElevenLabs di tab Audio (lihat ELEVEN_WORKER_URL &
+  // ELEVEN_KEY_STORAGE), supaya tidak perlu isi token dua kali.
+  closingBulanan: {
+    enabled: false,          // default OFF sampai Token Akses (tab Audio) diisi
+    warningMinutes: 10       // peringatan sebelum jam closing bulanan (menit)
   }
 };
 
@@ -981,6 +1010,69 @@ function workTimeToday(now, hhmm){
   const t = parseHHMM(hhmm);
   if(!t) return null;
   return new Date(now.getFullYear(), now.getMonth(), now.getDate(), t.h, t.m, 0, 0);
+}
+
+/* ---------------- Closing Bulanan & Jam Pulang Khusus (BARU) ----------------
+   Lihat komentar di DEFAULTS.closingBulanan di atas. workerScheduleData
+   dicache di localStorage supaya tetap ada walau app dibuka sebelum
+   sempat online lagi, sama semangatnya dgn calendarCache di bawah. */
+function loadWorkerScheduleCache(){
+  try{ return JSON.parse(localStorage.getItem("adzan_worker_schedule")||"null") || {jamPulangKhusus:[], closingBulanan:[], fetchedAt:null}; }
+  catch(e){ return {jamPulangKhusus:[], closingBulanan:[], fetchedAt:null}; }
+}
+function saveWorkerScheduleCache(){ localStorage.setItem("adzan_worker_schedule", JSON.stringify(workerScheduleData)); }
+let workerScheduleData = loadWorkerScheduleCache();
+
+async function fetchWorkerScheduleData(){
+  if(!settings.closingBulanan || !settings.closingBulanan.enabled) return false;
+  const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
+  if(!token) return false;
+  try{
+    const res = await fetch(ELEVEN_WORKER_URL + "/data", { headers:{ "Authorization":"Bearer " + token } });
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const body = await res.json();
+    workerScheduleData = {
+      jamPulangKhusus: (body.data && body.data.jamPulangKhusus) || [],
+      closingBulanan: (body.data && body.data.closingBulanan) || [],
+      fetchedAt: Date.now()
+    };
+    saveWorkerScheduleCache();
+    return true;
+  }catch(e){ console.log("fetchWorkerScheduleData gagal (pakai cache lama):", e); return false; }
+}
+// Format tanggal "now" jadi "DD-MM-YYYY", SAMA PERSIS format yg dipakai
+// Worker utk field .date di jamPulangKhusus[] & closingBulanan[].
+function ddmmyyyyOf(d){
+  const dd = String(d.getDate()).padStart(2,"0");
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  return `${dd}-${mm}-${d.getFullYear()}`;
+}
+/* Jam pulang KHUSUS hari ini (dari Worker), CUMA dipakai kalau memang
+   LEBIH CEPAT/AWAL dari jam pulang normal hari itu (settings.workHours)
+   -- sesuai maksud fitur ini ("kalau terdeteksi pulang lebih cepat").
+   Kalau override-nya justru sama atau lebih lambat dari jam normal,
+   DIABAIKAN (jam normal tetap dipakai) -- jaga-jaga dari salah input
+   tanggal/jam di sisi admin. Balikin Date atau null. */
+function getPulangOverrideToday(now){
+  if(!settings.closingBulanan || !settings.closingBulanan.enabled) return null;
+  const cfg = settings.workHours && settings.workHours.perDay && settings.workHours.perDay[now.getDay()];
+  const normal = (cfg && cfg.pulang) ? workTimeToday(now, cfg.pulang.time) : null;
+  const todayStr = ddmmyyyyOf(now);
+  const entry = (workerScheduleData.jamPulangKhusus||[]).find(r=> r.enabled && r.date === todayStr);
+  if(!entry) return null;
+  const overrideDate = workTimeToday(now, entry.time);
+  if(!overrideDate) return null;
+  if(normal && overrideDate.getTime() >= normal.getTime()) return null; // bukan "lebih cepat" -- abaikan, tetap pakai jam normal
+  return overrideDate;
+}
+// Closing bulanan HARI INI (kalau tanggal hari ini cocok dgn entri
+// closingBulanan[] yang aktif dari Worker). Balikin Date atau null.
+function getClosingBulananToday(now){
+  if(!settings.closingBulanan || !settings.closingBulanan.enabled) return null;
+  const todayStr = ddmmyyyyOf(now);
+  const entry = (workerScheduleData.closingBulanan||[]).find(r=> r.enabled && r.date === todayStr);
+  if(!entry) return null;
+  return workTimeToday(now, entry.time);
 }
 
 let settings = loadSettings();
@@ -1859,7 +1951,11 @@ function nextWorkInfo(now){
     for(const item of WORK_ITEMS){
       const wc = cfg[item];
       if(!wc || !wc.azanEnabled) continue;
-      const target = workTimeToday(d, wc.time);
+      let target = workTimeToday(d, wc.time);
+      if(item === "pulang" && offset === 0){
+        const override = getPulangOverrideToday(now);
+        if(override) target = override;
+      }
       if(!target) continue;
       if(target.getTime() > now.getTime()) return { item, date: target, isToday: offset===0 };
     }
@@ -1993,7 +2089,15 @@ function checkTriggers(now){
     for(const item of WORK_ITEMS){
       const wc = cfgHariIni[item];
       if(!wc) continue;
-      const target = workTimeToday(now, wc.time);
+      let target = workTimeToday(now, wc.time);
+      // Jam pulang HARI INI digeser kalau ada override "pulang lebih
+      // cepat" terdeteksi (lihat getPulangOverrideToday) -- jarak menit
+      // pengingat (wc.minutes) tetap ikut setting biasa, cuma titik
+      // acuannya (target) yang berubah.
+      if(item === "pulang"){
+        const override = getPulangOverrideToday(now);
+        if(override) target = override;
+      }
       if(!target) continue;
       const targetMs = target.getTime();
 
@@ -2017,6 +2121,22 @@ function checkTriggers(now){
           document.getElementById("nextLabel").innerHTML = `WAKTU ${WORK_ITEM_LABEL[item].toUpperCase()} TELAH TIBA`;
         }
       }
+    }
+  }
+
+  // ---- Closing Bulanan (BARU) -- independen dari jam kerja per-hari,
+  // cuma 1 notifikasi peringatan H-sekian menit (TIDAK ada notifikasi
+  // "saat tiba" terpisah, sesuai maksud fiturnya). ----
+  const closingTarget = getClosingBulananToday(now);
+  if(closingTarget){
+    const warnMin = Math.max(0, (settings.closingBulanan && settings.closingBulanan.warningMinutes) || 10);
+    const closingMs = closingTarget.getTime();
+    const remindAt = closingMs - warnMin*60000;
+    const closeLogKey = `${key}:closingBulanan:reminder`;
+    if(!triggeredLog[closeLogKey] && now.getTime() >= remindAt && now.getTime() < closingMs){
+      triggeredLog[closeLogKey] = true; saveTriggerLog();
+      playSound("reminder", "closing"); // pakai suara KHUSUS closing bulanan kalau sudah diunggah, kalau tidak jatuh ke default global
+      showClosingPopup(closingMs);
     }
   }
 }
@@ -2068,6 +2188,9 @@ async function showReminderPopup(prayerKey, prayerTimeMs){
 async function showWorkPopup(workKey, targetTimeMs){
   return showActivePopup("work", workKey, targetTimeMs);
 }
+async function showClosingPopup(targetTimeMs){
+  return showActivePopup("closing", "closing", targetTimeMs);
+}
 /* Logika di DALAM jendela popup itu sendiri -- cuma jalan kalau memang
    lagi di mode popup (class "is-popup" di <html>). */
 (function initPopupMode(){
@@ -2091,14 +2214,15 @@ async function showWorkPopup(workKey, targetTimeMs){
     const diff = target - Date.now();
     if (diff <= 0){ tutupPopup(); return; } // waktu (adzan/jam kerja) sudah tiba -- selesai tugas popup ini
     const isWork = info.type === "work";
+    const isClosing = info.type === "closing";
     const nameEl = document.getElementById("popupPrayerName");
     const cdEl = document.getElementById("popupCountdown");
     const subEl = document.getElementById("popupSub");
     const iconEl = document.getElementById("popupIcon");
-    if(nameEl) nameEl.textContent = isWork ? (WORK_ITEM_LABEL[info.prayerKey] || "-") : (displayLabel(info.prayerKey, new Date(info.targetTime)) || "-");
+    if(nameEl) nameEl.textContent = isClosing ? "Closing Bulanan" : (isWork ? (WORK_ITEM_LABEL[info.prayerKey] || "-") : (displayLabel(info.prayerKey, new Date(info.targetTime)) || "-"));
     if(cdEl) cdEl.textContent = fmtCountdown(diff);
-    if(subEl) subEl.textContent = isWork ? "menuju " + (WORK_ITEM_LABEL[info.prayerKey] || "jam kerja").toLowerCase() : "menuju adzan";
-    if(iconEl) iconEl.textContent = isWork ? (WORK_ITEM_EMOJI[info.prayerKey] || "💼") : "🕌";
+    if(subEl) subEl.textContent = isClosing ? "menuju closing bulanan" : (isWork ? "menuju " + (WORK_ITEM_LABEL[info.prayerKey] || "jam kerja").toLowerCase() : "menuju adzan");
+    if(iconEl) iconEl.textContent = isClosing ? "🔒" : (isWork ? (WORK_ITEM_EMOJI[info.prayerKey] || "💼") : "🕌");
   }
   document.getElementById("popupCloseBtn").addEventListener("click", tutupPopup);
   // begitu jendela ini DITAMPILKAN LAGI dari trigger baru (sementara JS-nya
@@ -2162,6 +2286,9 @@ function openSettings(){
   renderCorrectionRows();
   renderWorkRows();
   renderWorkAudioRows();
+  document.getElementById("closingBulananEnabled").checked = !!(settings.closingBulanan && settings.closingBulanan.enabled);
+  document.getElementById("closingBulananMenit").value = (settings.closingBulanan && settings.closingBulanan.warningMinutes) || 10;
+  refreshClosingBulananStatus();
   refreshAudioStatus();
   document.getElementById("urlReminder").value = localStorage.getItem("reminderAudioUrl") || "";
   document.getElementById("urlAzan").value = localStorage.getItem("azanAudioUrl") || "";
@@ -2589,6 +2716,7 @@ function renderPrayerRows(){
 function labelForAudioKey(key){
   if(JUMAT_KEYS.includes(key)) return `Jumat Bagian ${key.slice(-1)}`;
   if(key === JUMAT_AZAN_KEY) return "Adzan Jumatan";
+  if(key === "closing") return "Closing Bulanan";
   if(WORK_ITEMS.includes(key)) return WORK_ITEM_LABEL[key];
   return PRAYER_LABEL[key];
 }
@@ -2619,6 +2747,22 @@ async function refreshPrayerAudioStatus(){
       const url = localStorage.getItem(urlKey);
       if(url){ el.textContent = "Khusus (link) ✓"; continue; }
       el.textContent = "Pakai default";
+    }
+  }
+  // Status audio khusus Closing Bulanan (kunci semu "closing", cuma
+  // "reminder" -- tidak ada kind "azan" utknya, closing cuma 1 jenis
+  // notifikasi yaitu peringatan sebelum). Fallback default kalau belum
+  // diisi: suara pengingat GLOBAL (lihat resolveAudioSource).
+  {
+    const el = document.getElementById("paStat_reminder_closing");
+    if(el){
+      const { idbKey, urlKey } = audioKeysFor("reminder", "closing");
+      const blob = await idbGet(idbKey).catch(()=>null);
+      if(blob) el.textContent = "Khusus ✓";
+      else{
+        const url = localStorage.getItem(urlKey);
+        el.textContent = url ? "Khusus (link) ✓" : "Pakai default";
+      }
     }
   }
   // Status tiap baris MP3 Jumat (kunci semu "DhuhrJumat1/2/3") -- di luar
@@ -2678,6 +2822,7 @@ function elevenTargetOptions(){
     opts.push({label:WORK_ITEM_LABEL[item]+" -- Pengingat (sebelum jam tiba)", kind:"reminder", key:item});
     opts.push({label:WORK_ITEM_LABEL[item]+" -- Notifikasi (saat jam tiba)", kind:"azan", key:item});
   });
+  opts.push({label:"Closing Bulanan -- Peringatan (sebelum closing)", kind:"reminder", key:"closing"});
   return opts;
 }
 function setupElevenLabsTab(){
@@ -2933,6 +3078,38 @@ document.getElementById("applyWorkToAllDaysBtn").addEventListener("click", ()=>{
   showToast("Jam Senin disalin ke Selasa-Sabtu -- klik \"Simpan & tutup\" untuk menyimpan.", "ok");
 });
 
+/* ---------------- Closing Bulanan & Jam Pulang Otomatis -- UI Pengaturan ---------------- */
+function refreshClosingBulananStatus(){
+  const el = document.getElementById("closingBulananStatus");
+  if(!el) return;
+  if(!workerScheduleData.fetchedAt){ el.textContent = "Belum pernah disinkronkan."; return; }
+  const waktu = new Date(workerScheduleData.fetchedAt).toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"});
+  const now = new Date();
+  const override = getPulangOverrideToday(now);
+  const closing = getClosingBulananToday(now);
+  let ket = `Terakhir sinkron ${waktu}.`;
+  ket += override ? ` Jam pulang HARI INI dimajukan ke ${override.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"})}.` : " Tidak ada jam pulang khusus hari ini.";
+  ket += closing ? ` Closing bulanan HARI INI jam ${closing.toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"})}.` : " Tidak ada closing bulanan hari ini.";
+  el.textContent = ket;
+}
+document.getElementById("closingBulananSyncBtn").addEventListener("click", async ()=>{
+  const btn = document.getElementById("closingBulananSyncBtn");
+  // aktifkan dulu (biar fetchWorkerScheduleData tidak langsung nolak)
+  // pakai nilai toggle yg baru diklik user di form, belum tentu tersimpan
+  settings.closingBulanan = settings.closingBulanan || structuredClone(DEFAULTS.closingBulanan);
+  settings.closingBulanan.enabled = true;
+  document.getElementById("closingBulananEnabled").checked = true;
+  if(!localStorage.getItem(ELEVEN_KEY_STORAGE)){
+    showToast("Isi dulu \"Token Akses\" di tab Audio > Buat Suara AI (ElevenLabs).", "err");
+    return;
+  }
+  btn.textContent = "Menyinkronkan…"; btn.disabled = true;
+  const ok = await fetchWorkerScheduleData();
+  btn.disabled = false; btn.textContent = "Sinkronkan data sekarang";
+  refreshClosingBulananStatus();
+  if(!ok) showToast("Gagal mengambil data dari Worker. Cek Token Akses & koneksi internet.", "err");
+});
+
 /* ---------------- Suara khusus per-item Jam Masuk/Pulang ----------------
    Beda dari renderWorkRows() (yang mengulang per HARI Senin-Sabtu),
    audio-nya cuma 2 baris SAJA (satu utk "masuk", satu utk "pulang") --
@@ -2962,7 +3139,16 @@ function renderWorkAudioRows(){
         <button class="pa-mini-btn" data-test-audio="azan_${item}" data-pa-test-kind="azan" data-pa-test-key="${item}" title="Uji coba">▶</button>
         <button class="pa-mini-btn" data-pa-reset-kind="azan" data-pa-reset-key="${item}" title="Kembali ke default">↺</button>
       </div>
-  `).join("");
+  `).join("") + `
+      <div class="pa-row">
+        <span class="pa-icon">🔒</span>
+        <span class="pa-status">Closing Bulanan -- Peringatan (sebelum closing): <span id="paStat_reminder_closing">…</span></span>
+        <label class="pa-upload-btn" for="paFile_reminder_closing" title="Unggah MP3 khusus">⬆</label>
+        <input type="file" id="paFile_reminder_closing" class="pa-file-input" accept="audio/*" data-pa-kind="reminder" data-pa-key="closing">
+        <button class="pa-mini-btn" data-test-audio="reminder_closing" data-pa-test-kind="reminder" data-pa-test-key="closing" title="Uji coba">▶</button>
+        <button class="pa-mini-btn" data-pa-reset-kind="reminder" data-pa-reset-key="closing" title="Kembali ke default">↺</button>
+      </div>
+  `;
   // Event delegation SAMA polanya dgn renderPrayerRows() -- tapi kunci di
   // sini ("masuk"/"pulang") bukan kunci semu Jumat, jadi tidak perlu cek
   // isKunciSemuJumat / recalcJumatDuration seperti di sana.
@@ -3233,12 +3419,16 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
     readPrayerRowsIntoSettings();
     readCorrectionRowsIntoSettings();
     readWorkRowsIntoSettings();
+    settings.closingBulanan = settings.closingBulanan || structuredClone(DEFAULTS.closingBulanan);
+    settings.closingBulanan.enabled = document.getElementById("closingBulananEnabled").checked;
+    settings.closingBulanan.warningMinutes = Math.max(0, parseInt(document.getElementById("closingBulananMenit").value,10) || 10);
     saveSettings();
     closeSettings();
     showToast("Pengaturan berhasil disimpan.", "ok");
     scheduleDateStr = null;
     await ensureScheduleForToday();
     refreshOfflineCoverage();
+    fetchWorkerScheduleData().then(()=>{ tick(); }); // sinkron diam-diam kalau closing bulanan baru diaktifkan/diubah
   }catch(err){
     console.error("Gagal menyimpan pengaturan:", err);
     closeSettings();
@@ -3293,12 +3483,18 @@ function registerServiceWorker(){
   document.getElementById("cityLabel").textContent = settings.city || "Lokasi belum diatur";
   updateInfoCards();
   await ensureScheduleForToday();
+  await fetchWorkerScheduleData(); // ambil jam pulang khusus / closing bulanan terbaru (kalau sudah diaktifkan)
   tick();
   setInterval(async ()=>{
     const key = dateKey(new Date());
     if(key !== scheduleDateStr) await ensureScheduleForToday();
     tick();
   }, 1000);
+  // polling data jam pulang khusus/closing bulanan tiap 5 menit -- lebih
+  // sering drpd sinkron jadwal sholat (6 jam), karena pengumuman jam
+  // pulang/closing bisa muncul kapan saja di hari yang sama & perlu
+  // segera kelihatan di layar kantor.
+  setInterval(fetchWorkerScheduleData, 5*60000);
   setInterval(()=> ensureCalendarBuffer(true), 6*3600000);
   setInterval(maybeAutoSync, 15*60000);
   maybeAutoSync();
