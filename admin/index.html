@@ -292,6 +292,7 @@
     <div class="nav-item" data-page="kalender"><span class="ic">🗓️</span> Google Calendar</div>
     <div class="nav-item" data-page="pengingat"><span class="ic">🔔</span> Pengingat Umum</div>
     <div class="nav-item" data-page="libur"><span class="ic">🕋</span> Libur Nasional</div>
+    <div class="nav-item" data-page="pulangclosing"><span class="ic">🏃</span> Jam Pulang &amp; Closing Bulanan</div>
     <div class="nav-item" data-page="perangkat"><span class="ic">💡</span> Perangkat &amp; Google Home</div>
     <div class="nav-item" data-page="maintenance"><span class="ic">🛠️</span> Maintenance</div>
     <div class="nav-item" data-page="pengaturan"><span class="ic">⚙️</span> Pengaturan</div>
@@ -624,6 +625,46 @@
         </div>
       </section>
 
+      <section class="page" id="page-pulangclosing">
+        <div class="card">
+          <h2>🔒 Closing bulanan otomatis</h2>
+          <div class="desc">Sama dengan <code>/closing_bulanan_admin</code>. Worker menghitung sendiri perkiraan tanggal closing bulanan tiap bulan (tanggal terakhir bulan, dimajukan 1 hari kalau ternyata Libur Nasional), lalu H-sekian hari sebelum tanggal itu, DM otomatis dikirim ke ID di bawah minta konfirmasi tanggal &amp; jam pastinya (admin tetap balas manual lewat <code>/closing_bulanan</code> -- ini CUMA pengingat, bukan pengisian otomatis).</div>
+          <div class="row">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
+              <input type="checkbox" id="cbaEnabled" style="width:auto;"> Aktifkan reminder otomatis
+            </label>
+          </div>
+          <div class="row">
+            <div class="field"><label>ID Telegram penerima DM</label><input type="text" id="cbaAdminId" placeholder="mis. 141131037"></div>
+            <div class="field" style="max-width:160px;"><label>Kirim H- berapa hari</label><input type="number" id="cbaDaysBefore" min="1" max="14"></div>
+          </div>
+          <div class="hint">Cara dapat ID Telegram seseorang: minta orang itu DM bot ini (apa saja), atau cek lewat @userinfobot di Telegram.</div>
+          <button class="btn small" id="saveCbaBtn">Simpan pengaturan closing bulanan otomatis</button>
+        </div>
+
+        <div class="card">
+          <h2>🏃 Jam pulang khusus</h2>
+          <div class="desc">Sama dengan <code>/jampulang_khusus</code>. Dipakai app "Pengingat Sholat" kantor: geser jam pulang HARI TERTENTU SAJA (mis. jam pulang dimajukan). App polling data ini otomatis, tidak ada pengiriman apa pun lewat Telegram.</div>
+          <div class="row">
+            <div class="field" style="max-width:200px;"><label>Tanggal</label><input type="date" id="newJpTanggal"></div>
+            <div class="field" style="max-width:140px;"><label>Jam pulang baru</label><input type="time" id="newJpJam"></div>
+          </div>
+          <button class="btn small" id="addJpBtn">+ Tambah / timpa jam pulang khusus</button>
+          <div class="table-wrap"><table id="jpTable"><thead><tr><th>Tanggal</th><th>Jam</th><th>Status</th><th></th></tr></thead><tbody></tbody></table></div>
+        </div>
+
+        <div class="card">
+          <h2>🔒 Closing bulanan (tercatat)</h2>
+          <div class="desc">Sama dengan <code>/closing_bulanan</code>. App "Pengingat Sholat" kantor otomatis kirim peringatan sebelum jam ini (jarak menitnya diatur di app, default 10 menit). Tabel di bawah cuma menampilkan 3 bulan terakhir (data yang lebih lama tetap tersimpan, tidak dihapus, cuma disembunyikan dari tampilan).</div>
+          <div class="row">
+            <div class="field" style="max-width:200px;"><label>Tanggal</label><input type="date" id="newCbTanggal"></div>
+            <div class="field" style="max-width:140px;"><label>Jam closing</label><input type="time" id="newCbJam"></div>
+          </div>
+          <button class="btn small" id="addCbBtn">+ Tambah / timpa closing bulanan</button>
+          <div class="table-wrap"><table id="cbTable"><thead><tr><th>Tanggal</th><th>Jam</th><th>Status</th><th></th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </section>
+
       <section class="page" id="page-perangkat">
         <div class="card">
           <h2>🏠 Status hubungan Google Home <span class="badge" id="ghLinkBadge"></span></h2>
@@ -779,7 +820,7 @@ let data = null, sha = null;
 
 // Versi panel ini -- naikkan tiap kali ada perubahan berarti, cocokkan
 // dengan entri di CHANGELOG.md & WORKER_VERSION di worker-komunitas.js.
-const APP_VERSION = "2.14.7";
+const APP_VERSION = "2.15.1"; // naik dari 2.15.0 -- tabel Closing Bulanan cuma tampilkan 3 bulan terakhir
 const WORKER_URL_FOR_VERSION_CHECK = "https://gus-asisten.rempahecho.workers.dev";
 
 /* Cek versi worker LANGSUNG saat halaman dibuka, SEBELUM login (endpoint
@@ -1095,6 +1136,7 @@ function renderAll(){
   renderCalReminder();
   renderCalRules();
   renderLibur();
+  renderPulangClosing();
   renderBardiMonitor();
   renderMaintenance();
   renderSuperAdmin();
@@ -1929,6 +1971,146 @@ document.getElementById("saveLiburBtn").addEventListener("click", async ()=>{
   data.liburReminder = { enabled, time, topicKey, lastSentDate: null };
   if(await saveData()) renderLibur();
 });
+
+/* ================= JAM PULANG & CLOSING BULANAN (BARU) =================
+   Tiga bagian: (1) pengaturan reminder H-sekian hari closing bulanan
+   OTOMATIS (data.closingBulananAuto -- sama dgn /closing_bulanan_admin),
+   (2) daftar jam pulang khusus (data.jamPulangKhusus[] -- sama dgn
+   /jampulang_khusus, dipakai app "Pengingat Sholat" kantor), (3) daftar
+   closing bulanan tercatat (data.closingBulanan[] -- sama dgn
+   /closing_bulanan). Array (2) & (3) TIDAK punya endpoint POST khusus di
+   Worker (beda dari data.reminders[] yang ikut sinkron Google Calendar),
+   jadi diedit LANGSUNG lewat data + saveData() generik, sama pola dgn
+   liburReminder di atas. Tanggal disimpan format "DD-MM-YYYY" (SAMA
+   PERSIS format yang dipakai Worker/command Telegram), sedangkan
+   <input type="date"> HTML kasih/minta format "YYYY-MM-DD" -- makanya ada
+   konversi bolak-balik di ddmmyyyyToIso()/isoToDdmmyyyy() di bawah. */
+function ddmmyyyyToIso(s){ // "05-09-2026" -> "2026-09-05"
+  const [d,m,y] = (s||"").split("-");
+  return (y && m && d) ? `${y}-${m}-${d}` : "";
+}
+function isoToDdmmyyyy(s){ // "2026-09-05" -> "05-09-2026"
+  const [y,m,d] = (s||"").split("-");
+  return (y && m && d) ? `${d}-${m}-${y}` : "";
+}
+function renderPulangClosing(){
+  data.closingBulananAuto = data.closingBulananAuto || {enabled:true, reminderAdminId:null, reminderDaysBefore:3, lastReminderMonthKey:null};
+  const cba = data.closingBulananAuto;
+  document.getElementById("cbaEnabled").checked = !!cba.enabled;
+  document.getElementById("cbaAdminId").value = cba.reminderAdminId || "";
+  document.getElementById("cbaDaysBefore").value = cba.reminderDaysBefore || 3;
+
+  renderJpTable();
+  renderCbTable();
+}
+document.getElementById("saveCbaBtn").addEventListener("click", async ()=>{
+  const enabled = document.getElementById("cbaEnabled").checked;
+  const idRaw = document.getElementById("cbaAdminId").value.trim();
+  const reminderAdminId = idRaw ? parseInt(idRaw,10) : null;
+  const reminderDaysBefore = Math.max(1, parseInt(document.getElementById("cbaDaysBefore").value,10) || 3);
+  if(enabled && !reminderAdminId){ toast("Isi ID Telegram penerima DM dulu.", true); return; }
+  data.closingBulananAuto = { ...(data.closingBulananAuto||{}), enabled, reminderAdminId, reminderDaysBefore };
+  if(await saveData()) renderPulangClosing();
+});
+
+function renderJpTable(){
+  const tbody = document.querySelector("#jpTable tbody");
+  const list = data.jamPulangKhusus || [];
+  tbody.innerHTML = list.length ? "" : `<tr><td colspan="4" class="empty">Belum ada jam pulang khusus.</td></tr>`;
+  list.slice().sort((a,b)=>ddmmyyyyToIso(a.date).localeCompare(ddmmyyyyToIso(b.date))).forEach(r=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.date}</td>
+      <td>${r.time}</td>
+      <td><span class="badge ${r.enabled?"on":"off"}">${r.enabled?"Aktif":"Nonaktif"}</span></td>
+      <td class="td-actions">
+        <button class="btn small" data-toggle-jp="${r.id}">${r.enabled?"Matikan":"Aktifkan"}</button>
+        <button class="btn small danger" data-del-jp="${r.id}">Hapus</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll("[data-toggle-jp]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = Number(btn.dataset.toggleJp);
+      const r = data.jamPulangKhusus.find(x=>x.id===id);
+      r.enabled = !r.enabled;
+      if(await saveData()) renderJpTable();
+    });
+  });
+  tbody.querySelectorAll("[data-del-jp]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = Number(btn.dataset.delJp);
+      data.jamPulangKhusus = (data.jamPulangKhusus||[]).filter(x=>x.id!==id);
+      if(await saveData()) renderJpTable();
+    });
+  });
+}
+document.getElementById("addJpBtn").addEventListener("click", async ()=>{
+  const tanggalIso = document.getElementById("newJpTanggal").value;
+  const jam = document.getElementById("newJpJam").value;
+  if(!tanggalIso || !jam){ toast("Isi tanggal & jam dulu.", true); return; }
+  const tanggal = isoToDdmmyyyy(tanggalIso);
+  data.jamPulangKhusus = (data.jamPulangKhusus||[]).filter(r=>r.date!==tanggal); // 1 tanggal cuma 1 entri aktif, sama pola dgn Worker
+  data.jamPulangKhusus.push({ id: Date.now(), date: tanggal, time: jam, enabled: true });
+  if(await saveData()){
+    document.getElementById("newJpTanggal").value = "";
+    document.getElementById("newJpJam").value = "";
+    renderJpTable();
+  }
+});
+
+function renderCbTable(){
+  const tbody = document.querySelector("#cbTable tbody");
+  const listAll = data.closingBulanan || [];
+  // Cuma tampilkan 3 bulan terakhir (data lama TETAP tersimpan di GitHub,
+  // cuma disembunyikan di tabel ini biar tidak menumpuk tak berujung --
+  // urut dari yang PALING BARU, ambil 3 teratas).
+  const list = listAll.slice().sort((a,b)=>ddmmyyyyToIso(b.date).localeCompare(ddmmyyyyToIso(a.date))).slice(0,3);
+  tbody.innerHTML = list.length ? "" : `<tr><td colspan="4" class="empty">Belum ada closing bulanan tercatat.</td></tr>`;
+  list.forEach(r=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${r.date}</td>
+      <td>${r.time}</td>
+      <td><span class="badge ${r.enabled?"on":"off"}">${r.enabled?"Aktif":"Nonaktif"}</span></td>
+      <td class="td-actions">
+        <button class="btn small" data-toggle-cb="${r.id}">${r.enabled?"Matikan":"Aktifkan"}</button>
+        <button class="btn small danger" data-del-cb="${r.id}">Hapus</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+  tbody.querySelectorAll("[data-toggle-cb]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = Number(btn.dataset.toggleCb);
+      const r = data.closingBulanan.find(x=>x.id===id);
+      r.enabled = !r.enabled;
+      if(await saveData()) renderCbTable();
+    });
+  });
+  tbody.querySelectorAll("[data-del-cb]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id = Number(btn.dataset.delCb);
+      data.closingBulanan = (data.closingBulanan||[]).filter(x=>x.id!==id);
+      if(await saveData()) renderCbTable();
+    });
+  });
+}
+document.getElementById("addCbBtn").addEventListener("click", async ()=>{
+  const tanggalIso = document.getElementById("newCbTanggal").value;
+  const jam = document.getElementById("newCbJam").value;
+  if(!tanggalIso || !jam){ toast("Isi tanggal & jam dulu.", true); return; }
+  const tanggal = isoToDdmmyyyy(tanggalIso);
+  data.closingBulanan = (data.closingBulanan||[]).filter(r=>r.date!==tanggal);
+  data.closingBulanan.push({ id: Date.now(), date: tanggal, time: jam, enabled: true });
+  if(await saveData()){
+    document.getElementById("newCbTanggal").value = "";
+    document.getElementById("newCbJam").value = "";
+    renderCbTable();
+  }
+});
+
 function toggleRemFields(){
   const type = document.getElementById("newRemType").value;
   document.getElementById("remFieldOnce").style.display = type==="once" ? "flex" : "none";

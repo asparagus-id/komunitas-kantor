@@ -13,7 +13,7 @@
   supaya klien lama otomatis ambil versi baru (pola sama seperti sw.js
   di aplikasi Habit).
 */
-const CACHE_VERSION = "admkom-v7";
+const CACHE_VERSION = "admkom-v9"; // naik dari v8 -- tabel Closing Bulanan cuma tampilkan 3 bulan terakhir
 const APP_SHELL = [
   "./",
   "./index.html",
