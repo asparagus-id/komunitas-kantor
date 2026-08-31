@@ -13,7 +13,7 @@
   supaya klien lama otomatis ambil versi baru (pola sama seperti sw.js
   di aplikasi Habit).
 */
-const CACHE_VERSION = "admkom-v11"; // naik dari v10 -- FIX BUG menu "Jam Pulang & Closing Bulanan" tidak bisa diklik (PAGES belum diupdate)
+const CACHE_VERSION = "admkom-v12"; // naik dari v11 -- tambah field jam kirim DM H-3 closing bulanan
 const APP_SHELL = [
   "./",
   "./index.html",

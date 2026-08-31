@@ -628,7 +628,7 @@
       <section class="page" id="page-pulangclosing">
         <div class="card">
           <h2>🔒 Closing bulanan otomatis</h2>
-          <div class="desc">Sama dengan <code>/closing_bulanan_admin</code>. Worker menghitung sendiri perkiraan tanggal closing bulanan tiap bulan (tanggal terakhir bulan, dimajukan 1 hari kalau ternyata Libur Nasional), lalu H-sekian hari sebelum tanggal itu, DM otomatis dikirim ke ID di bawah minta konfirmasi tanggal &amp; jam pastinya (admin tetap balas manual lewat <code>/closing_bulanan</code> -- ini CUMA pengingat, bukan pengisian otomatis).</div>
+          <div class="desc">Sama dengan <code>/closing_bulanan_admin</code>. Worker menghitung sendiri perkiraan tanggal closing bulanan tiap bulan (tanggal terakhir bulan, dimajukan 1 hari kalau ternyata Libur Nasional), lalu pada jam &amp; H-sekian hari sebelum tanggal itu, DM otomatis dikirim ke ID di bawah minta konfirmasi tanggal &amp; jam pastinya (admin tetap balas manual lewat <code>/closing_bulanan</code> -- ini CUMA pengingat, bukan pengisian otomatis). Kalau tanggal H-sekian itu SENDIRI kena Libur Nasional, otomatis mundur lagi (H-4, H-5, dst) sampai ketemu hari kerja. Kalau bulan ini SUDAH ada closing bulanan tercatat (mis. admin sendiri majukan tanggalnya krn ada libur panjang), DM ini otomatis TIDAK dikirim lagi.</div>
           <div class="row">
             <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
               <input type="checkbox" id="cbaEnabled" style="width:auto;"> Aktifkan reminder otomatis
@@ -636,6 +636,9 @@
           </div>
           <div class="row">
             <div class="field"><label>ID Telegram penerima DM</label><input type="text" id="cbaAdminId" placeholder="mis. 141131037"></div>
+          </div>
+          <div class="row">
+            <div class="field" style="max-width:160px;"><label>Jam kirim (WIB)</label><input type="time" id="cbaTime"></div>
             <div class="field" style="max-width:160px;"><label>Kirim H- berapa hari</label><input type="number" id="cbaDaysBefore" min="1" max="14"></div>
           </div>
           <div class="hint">Cara dapat ID Telegram seseorang: minta orang itu DM bot ini (apa saja), atau cek lewat @userinfobot di Telegram.</div>
@@ -835,7 +838,7 @@ let data = null, sha = null;
 
 // Versi panel ini -- naikkan tiap kali ada perubahan berarti, cocokkan
 // dengan entri di CHANGELOG.md & WORKER_VERSION di worker-komunitas.js.
-const APP_VERSION = "2.16.1"; // naik dari 2.16.0 -- FIX BUG: "pulangclosing" belum terdaftar di array PAGES, jadi menu "Jam Pulang & Closing Bulanan" diklik tidak merespons (selalu balik ke Overview)
+const APP_VERSION = "2.17.0"; // naik dari 2.16.1 -- TAMBAH field "Jam kirim (WIB)" utk DM H-3 closing bulanan otomatis (cbaTime)
 const WORKER_URL_FOR_VERSION_CHECK = "https://gus-asisten.rempahecho.workers.dev";
 
 /* Cek versi worker LANGSUNG saat halaman dibuka, SEBELUM login (endpoint
@@ -2011,10 +2014,11 @@ function isoToDdmmyyyy(s){ // "2026-09-05" -> "05-09-2026"
   return (y && m && d) ? `${d}-${m}-${y}` : "";
 }
 function renderPulangClosing(){
-  data.closingBulananAuto = data.closingBulananAuto || {enabled:true, reminderAdminId:null, reminderDaysBefore:3, lastReminderMonthKey:null};
+  data.closingBulananAuto = data.closingBulananAuto || {enabled:true, reminderAdminId:null, reminderDaysBefore:3, time:"08:00", lastReminderMonthKey:null};
   const cba = data.closingBulananAuto;
   document.getElementById("cbaEnabled").checked = !!cba.enabled;
   document.getElementById("cbaAdminId").value = cba.reminderAdminId || "";
+  document.getElementById("cbaTime").value = cba.time || "08:00";
   document.getElementById("cbaDaysBefore").value = cba.reminderDaysBefore || 3;
 
   data.closingBulananPengumuman = data.closingBulananPengumuman || {enabled:true, time:"07:00", topicKey:null, lastSentDate:null};
@@ -2030,9 +2034,10 @@ document.getElementById("saveCbaBtn").addEventListener("click", async ()=>{
   const enabled = document.getElementById("cbaEnabled").checked;
   const idRaw = document.getElementById("cbaAdminId").value.trim();
   const reminderAdminId = idRaw ? parseInt(idRaw,10) : null;
+  const time = document.getElementById("cbaTime").value || "08:00";
   const reminderDaysBefore = Math.max(1, parseInt(document.getElementById("cbaDaysBefore").value,10) || 3);
   if(enabled && !reminderAdminId){ toast("Isi ID Telegram penerima DM dulu.", true); return; }
-  data.closingBulananAuto = { ...(data.closingBulananAuto||{}), enabled, reminderAdminId, reminderDaysBefore };
+  data.closingBulananAuto = { ...(data.closingBulananAuto||{}), enabled, reminderAdminId, time, reminderDaysBefore };
   if(await saveData()) renderPulangClosing();
 });
 document.getElementById("saveCbpBtn").addEventListener("click", async ()=>{
