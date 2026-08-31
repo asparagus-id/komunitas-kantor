@@ -13,7 +13,7 @@
   supaya klien lama otomatis ambil versi baru (pola sama seperti sw.js
   di aplikasi Habit).
 */
-const CACHE_VERSION = "admkom-v13"; // naik dari v12 -- kartu Overview rekap puasa ikut tampilkan "Belum isi"
+const CACHE_VERSION = "admkom-v14"; // naik dari v13 -- closing bulanan sinkron Google Calendar + notifikasi jam H disederhanakan
 const APP_SHELL = [
   "./",
   "./index.html",

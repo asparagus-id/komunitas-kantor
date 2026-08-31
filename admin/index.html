@@ -646,18 +646,17 @@
         </div>
 
         <div class="card">
-          <h2>📢 Pengumuman closing bulanan ke grup (hari-H)</h2>
-          <div class="desc">Pesan TERPISAH dari DM admin H-3 di atas -- ini dikirim ke GRUP/topik PAS tanggal closing itu sendiri (bukan wajib 10 menit sebelum, itu urusan suara di app "Pengingat Sholat" kantor yang independen total). Cuma terkirim kalau ada entri closing bulanan aktif untuk tanggal hari itu (lihat tabel "Closing bulanan (tercatat)" di bawah).</div>
+          <h2>📢 Notifikasi closing bulanan ke grup (jam H)</h2>
+          <div class="desc">Pesan TERPISAH dari DM admin H-3 di atas -- ini dikirim ke GRUP/topik PAS jam yang tertulis di entri closing bulanan itu sendiri (bukan jam custom lagi -- identik pola notifikasi kajian &amp; pengingat umum, cuma 1 jalur notifikasi, tidak dobel). Otomatis tersinkron ke Google Calendar juga begitu ditambahkan.</div>
           <div class="row">
             <label style="display:flex; align-items:center; gap:8px; font-size:13px;">
-              <input type="checkbox" id="cbpEnabled" style="width:auto;"> Aktifkan pengumuman hari-H
+              <input type="checkbox" id="cbpEnabled" style="width:auto;"> Aktifkan notifikasi jam H ke grup
             </label>
           </div>
           <div class="row">
-            <div class="field"><label>Jam kirim (WIB)</label><input type="time" id="cbpTime"></div>
             <div class="field"><label>Kirim ke topik</label><select id="cbpTopic"><option value="">(percakapan umum grup)</option></select></div>
           </div>
-          <button class="btn small" id="saveCbpBtn">Simpan pengaturan pengumuman hari-H</button>
+          <button class="btn small" id="saveCbpBtn">Simpan pengaturan notifikasi jam H</button>
         </div>
 
         <div class="card">
@@ -838,7 +837,7 @@ let data = null, sha = null;
 
 // Versi panel ini -- naikkan tiap kali ada perubahan berarti, cocokkan
 // dengan entri di CHANGELOG.md & WORKER_VERSION di worker-komunitas.js.
-const APP_VERSION = "2.18.0"; // naik dari 2.17.0 -- renderRekap() (kartu Overview) sekarang ikut tampilkan "Belum isi" (roster puasaVoterRoster), konsisten dgn rekap yg dikirim ke grup Telegram
+const APP_VERSION = "2.19.0"; // naik dari 2.18.0 -- Closing bulanan skrg sinkron Google Calendar otomatis; card "Pengumuman hari-H" disederhanakan jadi "Notifikasi jam H" (field cbpTime dihapus, tidak perlu diatur lagi -- selalu ikut jam di entri itu sendiri)
 const WORKER_URL_FOR_VERSION_CHECK = "https://gus-asisten.rempahecho.workers.dev";
 
 /* Cek versi worker LANGSUNG saat halaman dibuka, SEBELUM login (endpoint
@@ -2027,10 +2026,9 @@ function renderPulangClosing(){
   document.getElementById("cbaTime").value = cba.time || "08:00";
   document.getElementById("cbaDaysBefore").value = cba.reminderDaysBefore || 3;
 
-  data.closingBulananPengumuman = data.closingBulananPengumuman || {enabled:true, time:"07:00", topicKey:null, lastSentDate:null};
+  data.closingBulananPengumuman = data.closingBulananPengumuman || {enabled:true, topicKey:null};
   const cbp = data.closingBulananPengumuman;
   document.getElementById("cbpEnabled").checked = !!cbp.enabled;
-  document.getElementById("cbpTime").value = cbp.time || "07:00";
   document.getElementById("cbpTopic").value = cbp.topicKey || "";
 
   renderJpTable();
@@ -2048,9 +2046,8 @@ document.getElementById("saveCbaBtn").addEventListener("click", async ()=>{
 });
 document.getElementById("saveCbpBtn").addEventListener("click", async ()=>{
   const enabled = document.getElementById("cbpEnabled").checked;
-  const time = document.getElementById("cbpTime").value || "07:00";
   const topicKey = document.getElementById("cbpTopic").value || null;
-  data.closingBulananPengumuman = { ...(data.closingBulananPengumuman||{}), enabled, time, topicKey };
+  data.closingBulananPengumuman = { ...(data.closingBulananPengumuman||{}), enabled, topicKey };
   if(await saveData()) renderPulangClosing();
 });
 
@@ -2114,7 +2111,7 @@ function renderCbTable(){
     tr.innerHTML = `
       <td>${r.date}</td>
       <td>${r.time}</td>
-      <td><span class="badge ${r.enabled?"on":"off"}">${r.enabled?"Aktif":"Nonaktif"}</span></td>
+      <td><span class="badge ${r.enabled?"on":"off"}">${r.enabled?"Aktif":"Nonaktif"}</span> ${r.googleEventId?'<span title="Tersinkron Google Calendar">📅</span>':''} ${r.groupNotifSent?'<span title="Notifikasi jam H sudah terkirim">✅</span>':''}</td>
       <td class="td-actions">
         <button class="btn small" data-toggle-cb="${r.id}">${r.enabled?"Matikan":"Aktifkan"}</button>
         <button class="btn small danger" data-del-cb="${r.id}">Hapus</button>
@@ -2133,8 +2130,18 @@ function renderCbTable(){
   tbody.querySelectorAll("[data-del-cb]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const id = Number(btn.dataset.delCb);
+      const target = (data.closingBulanan||[]).find(x=>x.id===id);
       data.closingBulanan = (data.closingBulanan||[]).filter(x=>x.id!==id);
-      if(await saveData()) renderCbTable();
+      if(await saveData()){
+        renderCbTable();
+        // Catatan: hapus dari sini TIDAK ikut hapus event di Google Calendar
+        // (beda dari /closing_bulanan_hapus via Telegram, yang otomatis
+        // ikut hapus) -- kalau sudah sempat tersinkron, hapus manual juga
+        // di Google Calendar kalau perlu.
+        if(target && target.googleEventId){
+          toast("Dihapus dari daftar. Event-nya di Google Calendar perlu dihapus manual (hapus lewat panel belum bisa ikut hapus otomatis).", true);
+        }
+      }
     });
   });
 }
@@ -2144,11 +2151,12 @@ document.getElementById("addCbBtn").addEventListener("click", async ()=>{
   if(!tanggalIso || !jam){ toast("Isi tanggal & jam dulu.", true); return; }
   const tanggal = isoToDdmmyyyy(tanggalIso);
   data.closingBulanan = (data.closingBulanan||[]).filter(r=>r.date!==tanggal);
-  data.closingBulanan.push({ id: Date.now(), date: tanggal, time: jam, enabled: true });
+  data.closingBulanan.push({ id: Date.now(), date: tanggal, time: jam, enabled: true, googleEventId: null, groupNotifSent: false });
   if(await saveData()){
     document.getElementById("newCbTanggal").value = "";
     document.getElementById("newCbJam").value = "";
     renderCbTable();
+    toast("Tersimpan ✓ -- sinkron ke Google Calendar berjalan otomatis di background (±5 menit).");
   }
 });
 
