@@ -709,6 +709,13 @@
             <button class="btn" id="fetchReminder">Ambil dari link</button>
           </div>
           <div class="link-status" id="linkStatusReminder"></div>
+          <div class="field" style="margin-top:12px;">
+            <label>Volume suara pengingat</label>
+            <div class="slider-row">
+              <input type="range" id="inVolumeReminder" min="0" max="100" value="80">
+              <span id="volumeReminderVal" style="font-size:12.5px;color:var(--muted);width:36px;">80%</span>
+            </div>
+          </div>
         </div>
         <div class="audio-block">
           <div class="atitle">Suara adzan / takbir (saat waktu tiba)</div>
@@ -724,16 +731,16 @@
             <button class="btn" id="fetchAzan">Ambil dari link</button>
           </div>
           <div class="link-status" id="linkStatusAzan"></div>
+          <div class="field" style="margin-top:12px;">
+            <label>Volume suara adzan</label>
+            <div class="slider-row">
+              <input type="range" id="inVolumeAzan" min="0" max="100" value="80">
+              <span id="volumeAzanVal" style="font-size:12.5px;color:var(--muted);width:36px;">80%</span>
+            </div>
+          </div>
         </div>
         <button class="btn primary" id="applyAudioToAllBtn" style="width:100%; margin-bottom:14px;">Terapkan MP3 Default ke Semua Waktu Sholat</button>
         <div class="hint" style="margin-top:-10px; margin-bottom:14px;">Menyalin file di atas ke tiap waktu sholat (5x). Sesudahnya, di tab Jadwal, tiap sholat bisa diganti sendiri-sendiri kalau ada yang mau beda (mis. cuma Subuh pakai suara lain).</div>
-        <div class="field">
-          <label>Volume</label>
-          <div class="slider-row">
-            <input type="range" id="inVolume" min="0" max="100" value="80">
-            <span id="volumeVal" style="font-size:12.5px;color:var(--muted);width:36px;">80%</span>
-          </div>
-        </div>
 
         <div class="section-title">Buat Suara AI (ElevenLabs)</div>
         <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
@@ -891,7 +898,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.23.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.22.0: TAMBAH Closing Bulanan & Jam Pulang Otomatis (tab Jam Kerja)
+const APP_VERSION = "1.24.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.23.0: volume dipecah jadi 2 (suara pengingat & suara adzan terpisah)
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -929,7 +936,12 @@ const DEFAULTS = {
   // masih kurang 0-1 menit dari jadwal rujukan Anda. Field ini TETAP bisa
   // diubah manual lewat Pengaturan > Jadwal kalau perlu pas-kan lebih presisi.
   correctionMinutes: { Fajr:2, Sunrise:0, Dhuhr:2, Asr:2, Maghrib:2, Isha:2 },
-  volume: 0.8,
+  // volume terpisah per jenis suara (pengingat vs adzan/takbir) -- berlaku
+  // utk SEMUA kunci audio dari jenis itu (default global maupun override
+  // per-sholat/per-jam-kerja/bagian Jumat), sesuai kategori "kind" yg
+  // sudah dipakai di seluruh app (lihat audioKeysFor/playSound).
+  volumeReminder: 0.8,
+  volumeAzan: 0.8,
   // Pengingat Jam Kerja (masuk & pulang) -- sistem terpisah dari sholat,
   // tapi pakai mesin yang sama (checkTriggers, bar popup, suara reminder/
   // azan). Diatur PER HARI (Senin=1 .. Sabtu=6, key = Date.getDay()),
@@ -1097,6 +1109,12 @@ function loadSettings(){
     const raw = localStorage.getItem("adzan_settings");
     if(!raw) return structuredClone(DEFAULTS);
     const saved = JSON.parse(raw);
+    // migrasi dari versi lama yg cuma punya 1 volume gabungan -> pecah jadi 2
+    if(saved.volume != null && saved.volumeReminder == null && saved.volumeAzan == null){
+      saved.volumeReminder = saved.volume;
+      saved.volumeAzan = saved.volume;
+    }
+    delete saved.volume;
     const merged = structuredClone(DEFAULTS);
     Object.assign(merged, saved); // field top-level yang sederhana (city, lat, volume, dst.)
     merged.prayerSettings = structuredClone(DEFAULTS.prayerSettings);
@@ -1195,16 +1213,17 @@ async function idbDelete(key){
 /* ---------------- Fallback nada (Web Audio) ---------------- */
 let actx = null;
 function ctx(){ if(!actx) actx = new (window.AudioContext||window.webkitAudioContext)(); return actx; }
-function playChime(kind){
+function playChime(kind, volOverride){
   const ac = ctx();
   const now = ac.currentTime;
   const notes = kind === "azan" ? [523.25,659.25,783.99,1046.5] : [659.25,880];
+  const vol = volOverride != null ? volOverride : (kind === "azan" ? settings.volumeAzan : settings.volumeReminder);
   notes.forEach((freq,i)=>{
     const o = ac.createOscillator(); const g = ac.createGain();
     o.type = "sine"; o.frequency.value = freq;
     const t0 = now + i*0.22;
     g.gain.setValueAtTime(0, t0);
-    g.gain.linearRampToValueAtTime(settings.volume*0.5, t0+0.03);
+    g.gain.linearRampToValueAtTime(vol*0.5, t0+0.03);
     g.gain.exponentialRampToValueAtTime(0.001, t0+0.5);
     o.connect(g).connect(ac.destination);
     o.start(t0); o.stop(t0+0.55);
@@ -1246,12 +1265,12 @@ function berhentiUjiCoba(){
   sedangUjiCoba = null;
   updateTombolUjiCoba();
 }
-async function toggleUjiCoba(kind, prayerKey, audioKeys){
+async function toggleUjiCoba(kind, prayerKey, audioKeys, volOverride){
   const idUjiCoba = prayerKey ? `${kind}_${prayerKey}` : kind;
   if (sedangUjiCoba === idUjiCoba){ berhentiUjiCoba(); return; }
   sedangUjiCoba = idUjiCoba;
   updateTombolUjiCoba();
-  await playSound(kind, audioKeys != null ? audioKeys : prayerKey);
+  await playSound(kind, audioKeys != null ? audioKeys : prayerKey, volOverride);
 }
 document.getElementById("audioEl").addEventListener("ended", () => { sedangUjiCoba = null; updateTombolUjiCoba(); });
 
@@ -1287,23 +1306,24 @@ async function resolveAudioSource(kind, prayerKeyOrKeys){
   if(urlDefault) return { url: urlDefault, sumber:"default-link" };
   return { sumber:"nada-bawaan" };
 }
-async function playSound(kind, prayerKey){
+async function playSound(kind, prayerKey, volOverride){
   const sumber = await resolveAudioSource(kind, prayerKey);
   const audioEl = document.getElementById("audioEl");
+  const vol = volOverride != null ? volOverride : (kind === "azan" ? settings.volumeAzan : settings.volumeReminder);
   if(sumber.blob){
     audioEl.src = URL.createObjectURL(sumber.blob);
-    audioEl.volume = settings.volume;
+    audioEl.volume = vol;
     audioEl.currentTime = 0;
-    try{ await audioEl.play(); }catch(e){ playChime(kind); }
+    try{ await audioEl.play(); }catch(e){ playChime(kind, volOverride); }
     return;
   }
   if(sumber.url){
     audioEl.src = sumber.url;
-    audioEl.volume = settings.volume;
+    audioEl.volume = vol;
     audioEl.currentTime = 0;
     try{ await audioEl.play(); return; }catch(e){ /* lanjut ke fallback nada */ }
   }
-  playChime(kind);
+  playChime(kind, volOverride);
 }
 
 /* ---------------- Rantai 3 MP3 Jumat (pengingat sebelum Jumatan) ----------------
@@ -1479,7 +1499,7 @@ async function playJumatReminderChain(){
   for(const p of parts){
     if(!rantaiJumatAktif) break;
     audioEl.src = p.blob ? URL.createObjectURL(p.blob) : p.url;
-    audioEl.volume = settings.volume;
+    audioEl.volume = settings.volumeReminder;
     audioEl.currentTime = 0;
     await new Promise((resolve)=>{
       const onEnded = ()=>{ audioEl.removeEventListener("ended", onEnded); resolve(); };
@@ -2279,8 +2299,10 @@ function openSettings(){
   document.getElementById("inLng").value = settings.lng;
   document.getElementById("citySearchInput").value = "";
   document.getElementById("citySearchResults").innerHTML = "";
-  document.getElementById("inVolume").value = Math.round(settings.volume*100);
-  document.getElementById("volumeVal").textContent = Math.round(settings.volume*100)+"%";
+  document.getElementById("inVolumeReminder").value = Math.round(settings.volumeReminder*100);
+  document.getElementById("volumeReminderVal").textContent = Math.round(settings.volumeReminder*100)+"%";
+  document.getElementById("inVolumeAzan").value = Math.round(settings.volumeAzan*100);
+  document.getElementById("volumeAzanVal").textContent = Math.round(settings.volumeAzan*100)+"%";
   document.getElementById("inDuhaMinutes").value = settings.duhaMinutesAfterSunrise || 15;
   renderPrayerRows();
   renderCorrectionRows();
@@ -3398,10 +3420,19 @@ document.getElementById("syncNowBtn").addEventListener("click", async ()=>{
   else if(!ok) showToast("Cadangan sudah lengkap, tidak ada yang perlu diunduh ulang.");
 });
 document.getElementById("quickSyncBtn").addEventListener("click", ()=> document.getElementById("syncNowBtn").click());
-document.getElementById("testReminder").addEventListener("click", ()=>toggleUjiCoba("reminder"));
-document.getElementById("testAzan").addEventListener("click", ()=>toggleUjiCoba("azan"));
-document.getElementById("inVolume").addEventListener("input", (e)=>{
-  document.getElementById("volumeVal").textContent = e.target.value+"%";
+document.getElementById("testReminder").addEventListener("click", ()=>{
+  const v = parseInt(document.getElementById("inVolumeReminder").value,10)/100;
+  toggleUjiCoba("reminder", null, null, v);
+});
+document.getElementById("testAzan").addEventListener("click", ()=>{
+  const v = parseInt(document.getElementById("inVolumeAzan").value,10)/100;
+  toggleUjiCoba("azan", null, null, v);
+});
+document.getElementById("inVolumeReminder").addEventListener("input", (e)=>{
+  document.getElementById("volumeReminderVal").textContent = e.target.value+"%";
+});
+document.getElementById("inVolumeAzan").addEventListener("input", (e)=>{
+  document.getElementById("volumeAzanVal").textContent = e.target.value+"%";
 });
 
 document.getElementById("resetBtn").addEventListener("click", ()=>{
@@ -3414,7 +3445,8 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
     settings.city = document.getElementById("inCity").value.trim() || DEFAULTS.city;
     settings.lat = parseFloat(document.getElementById("inLat").value) || DEFAULTS.lat;
     settings.lng = parseFloat(document.getElementById("inLng").value) || DEFAULTS.lng;
-    settings.volume = parseInt(document.getElementById("inVolume").value,10)/100;
+    settings.volumeReminder = parseInt(document.getElementById("inVolumeReminder").value,10)/100;
+    settings.volumeAzan = parseInt(document.getElementById("inVolumeAzan").value,10)/100;
     settings.duhaMinutesAfterSunrise = Math.max(1, parseInt(document.getElementById("inDuhaMinutes").value,10) || 15);
     readPrayerRowsIntoSettings();
     readCorrectionRowsIntoSettings();
