@@ -363,8 +363,7 @@
     11,
     30,
     59,
-    2,
-    221
+    2
   ],
   "puasaVariantQueuePoolSize": 249,
   "kajian": [
@@ -605,6 +604,15 @@
         "Ikut",
         "Tidak ikut"
       ]
+    },
+    "2026-09-03": {
+      "pollId": "6109355691661591594",
+      "threadId": 9028,
+      "answers": {},
+      "options": [
+        "Nol, puasa",
+        "Tinggi"
+      ]
     }
   },
   "puasaVoterRoster": {
@@ -615,7 +623,7 @@
     "451730890": "Ulva Halawa",
     "1244930074": "Mila Paramita"
   },
-  "lastPuasaPollSentDate": "2026-08-31",
+  "lastPuasaPollSentDate": "2026-09-03",
   "lastKajianCheckDate": "2026-09-03",
   "maintenanceReports": [],
   "maintenanceTopicKey": null,
