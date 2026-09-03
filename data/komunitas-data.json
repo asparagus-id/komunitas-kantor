@@ -477,6 +477,25 @@
         "sent": true
       },
       "googleEventId": "ea0ek9gam6ql36kni0r1svh8l0"
+    },
+    {
+      "id": 1788439138261,
+      "title": "Rapat dengan Pak Agus Perihal PKP",
+      "message": "Rapat dengan pak Agus di Lantai 2",
+      "topicKey": "kopi_pagi",
+      "schedule": {
+        "type": "once",
+        "date": "2026-09-07",
+        "time": "09:30"
+      },
+      "enabled": true,
+      "lastSentDate": null,
+      "preReminder": {
+        "date": "2026-09-05",
+        "time": "09:00",
+        "sent": false
+      },
+      "googleEventId": "j9dr7smqaq1i0ptdtrlthdo1mg"
     }
   ],
   "liburReminder": {
