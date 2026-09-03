@@ -263,6 +263,11 @@
     display:flex; align-items:center; justify-content:center; font-family:inherit;
   }
   .pa-upload-btn:hover, .pa-mini-btn:hover{border-color:var(--primary); color:var(--primary);}
+  .pa-vol-row{display:flex; align-items:center; gap:7px; margin-top:5px; padding-left:30px; font-size:10.5px; color:var(--muted);}
+  .pa-vol-row input[type=range]{width:84px; flex-shrink:0;}
+  .pa-vol-val{width:30px; flex-shrink:0; text-align:right;}
+  .pa-vol-reset{flex-shrink:0; border:none; background:none; color:var(--muted-dim); font-size:10.5px; cursor:pointer; font-family:inherit; padding:0;}
+  .pa-vol-reset:hover{color:var(--primary);}
   .friday-override input{width:60px; padding:5px 7px; font-size:12.5px; background:var(--surface); border:1px solid rgba(201,162,39,.35); border-radius:8px; color:var(--text);}
   .audio-block{background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:10px;}
   .audio-block .atitle{font-size:13px; font-weight:600; margin-bottom:2px;}
@@ -898,7 +903,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.24.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.23.0: volume dipecah jadi 2 (suara pengingat & suara adzan terpisah)
+const APP_VERSION = "1.25.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.24.0: TAMBAH volume mini per-titik upload (tiap sholat, bagian Jumat, jam kerja, closing)
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -942,6 +947,11 @@ const DEFAULTS = {
   // sudah dipakai di seluruh app (lihat audioKeysFor/playSound).
   volumeReminder: 0.8,
   volumeAzan: 0.8,
+  // Override volume KHUSUS per titik upload (per-sholat, bagian Jumat,
+  // jam kerja, closing) -- kunci "${kind}_${key}" spt "reminder_Fajr",
+  // "azan_DhuhrJumatAzan", dst. Kalau kosong utk suatu titik, otomatis
+  // jatuh ke volumeReminder/volumeAzan di atas (lihat volumeFor()).
+  volumePerKey: {},
   // Pengingat Jam Kerja (masuk & pulang) -- sistem terpisah dari sholat,
   // tapi pakai mesin yang sama (checkTriggers, bar popup, suara reminder/
   // azan). Diatur PER HARI (Senin=1 .. Sabtu=6, key = Date.getDay()),
@@ -1306,15 +1316,41 @@ async function resolveAudioSource(kind, prayerKeyOrKeys){
   if(urlDefault) return { url: urlDefault, sumber:"default-link" };
   return { sumber:"nada-bawaan" };
 }
+/* Volume yang BENAR-BENAR dipakai utk kombinasi kind+key: kalau titik itu
+   (mis. "reminder_Fajr", "azan_DhuhrJumatAzan") punya override volume
+   sendiri di settings.volumePerKey, pakai itu -- kalau tidak ada override
+   utk kunci manapun di daftar (prayerKeyOrKeys boleh array, dicoba paling
+   spesifik duluan, sama pola dgn resolveAudioSource), jatuh ke volume
+   default kategori (volumeReminder/volumeAzan). */
+function volumeFor(kind, prayerKeyOrKeys){
+  const daftarKunci = Array.isArray(prayerKeyOrKeys) ? prayerKeyOrKeys : (prayerKeyOrKeys ? [prayerKeyOrKeys] : []);
+  if(settings.volumePerKey){
+    for(const key of daftarKunci){
+      const v = settings.volumePerKey[`${kind}_${key}`];
+      if(v != null) return v;
+    }
+  }
+  return kind === "azan" ? settings.volumeAzan : settings.volumeReminder;
+}
+function setVolumeOverride(kind, key, vol){
+  if(!settings.volumePerKey) settings.volumePerKey = {};
+  settings.volumePerKey[`${kind}_${key}`] = vol;
+  saveSettings();
+}
+function clearVolumeOverride(kind, key){
+  if(settings.volumePerKey) delete settings.volumePerKey[`${kind}_${key}`];
+  saveSettings();
+}
+
 async function playSound(kind, prayerKey, volOverride){
   const sumber = await resolveAudioSource(kind, prayerKey);
   const audioEl = document.getElementById("audioEl");
-  const vol = volOverride != null ? volOverride : (kind === "azan" ? settings.volumeAzan : settings.volumeReminder);
+  const vol = volOverride != null ? volOverride : volumeFor(kind, prayerKey);
   if(sumber.blob){
     audioEl.src = URL.createObjectURL(sumber.blob);
     audioEl.volume = vol;
     audioEl.currentTime = 0;
-    try{ await audioEl.play(); }catch(e){ playChime(kind, volOverride); }
+    try{ await audioEl.play(); }catch(e){ playChime(kind, vol); }
     return;
   }
   if(sumber.url){
@@ -1323,7 +1359,7 @@ async function playSound(kind, prayerKey, volOverride){
     audioEl.currentTime = 0;
     try{ await audioEl.play(); return; }catch(e){ /* lanjut ke fallback nada */ }
   }
-  playChime(kind, volOverride);
+  playChime(kind, vol);
 }
 
 /* ---------------- Rantai 3 MP3 Jumat (pengingat sebelum Jumatan) ----------------
@@ -1393,7 +1429,7 @@ async function resolveJumatParts(){
   const parts = [];
   for(const k of JUMAT_KEYS){
     const src = await resolveJumatOverrideOnly("reminder", k);
-    if(src) parts.push(src);
+    if(src) parts.push({...src, key:k});
   }
   return parts;
 }
@@ -1499,7 +1535,7 @@ async function playJumatReminderChain(){
   for(const p of parts){
     if(!rantaiJumatAktif) break;
     audioEl.src = p.blob ? URL.createObjectURL(p.blob) : p.url;
-    audioEl.volume = settings.volumeReminder;
+    audioEl.volume = volumeFor("reminder", p.key);
     audioEl.currentTime = 0;
     await new Promise((resolve)=>{
       const onEnded = ()=>{ audioEl.removeEventListener("ended", onEnded); resolve(); };
@@ -2591,6 +2627,49 @@ document.getElementById("yearlyDownloadAllBtn").addEventListener("click", async 
   renderYearlyTable();
 });
 
+/* ---------------- Volume mini per-titik (di tiap baris upload MP3) ----------------
+   Ditaruh SATU baris kecil di bawah tiap .pa-row (upload/uji-coba/reset),
+   supaya titik manapun yang punya slot upload sendiri (per-sholat, tiap
+   bagian Jumat, jam masuk/pulang, closing) juga bisa diatur volumenya
+   sendiri-sendiri -- bukan cuma 2 slider default global di tab Audio.
+   Disimpan LANGSUNG (tanpa perlu klik "Simpan") begitu slider dilepas,
+   sama seperti pola instan upload/reset MP3 di titik yang sama. */
+function paVolRowHtml(kind, key){
+  return `<div class="pa-vol-row">
+    <span>🔊</span>
+    <input type="range" class="pa-vol-range" min="0" max="100" data-pa-vol-kind="${kind}" data-pa-vol-key="${key}">
+    <span class="pa-vol-val" data-pa-vol-label="${kind}_${key}">--%</span>
+    <button type="button" class="pa-vol-reset" data-pa-vol-reset-kind="${kind}" data-pa-vol-reset-key="${key}" title="Kembali ke volume default (${kind==="azan"?"Volume suara adzan":"Volume suara pengingat"})">↺ default</button>
+  </div>`;
+}
+function wirePaVolControls(box){
+  box.querySelectorAll(".pa-vol-range").forEach(range=>{
+    const kind = range.dataset.paVolKind, key = range.dataset.paVolKey;
+    const labelEl = box.querySelector(`[data-pa-vol-label="${kind}_${key}"]`);
+    const v = Math.round(volumeFor(kind, key) * 100);
+    range.value = v;
+    if(labelEl) labelEl.textContent = v + "%";
+    range.addEventListener("input", ()=>{
+      if(labelEl) labelEl.textContent = range.value + "%";
+    });
+    range.addEventListener("change", ()=>{
+      setVolumeOverride(kind, key, parseInt(range.value,10)/100);
+    });
+  });
+  box.querySelectorAll("[data-pa-vol-reset-kind]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const kind = btn.dataset.paVolResetKind, key = btn.dataset.paVolResetKey;
+      clearVolumeOverride(kind, key);
+      const range = box.querySelector(`.pa-vol-range[data-pa-vol-kind="${kind}"][data-pa-vol-key="${key}"]`);
+      const labelEl = box.querySelector(`[data-pa-vol-label="${kind}_${key}"]`);
+      const v = Math.round(volumeFor(kind, key) * 100);
+      if(range) range.value = v;
+      if(labelEl) labelEl.textContent = v + "%";
+      showToast(`Volume ${labelForAudioKey(key)} dikembalikan ke default.`, "ok");
+    });
+  });
+}
+
 function renderPrayerRows(){
   const box = document.getElementById("prayerRows");
   box.innerHTML = "";
@@ -2628,7 +2707,8 @@ function renderPrayerRows(){
         <input type="file" id="paFile_reminder_DhuhrJumat${n}" class="pa-file-input" accept="audio/*" data-pa-kind="reminder" data-pa-key="DhuhrJumat${n}">
         <button class="pa-mini-btn" data-test-audio="reminder_DhuhrJumat${n}" data-pa-test-kind="reminder" data-pa-test-key="DhuhrJumat${n}" title="Uji coba bagian ${n}">▶</button>
         <button class="pa-mini-btn" data-pa-reset-kind="reminder" data-pa-reset-key="DhuhrJumat${n}" title="Kembali ke default">↺</button>
-      </div>`).join("")}
+      </div>
+      ${paVolRowHtml("reminder", `DhuhrJumat${n}`)}`).join("")}
       <div class="pa-row">
         <span class="pa-icon">⛓️</span>
         <span class="pa-status">Bagian 1 → 2 → 3 berurutan</span>
@@ -2648,6 +2728,7 @@ function renderPrayerRows(){
         <button class="pa-mini-btn" data-test-audio="azan_${JUMAT_AZAN_KEY}" data-pa-test-kind="azan" data-pa-test-key="${JUMAT_AZAN_KEY}" title="Uji coba">▶</button>
         <button class="pa-mini-btn" data-pa-reset-kind="azan" data-pa-reset-key="${JUMAT_AZAN_KEY}" title="Kembali ke default">↺</button>
       </div>
+      ${paVolRowHtml("azan", JUMAT_AZAN_KEY)}
       <div class="hint" style="margin:0 0 8px;">Kalau kosong, adzan Dzuhur hari Jumat tetap pakai MP3 adzan Dzuhur biasa di bawah (perilaku lama).</div>` : ""}
       <div class="pa-row">
         <span class="pa-icon">🔔</span>
@@ -2657,6 +2738,7 @@ function renderPrayerRows(){
         <button class="pa-mini-btn" data-test-audio="reminder_${key}" data-pa-test-kind="reminder" data-pa-test-key="${key}" title="Uji coba">▶</button>
         <button class="pa-mini-btn" data-pa-reset-kind="reminder" data-pa-reset-key="${key}" title="Kembali ke default">↺</button>
       </div>
+      ${paVolRowHtml("reminder", key)}
       <div id="reminderAutoInfo_${key}" class="hint" style="margin:0 0 8px;">…</div>
       <div class="pa-row">
         <span class="pa-icon">📢</span>
@@ -2666,6 +2748,7 @@ function renderPrayerRows(){
         <button class="pa-mini-btn" data-test-audio="azan_${key}" data-pa-test-kind="azan" data-pa-test-key="${key}" title="Uji coba">▶</button>
         <button class="pa-mini-btn" data-pa-reset-kind="azan" data-pa-reset-key="${key}" title="Kembali ke default">↺</button>
       </div>
+      ${paVolRowHtml("azan", key)}
     `;
     const updateOffState = ()=>{
       const anyOn = row.querySelector(".reminderEnableInput").checked || row.querySelector(".azanEnableInput").checked;
@@ -2730,6 +2813,7 @@ function renderPrayerRows(){
       refreshPrayerAudioStatus();
     });
   });
+  wirePaVolControls(box);
   refreshPrayerAudioStatus();
 }
 /* Label tampilan utk kunci audio -- REMINDABLE pakai PRAYER_LABEL biasa,
@@ -3153,6 +3237,7 @@ function renderWorkAudioRows(){
         <button class="pa-mini-btn" data-test-audio="reminder_${item}" data-pa-test-kind="reminder" data-pa-test-key="${item}" title="Uji coba">▶</button>
         <button class="pa-mini-btn" data-pa-reset-kind="reminder" data-pa-reset-key="${item}" title="Kembali ke default">↺</button>
       </div>
+      ${paVolRowHtml("reminder", item)}
       <div class="pa-row">
         <span class="pa-icon">${WORK_ITEM_EMOJI[item]}</span>
         <span class="pa-status">${WORK_ITEM_LABEL[item]} -- Notifikasi (saat jam tiba): <span id="paStat_azan_${item}">…</span></span>
@@ -3161,6 +3246,7 @@ function renderWorkAudioRows(){
         <button class="pa-mini-btn" data-test-audio="azan_${item}" data-pa-test-kind="azan" data-pa-test-key="${item}" title="Uji coba">▶</button>
         <button class="pa-mini-btn" data-pa-reset-kind="azan" data-pa-reset-key="${item}" title="Kembali ke default">↺</button>
       </div>
+      ${paVolRowHtml("azan", item)}
   `).join("") + `
       <div class="pa-row">
         <span class="pa-icon">🔒</span>
@@ -3170,6 +3256,7 @@ function renderWorkAudioRows(){
         <button class="pa-mini-btn" data-test-audio="reminder_closing" data-pa-test-kind="reminder" data-pa-test-key="closing" title="Uji coba">▶</button>
         <button class="pa-mini-btn" data-pa-reset-kind="reminder" data-pa-reset-key="closing" title="Kembali ke default">↺</button>
       </div>
+      ${paVolRowHtml("reminder", "closing")}
   `;
   // Event delegation SAMA polanya dgn renderPrayerRows() -- tapi kunci di
   // sini ("masuk"/"pulang") bukan kunci semu Jumat, jadi tidak perlu cek
@@ -3207,6 +3294,7 @@ function renderWorkAudioRows(){
       refreshPrayerAudioStatus();
     });
   });
+  wirePaVolControls(box);
   refreshPrayerAudioStatus();
 }
 function refreshAudioStatus(){
