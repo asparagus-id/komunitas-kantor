@@ -608,7 +608,12 @@
     "2026-09-03": {
       "pollId": "6109355691661591594",
       "threadId": 9028,
-      "answers": {},
+      "answers": {
+        "1244930074": {
+          "name": "Mila Paramita",
+          "choice": 0
+        }
+      },
       "options": [
         "Nol, puasa",
         "Tinggi"
