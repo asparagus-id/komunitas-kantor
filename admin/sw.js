@@ -13,7 +13,7 @@
   supaya klien lama otomatis ambil versi baru (pola sama seperti sw.js
   di aplikasi Habit).
 */
-const CACHE_VERSION = "admkom-v14"; // naik dari v13 -- closing bulanan sinkron Google Calendar + notifikasi jam H disederhanakan
+const CACHE_VERSION = "admkom-v15"; // naik dari v14 -- index.html diupdate: tabel Kajian/Riwayat Kajian/Pengingat Umum dapat kolom "Kehadiran" (badge Hadir/Tidak hadir/Belum pasti + popup detail), card baru "Rekap Kehadiran Notifikasi Kalender" di halaman Google Calendar. Menyusul fitur poll kehadiran otomatis di Worker (v2.26.0).
 const APP_SHELL = [
   "./",
   "./index.html",

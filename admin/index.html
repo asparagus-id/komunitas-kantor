@@ -505,7 +505,7 @@
             <button class="btn small hidden" id="editKajianSettingsBtn">✏️ Edit pengaturan</button>
           </div>
           <div class="locked-note hidden" id="kajianSettingsLockedNote">Pengaturan tersimpan &amp; terkunci -- klik "Edit pengaturan" utk mengubahnya.</div>
-          <div class="table-wrap"><table id="kajianTable"><thead><tr><th>Tanggal</th><th>Pengisi</th><th>Tema</th><th></th></tr></thead><tbody></tbody></table></div>
+          <div class="table-wrap"><table id="kajianTable"><thead><tr><th>Tanggal</th><th>Pengisi</th><th>Tema</th><th>Kehadiran</th><th></th></tr></thead><tbody></tbody></table></div>
           <div class="row" style="margin-top:14px;">
             <div class="field"><label>Tanggal</label><input type="date" id="newKajianDate"></div>
             <div class="field"><label>Pengisi</label><input type="text" id="newKajianPengisi" placeholder="Ust. Fulan"></div>
@@ -520,7 +520,7 @@
         <div class="card">
           <h2>🗂️ Riwayat kajian</h2>
           <div class="desc">Kajian yang sudah lewat tanggalnya — cuma untuk dilihat, tidak bisa diedit dari sini (data mentah tersimpan selamanya di <code>data.kajian</code>, tapi otomatis dibersihkan dari daftar aktif setelah &gt;7 hari lewat).</div>
-          <div class="table-wrap"><table id="kajianRiwayatTable"><thead><tr><th>Tanggal</th><th>Pengisi</th><th>Tema</th></tr></thead><tbody></tbody></table></div>
+          <div class="table-wrap"><table id="kajianRiwayatTable"><thead><tr><th>Tanggal</th><th>Pengisi</th><th>Tema</th><th>Kehadiran</th></tr></thead><tbody></tbody></table></div>
         </div>
       </section>
 
@@ -564,13 +564,19 @@
           </div>
           <button class="btn primary" id="addCalRuleBtn">+ Tambah aturan</button>
         </div>
+
+        <div class="card">
+          <h2>📊 Rekap Kehadiran Notifikasi Kalender</h2>
+          <div class="desc">Tiap notifikasi ontime kalender (di atas) sekarang otomatis disusul 1 poll kehadiran ke grup. Daftar di bawah ini event PALING BARU yang sudah dapat poll (maks 20 terakhir) — klik badge-nya utk lihat siapa jawab apa.</div>
+          <div class="table-wrap"><table id="calRekapTable"><thead><tr><th>Tanggal</th><th>Event</th><th>Kehadiran</th></tr></thead><tbody></tbody></table></div>
+        </div>
       </section>
 
       <section class="page" id="page-pengingat">
         <div class="card">
           <h2>🔔 Pengingat umum</h2>
           <div class="desc">Sama dengan <code>/ingat_tambah</code>. Bebas judul &amp; pesan, ke topik mana saja, sekali/harian/mingguan/bulanan. Otomatis tersinkron ke Google Calendar kalau sudah dikonfigurasi (termasuk sebagai recurring event asli untuk yang berulang). <b>Tips:</b> pilih topik <code>pengumuman</code> di dropdown Topik untuk bikin pengumuman — ini fitur yang SAMA PERSIS dengan command <code>/pengumuman &lt;judul&gt; | &lt;pesan&gt; | &lt;jadwal&gt;</code> di Telegram (cuma lebih singkat karena topiknya otomatis).</div>
-          <div class="table-wrap"><table id="remindersTable"><thead><tr><th>Judul</th><th>Jadwal</th><th>Topik</th><th>Status</th><th></th></tr></thead><tbody></tbody></table></div>
+          <div class="table-wrap"><table id="remindersTable"><thead><tr><th>Judul</th><th>Jadwal</th><th>Topik</th><th>Status</th><th>Kehadiran</th><th></th></tr></thead><tbody></tbody></table></div>
           <div class="row" style="margin-top:14px;">
             <div class="field"><label>Judul</label><input type="text" id="newRemTitle" placeholder="Rapat Bulanan"></div>
             <div class="field"><label>Topik</label><select id="newRemTopic"></select></div>
@@ -822,6 +828,16 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div id="attModalOverlay" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:999; display:flex; align-items:center; justify-content:center; padding:16px;">
+  <div style="background:var(--panel); border:1px solid var(--line); border-radius:12px; max-width:480px; width:100%; max-height:80vh; overflow:auto; padding:18px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <h3 id="attModalTitle" style="margin:0; font-size:15px;">Rekap Kehadiran</h3>
+      <button class="btn small" id="attModalCloseBtn">✕</button>
+    </div>
+    <div id="attModalBody"></div>
+  </div>
+</div>
 
 <script>
 const HARI = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
@@ -1153,6 +1169,7 @@ function renderAll(){
   renderReminders();
   renderCalReminder();
   renderCalRules();
+  renderCalRekap();
   renderLibur();
   renderPulangClosing();
   renderBardiMonitor();
@@ -1708,13 +1725,14 @@ function renderKajian(){
   kajianSettingsSetLocked(kajianSettingsIsConfigured());
   const tbody = document.querySelector("#kajianTable tbody");
   const list = getUpcomingKajian();
-  tbody.innerHTML = list.length ? "" : `<tr><td colspan="4" class="empty">Belum ada jadwal kajian mendatang.</td></tr>`;
+  tbody.innerHTML = list.length ? "" : `<tr><td colspan="5" class="empty">Belum ada jadwal kajian mendatang.</td></tr>`;
   list.forEach(k=>{
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${fmtTanggalID(k.tanggal)}</td>
       <td>${k.pengisi}</td>
       <td>${k.tema}</td>
+      <td>${attendanceBadgeHtml(k.attendance, `Kehadiran — ${fmtTanggalID(k.tanggal)}: ${k.tema}`, "kajian-"+k.id)}</td>
       <td class="td-actions">
         <button class="btn small" data-edit-kajian="${k.id}">Edit</button>
         <button class="btn small danger" data-del-kajian="${k.id}">Hapus</button>
@@ -1722,6 +1740,7 @@ function renderKajian(){
     `;
     tbody.appendChild(tr);
   });
+  bindAttendanceBadges(tbody);
   tbody.querySelectorAll("[data-del-kajian]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const id = Number(btn.dataset.delKajian);
@@ -1785,18 +1804,87 @@ function renderKajianRiwayat(){
   if(!tbody) return;
   const today = getTodayKey();
   const list = (data.kajian || []).filter(k=>k.tanggal < today).sort((a,b)=>b.tanggal.localeCompare(a.tanggal));
-  tbody.innerHTML = list.length ? "" : `<tr><td colspan="3" class="empty">Belum ada riwayat (atau semua sudah lewat &gt;7 hari, jadi sudah dibersihkan otomatis).</td></tr>`;
+  tbody.innerHTML = list.length ? "" : `<tr><td colspan="4" class="empty">Belum ada riwayat (atau semua sudah lewat &gt;7 hari, jadi sudah dibersihkan otomatis).</td></tr>`;
   list.forEach(k=>{
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${fmtTanggalID(k.tanggal)}</td><td>${k.pengisi}</td><td>${k.tema}</td>`;
+    tr.innerHTML = `<td>${fmtTanggalID(k.tanggal)}</td><td>${k.pengisi}</td><td>${k.tema}</td><td>${attendanceBadgeHtml(k.attendance, `Kehadiran — ${fmtTanggalID(k.tanggal)}: ${k.tema}`, "kajian-riwayat-"+k.id)}</td>`;
     tbody.appendChild(tr);
   });
+  bindAttendanceBadges(tbody);
 }
 function fmtTanggalID(iso){
   const [y,m,d] = iso.split("-").map(Number);
   const bulan = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
   return `${d} ${bulan[m-1]} ${y}`;
 }
+
+/* ---------- Rekap Kehadiran (generik) ----------
+   Dipakai bareng oleh Kajian, Pengingat Umum, & notifikasi ontime
+   Kalender -- ketiganya sekarang otomatis dapat poll Telegram kehadiran
+   (Hadir/Tidak hadir/Belum pasti, TIDAK anonim) begitu reminder-nya
+   terkirim (lihat Worker, sendAttendancePoll). `attendance` di sini
+   bentuknya {pollId, answers:{userId:{name,choice}}} -- SAMA persis
+   dengan yang disimpan di k.attendance / r.attendance /
+   r.preReminder.attendance / data.calendarAttendance[eventId]. */
+/* Registry sementara: key unik -> {attendance, title}. Dipakai drpd
+   nyimpen JSON/nama org langsung di atribut HTML (nama bisa mengandung
+   tanda kutip/karakter aneh yg bikin ribet escaping). Diisi ulang tiap
+   kali tabel di-render, cukup buat 1x sesi (tidak perlu persist). */
+const ATT_REGISTRY = {};
+function attendanceCounts(attendance){
+  const answers = (attendance && attendance.answers) || {};
+  const vals = Object.values(answers);
+  return {
+    hadir: vals.filter(a=>a.choice===0),
+    tidak: vals.filter(a=>a.choice===1),
+    belum: vals.filter(a=>a.choice===2),
+    total: vals.length,
+  };
+}
+/* Badge kecil "✅2 ❌1 🤔0" yang bisa diklik utk lihat nama-namanya --
+   dipasang di kolom tabel. `key` HARUS unik per baris (mis. "kajian-123").
+   Kalau poll belum pernah terkirim (attendance null/tidak ada pollId),
+   tampil abu-abu "belum ada poll" & tidak bisa diklik. */
+function attendanceBadgeHtml(attendance, title, key){
+  if(!attendance || !attendance.pollId){
+    return `<span class="hint" style="margin:0;">— belum ada poll</span>`;
+  }
+  ATT_REGISTRY[key] = { attendance, title };
+  const c = attendanceCounts(attendance);
+  return `<button class="btn small" data-att-key="${key}" style="white-space:nowrap;">✅${c.hadir.length} ❌${c.tidak.length} 🤔${c.belum.length}</button>`;
+}
+function bindAttendanceBadges(root){
+  (root || document).querySelectorAll("[data-att-key]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const entry = ATT_REGISTRY[btn.dataset.attKey];
+      if(entry) openAttendanceModal(entry.title, entry.attendance);
+    });
+  });
+}
+function openAttendanceModal(title, attendance){
+  document.getElementById("attModalTitle").textContent = title || "Rekap Kehadiran";
+  const c = attendanceCounts(attendance);
+  const body = document.getElementById("attModalBody");
+  if(c.total === 0){
+    body.innerHTML = `<div class="empty">Poll sudah terkirim, tapi belum ada yang menjawab.</div>`;
+  } else {
+    body.innerHTML = `
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div><b style="color:var(--ok)">✅ Hadir (${c.hadir.length})</b><br>${c.hadir.map(a=>a.name).join("<br>") || "-"}</div>
+        <div><b style="color:var(--ember)">❌ Tidak hadir (${c.tidak.length})</b><br>${c.tidak.map(a=>a.name).join("<br>") || "-"}</div>
+        <div><b style="color:var(--warning)">🤔 Belum pasti (${c.belum.length})</b><br>${c.belum.map(a=>a.name).join("<br>") || "-"}</div>
+      </div>
+    `;
+  }
+  document.getElementById("attModalOverlay").classList.remove("hidden");
+}
+function closeAttendanceModal(){
+  document.getElementById("attModalOverlay").classList.add("hidden");
+}
+document.getElementById("attModalCloseBtn").addEventListener("click", closeAttendanceModal);
+document.getElementById("attModalOverlay").addEventListener("click", (e)=>{
+  if(e.target.id === "attModalOverlay") closeAttendanceModal();
+});
 document.getElementById("saveKajianSettingsBtn").addEventListener("click", async ()=>{
   const offsetsRaw = document.getElementById("kajianOffsets").value.trim();
   const offsets = offsetsRaw ? offsetsRaw.split(",").map(s=>parseInt(s.trim(),10)).filter(n=>!isNaN(n) && n>=0) : [];
@@ -1948,6 +2036,24 @@ document.getElementById("addCalRuleBtn").addEventListener("click", async ()=>{
     renderCalRules();
   }
 });
+
+/* Daftar poll kehadiran dari notifikasi ontime kalender -- data.calendarAttendance
+   dari GET /data adalah objek {eventId: {pollId, answers, summary, sentAt}}.
+   Diurut TERBARU dulu (by sentAt), tampilkan maks 20 supaya tabel tidak
+   kepanjangan (Worker sendiri juga sudah membatasi cuma simpan 100 entri
+   -- lihat catatan di handleScheduledTick). */
+function renderCalRekap(){
+  const tbody = document.querySelector("#calRekapTable tbody");
+  if(!tbody) return;
+  const entries = Object.values(data.calendarAttendance || {}).sort((a,b)=> (b.sentAt||"").localeCompare(a.sentAt||"")).slice(0,20);
+  tbody.innerHTML = entries.length ? "" : `<tr><td colspan="3" class="empty">Belum ada polling kehadiran dari notifikasi kalender.</td></tr>`;
+  entries.forEach((e, i)=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${e.sentAt ? fmtTanggalID(e.sentAt) : "-"}</td><td>${e.summary || "(Tanpa judul)"}</td><td>${attendanceBadgeHtml(e, `Kehadiran — ${e.summary || "(Tanpa judul)"}`, "kalender-"+i+"-"+(e.pollId||i))}</td>`;
+    tbody.appendChild(tr);
+  });
+  bindAttendanceBadges(tbody);
+}
 
 /* ---------- PENGINGAT UMUM ---------- */
 function populateTopicSelect(){
@@ -2180,14 +2286,18 @@ function renderReminders(){
   populateTopicSelect();
   const tbody = document.querySelector("#remindersTable tbody");
   const list = data.reminders || [];
-  tbody.innerHTML = list.length ? "" : `<tr><td colspan="5" class="empty">Belum ada pengingat umum.</td></tr>`;
+  tbody.innerHTML = list.length ? "" : `<tr><td colspan="6" class="empty">Belum ada pengingat umum.</td></tr>`;
   list.forEach(r=>{
+    // Prioritas ke poll pengingat UTAMA (lebih dekat ke jadwal asli),
+    // fallback ke poll pengingat AWAL kalau pengingat utama belum sempat kirim.
+    const att = (r.attendance && r.attendance.pollId) ? r.attendance : (r.preReminder && r.preReminder.attendance);
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${r.title}${r.googleEventId ? ' <span title="Tersinkron Google Calendar">🗓️</span>':''}</td>
       <td>${formatJadwalUmum(r.schedule)}${r.preReminder ? `<br><span class="hint" style="margin:0;">⏳ awal: ${formatPreReminderHtml(r.preReminder)}${r.preReminder.sent?' (terkirim)':''}</span>` : ''}</td>
       <td><code>${r.topicKey}</code></td>
       <td><span class="badge ${r.enabled?"on":"off"}">${r.enabled?"Aktif":"Nonaktif"}</span></td>
+      <td>${attendanceBadgeHtml(att, `Kehadiran — ${r.title}`, "ingat-"+r.id)}</td>
       <td class="td-actions">
         <button class="btn small" data-toggle-rem="${r.id}">${r.enabled?"Matikan":"Aktifkan"}</button>
         <button class="btn small danger" data-del-rem="${r.id}">Hapus</button>
@@ -2195,6 +2305,7 @@ function renderReminders(){
     `;
     tbody.appendChild(tr);
   });
+  bindAttendanceBadges(tbody);
   tbody.querySelectorAll("[data-toggle-rem]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const id = Number(btn.dataset.toggleRem);
