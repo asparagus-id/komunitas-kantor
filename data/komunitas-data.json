@@ -512,6 +512,10 @@
           "451730890": {
             "name": "Ulva Halawa",
             "choice": 1
+          },
+          "6859256255": {
+            "name": "INFO UMUM HALAWA INV",
+            "choice": 1
           }
         }
       }
@@ -754,6 +758,7 @@
   "attendanceVoterRoster": {
     "121822437": "KH TOYYIB MUBAROQ LC. MA",
     "223975427": "Pangeran Herry",
-    "451730890": "Ulva Halawa"
+    "451730890": "Ulva Halawa",
+    "6859256255": "INFO UMUM HALAWA INV"
   }
 }
