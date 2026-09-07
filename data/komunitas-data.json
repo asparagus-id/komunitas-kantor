@@ -500,7 +500,12 @@
       "googleEventId": "j9dr7smqaq1i0ptdtrlthdo1mg",
       "attendance": {
         "pollId": "6120572346647446322",
-        "answers": {}
+        "answers": {
+          "451730890": {
+            "name": "Ulva Halawa",
+            "choice": 1
+          }
+        }
       }
     }
   ],
@@ -737,5 +742,8 @@
       "summary": "KONTEN Markaz",
       "sentAt": "2026-09-07"
     }
+  },
+  "attendanceVoterRoster": {
+    "451730890": "Ulva Halawa"
   }
 }
