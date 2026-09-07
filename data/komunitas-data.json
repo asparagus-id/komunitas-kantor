@@ -362,8 +362,7 @@
     201,
     11,
     30,
-    59,
-    2
+    59
   ],
   "puasaVariantQueuePoolSize": 249,
   "kajian": [
@@ -442,7 +441,8 @@
     "68mtng59jq1fo87c5ptphlcfnr_20260901T013000Z",
     "15hu576b8tkkr7crjbaovqkmrv_20260902T073000Z",
     "69ckd0j6a4tiqnk6cp6ptk955n_20260905T013000Z",
-    "5462021tm6q0vf5uadpil6jqk9_20260906T013000Z"
+    "5462021tm6q0vf5uadpil6jqk9_20260906T013000Z",
+    "4qj2c0h5vv5cisav8n89lu5gn9_20260907T013000Z"
   ],
   "calendarTopicKey": "pengumuman",
   "calendarTopicRules": [],
@@ -655,6 +655,15 @@
         "Nol, puasa",
         "Tinggi"
       ]
+    },
+    "2026-09-07": {
+      "pollId": "6120572346647446318",
+      "threadId": 9028,
+      "answers": {},
+      "options": [
+        "Iya, puasa",
+        "Tidak puasa"
+      ]
     }
   },
   "puasaVoterRoster": {
@@ -665,7 +674,7 @@
     "451730890": "Ulva Halawa",
     "1244930074": "Mila Paramita"
   },
-  "lastPuasaPollSentDate": "2026-09-03",
+  "lastPuasaPollSentDate": "2026-09-07",
   "lastKajianCheckDate": "2026-09-07",
   "maintenanceReports": [],
   "maintenanceTopicKey": null,
@@ -698,5 +707,13 @@
       "enabled": true,
       "googleEventId": "cn2gtkt2shrtmlk33vrsnmsitk"
     }
-  ]
+  ],
+  "calendarAttendance": {
+    "4qj2c0h5vv5cisav8n89lu5gn9_20260907T013000Z": {
+      "pollId": "6120572346647446319",
+      "answers": {},
+      "summary": "KONTEN Markaz",
+      "sentAt": "2026-09-07"
+    }
+  }
 }
