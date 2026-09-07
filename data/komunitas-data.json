@@ -490,14 +490,18 @@
         "date": "2026-09-07",
         "time": "09:30"
       },
-      "enabled": true,
-      "lastSentDate": null,
+      "enabled": false,
+      "lastSentDate": "2026-09-07",
       "preReminder": {
         "date": "2026-09-05",
         "time": "09:00",
         "sent": true
       },
-      "googleEventId": "j9dr7smqaq1i0ptdtrlthdo1mg"
+      "googleEventId": "j9dr7smqaq1i0ptdtrlthdo1mg",
+      "attendance": {
+        "pollId": "6120572346647446322",
+        "answers": {}
+      }
     }
   ],
   "liburReminder": {
