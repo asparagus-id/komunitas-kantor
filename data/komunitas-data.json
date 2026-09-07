@@ -681,6 +681,10 @@
       "pollId": "6120572346647446318",
       "threadId": 9028,
       "answers": {
+        "121822437": {
+          "name": "KH TOYYIB MUBAROQ LC. MA",
+          "choice": 1
+        },
         "216663781": {
           "name": "Edwin Prayoga",
           "choice": 1
@@ -705,7 +709,7 @@
     }
   },
   "puasaVoterRoster": {
-    "121822437": "ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ§",
+    "121822437": "KH TOYYIB MUBAROQ LC. MA",
     "141131037": "Tangguh Prima Viernanto",
     "216663781": "Edwin Prayoga",
     "223975427": "Pangeran Herry",
