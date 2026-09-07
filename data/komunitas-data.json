@@ -513,6 +513,10 @@
             "name": "Ulva Halawa",
             "choice": 1
           },
+          "1244930074": {
+            "name": "Mila Paramita",
+            "choice": 0
+          },
           "6859256255": {
             "name": "INFO UMUM HALAWA INV",
             "choice": 1
@@ -763,6 +767,7 @@
     "121822437": "KH TOYYIB MUBAROQ LC. MA",
     "223975427": "Pangeran Herry",
     "451730890": "Ulva Halawa",
+    "1244930074": "Mila Paramita",
     "6859256255": "INFO UMUM HALAWA INV"
   }
 }
