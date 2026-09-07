@@ -501,6 +501,10 @@
       "attendance": {
         "pollId": "6120572346647446322",
         "answers": {
+          "121822437": {
+            "name": "KH TOYYIB MUBAROQ LC. MA",
+            "choice": 1
+          },
           "451730890": {
             "name": "Ulva Halawa",
             "choice": 1
@@ -744,6 +748,7 @@
     }
   },
   "attendanceVoterRoster": {
+    "121822437": "KH TOYYIB MUBAROQ LC. MA",
     "451730890": "Ulva Halawa"
   }
 }
