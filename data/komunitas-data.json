@@ -659,7 +659,12 @@
     "2026-09-07": {
       "pollId": "6120572346647446318",
       "threadId": 9028,
-      "answers": {},
+      "answers": {
+        "216663781": {
+          "name": "Edwin Prayoga",
+          "choice": 1
+        }
+      },
       "options": [
         "Iya, puasa",
         "Tidak puasa"
