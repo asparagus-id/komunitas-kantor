@@ -505,6 +505,10 @@
             "name": "KH TOYYIB MUBAROQ LC. MA",
             "choice": 1
           },
+          "223975427": {
+            "name": "Pangeran Herry",
+            "choice": 1
+          },
           "451730890": {
             "name": "Ulva Halawa",
             "choice": 1
@@ -749,6 +753,7 @@
   },
   "attendanceVoterRoster": {
     "121822437": "KH TOYYIB MUBAROQ LC. MA",
+    "223975427": "Pangeran Herry",
     "451730890": "Ulva Halawa"
   }
 }
