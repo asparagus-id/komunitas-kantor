@@ -547,7 +547,7 @@
     "threshold": 2,
     "topicKey": "pengumuman",
     "alerted": false,
-    "offlineStreak": 0
+    "offlineStreak": 1
   },
   "puasaLog": {
     "2026-08-26": {
