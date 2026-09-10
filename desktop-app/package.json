@@ -1,6 +1,6 @@
 {
   "name": "pengingat-sholat-desktop",
-  "version": "1.27.0",
+  "version": "1.27.2",
   "private": true,
   "scripts": {
     "tauri": "tauri"
