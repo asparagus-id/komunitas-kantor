@@ -203,26 +203,44 @@
   .overlay{position:fixed; inset:0; background:rgba(15,23,42,.35); z-index:20; display:none;}
   .overlay.open{display:block;}
   [data-theme="dark"] .overlay{background:rgba(0,0,0,.55);}
+  /* Panel pengaturan SEKARANG modal lebar di tengah layar (bukan drawer
+     sempit nempel kanan) -- lebih pas utk aplikasi desktop 1280x800.
+     Struktur: .panel-rail (navigasi tab vertikal, kiri) + .panel-main
+     (judul, isi tab yg bisa discroll, tombol simpan -- kanan). Di layar
+     sempit (<=760px, mis. dibuka lewat HP sbg PWA) balik ke tata letak
+     lama: rail jadi strip tab horizontal di atas, spt semula. */
   .panel{
-    position:fixed; top:0; right:0; height:100vh; width:min(420px,92vw);
-    background:var(--surface); border-left:1px solid var(--line); box-shadow:var(--shadow-lg);
-    display:flex; flex-direction:column; transform:translateX(100%); transition:transform .25s ease;
+    position:fixed; top:50%; left:50%; width:min(960px,94vw); height:min(84vh,740px);
+    background:var(--surface); border:1px solid var(--line); border-radius:20px; box-shadow:var(--shadow-lg);
+    display:flex; flex-direction:row; overflow:hidden;
+    opacity:0; pointer-events:none; transform:translate(-50%,-50%) scale(.97); transition:opacity .2s ease, transform .2s ease;
   }
-  .overlay.open .panel{transform:translateX(0);}
-  .panel-head{display:flex; align-items:center; justify-content:space-between; padding:20px 22px 14px; border-bottom:1px solid var(--line);}
-  .panel-head h2{font-family:'Inter Tight',sans-serif; font-size:15px; margin:0; letter-spacing:.06em; text-transform:uppercase;}
-  .panel-close{width:30px; height:30px; border-radius:50%; border:none; background:var(--surface-2); color:var(--muted);
-    cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px;}
-  .panel-close:hover{color:var(--text);}
-  .tabs{display:flex; gap:6px; padding:14px 18px 0;}
-  .tab-btn{flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; padding:10px 4px;
+  .overlay.open .panel{opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1);}
+  .panel-rail{width:130px; flex-shrink:0; background:var(--surface-2); border-right:1px solid var(--line);
+    padding:20px 10px; display:flex; flex-direction:column; overflow-y:auto;}
+  .panel-main{flex:1; min-width:0; display:flex; flex-direction:column;}
+  .panel-head{display:flex; align-items:center; justify-content:space-between; padding:22px 30px 16px; border-bottom:1px solid var(--line); flex-shrink:0;}
+  .panel-head h2{font-family:'Inter Tight',sans-serif; font-size:17px; margin:0; letter-spacing:.02em;}
+  .panel-close{width:32px; height:32px; border-radius:50%; border:1px solid var(--line); background:var(--surface); color:var(--muted);
+    cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;}
+  .panel-close:hover{color:var(--text); border-color:var(--muted-dim);}
+  .tabs{display:flex; flex-direction:column; gap:6px;}
+  .tab-btn{width:100%; display:flex; flex-direction:column; align-items:center; gap:5px; padding:11px 4px;
     border:1px solid var(--line); background:var(--surface-2); border-radius:12px; cursor:pointer; color:var(--muted);
     font-size:11px; transition:.15s;}
   .tab-btn svg{width:16px; height:16px;}
-  .tab-btn.active{border-color:var(--primary); color:var(--primary); background:var(--primary-50); font-weight:700;}
-  .tab-panes{flex:1; overflow-y:auto; padding:18px 22px 10px;}
+  .tab-btn.active{border-color:var(--primary); color:var(--primary); background:var(--primary-50); font-weight:700; box-shadow:var(--shadow);}
+  .tab-panes{flex:1; overflow-y:auto; padding:20px 30px 10px;}
   .tab-pane{display:none;}
   .tab-pane.active{display:block;}
+  @media (max-width:760px){
+    .panel{flex-direction:column; width:96vw; height:92vh; border-radius:16px;}
+    .panel-rail{width:100%; flex-direction:row; overflow-x:auto; overflow-y:visible; border-right:none; border-bottom:1px solid var(--line); padding:10px 12px;}
+    .tabs{flex-direction:row; gap:6px; width:max-content; min-width:100%;}
+    .tab-btn{width:auto; flex:1; min-width:64px;}
+    .panel-head{padding:18px 18px 12px;}
+    .tab-panes{padding:16px 18px 10px;}
+  }
   .panel .sub{font-size:12px; color:var(--muted); margin-bottom:16px;}
   .field-row{display:flex; gap:10px; margin-bottom:14px;}
   .field{flex:1; display:flex; flex-direction:column; gap:6px;}
@@ -305,8 +323,72 @@
     font-size:11.5px; text-align:center; transition:.15s;}
   .quick-btn:hover{border-color:var(--primary); color:var(--primary);}
   .quick-btn svg{width:20px; height:20px;}
-  .panel-footer{padding:16px 22px 20px; border-top:1px solid var(--line);}
-  .panel-footer .btn{width:100%;}
+  .panel-footer{padding:16px 30px 22px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; flex-shrink:0;}
+  .panel-footer .btn{width:auto; padding:11px 26px;}
+  @media (max-width:760px){
+    .panel-footer{padding:14px 18px 18px;}
+    .panel-footer .btn{width:100%;}
+  }
+
+  /* ================= TABEL MINGGUAN JAM KERJA (chip + popover) =================
+     Ganti tumpukan 6 kartu vertikal (satu per hari) jadi 1 tabel: baris=hari,
+     kolom=Masuk/Istirahat/Pulang, supaya seluruh minggu kebaca sekaligus.
+     Tiap sel jam adalah "chip" -- diklik utk buka popover kecil berisi jam,
+     menit pengingat, & toggle notifikasi (input aslinya sama persis dgn versi
+     lama: .workTimeInput/.workMinutesInput/.workReminderEnable/.workAzanEnable,
+     cuma dipindah taruh di dalam popover -- jadi readWorkRowsIntoSettings()
+     & tombol "salin Senin" TIDAK perlu diubah sama sekali). */
+  .week-table-wrap{border:1px solid var(--line); border-radius:16px; overflow-x:auto;}
+  table.week-table{width:100%; border-collapse:collapse; font-size:13px;}
+  .week-table thead th{text-align:left; font-family:'Inter Tight',sans-serif; font-weight:700; font-size:11.5px;
+    color:var(--muted); background:var(--surface-2); padding:12px 14px; border-bottom:1px solid var(--line);}
+  .week-table thead th.col-item{text-align:center;}
+  .week-table tbody tr{border-bottom:1px solid var(--line);}
+  .week-table tbody tr:last-child{border-bottom:none;}
+  .week-table tbody tr:hover{background:var(--gold-light);}
+  .week-table tbody tr.off{opacity:.55;}
+  .week-table td{padding:12px; vertical-align:middle;}
+  .day-cell{font-family:'Inter Tight',sans-serif; font-weight:700; font-size:13.5px; white-space:nowrap;}
+  .col-item{text-align:center;}
+  .chip-wrap{position:relative; display:inline-block;}
+  .chip{display:inline-flex; align-items:center; gap:7px; background:var(--surface); border:1px solid var(--line);
+    border-radius:10px; padding:7px 10px 7px 8px; cursor:pointer; transition:.15s; font-family:inherit;}
+  .chip:hover{border-color:var(--primary);}
+  .chip .dot{width:7px; height:7px; border-radius:50%; background:var(--success); flex-shrink:0;}
+  .chip.off .dot{background:var(--muted-dim);}
+  .chip.off{opacity:.6;}
+  .chip .t{font-variant-numeric:tabular-nums; font-weight:700; font-size:12.5px; color:var(--text);}
+  .chip .t.empty{color:var(--muted-dim); font-weight:600; font-style:italic; font-size:11.5px;}
+  .break-chip{display:inline-flex; align-items:center; gap:6px;}
+  .break-chip .arrow{color:var(--muted-dim); font-size:11px;}
+  .popover{position:absolute; z-index:8; top:calc(100% + 8px); left:50%; width:216px;
+    background:var(--surface); color:var(--text); border:1px solid var(--line); border-radius:14px; padding:13px 14px;
+    box-shadow:var(--shadow-lg); font-size:12px; text-align:left;
+    opacity:0; visibility:hidden; pointer-events:none; transform:translateX(-50%) translateY(-4px); transition:opacity .15s, transform .15s;}
+  .popover.open{opacity:1; visibility:visible; pointer-events:auto; transform:translateX(-50%) translateY(0);}
+  .popover.popover-up{top:auto; bottom:calc(100% + 8px); transform:translateX(-50%) translateY(4px);}
+  .popover.popover-up.open{transform:translateX(-50%) translateY(0);}
+  .week-table td.col-item:nth-child(2) .popover{left:0; transform:translateX(0) translateY(-4px);}
+  .week-table td.col-item:nth-child(2) .popover.open{transform:translateX(0) translateY(0);}
+  .week-table td.col-item:nth-child(4) .popover{left:auto; right:0; transform:translateX(0) translateY(-4px);}
+  .week-table td.col-item:nth-child(4) .popover.open{transform:translateX(0) translateY(0);}
+  .popover .pv-title{font-weight:700; font-family:'Inter Tight',sans-serif; font-size:12px; margin-bottom:9px; color:var(--gold-soft);}
+  .popover .pv-row{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 0; border-top:1px dashed var(--line);}
+  .popover .pv-row:first-of-type{border-top:none; padding-top:0;}
+  .popover .pv-row input[type=time]{width:100%; background:var(--surface-2); border:1px solid var(--line); color:var(--text);
+    border-radius:8px; padding:6px 8px; font-size:12.5px; font-family:inherit;}
+  .popover .pv-row input[type=number]{width:42px; background:var(--surface-2); border:1.5px solid var(--muted-dim); color:var(--text);
+    border-radius:8px; padding:4px 6px; font-size:12px; text-align:center;}
+  .pv-switch-label{display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12px; color:var(--muted);}
+  @media (max-width:760px){ .popover{width:190px;} .kerja-quick-grid{grid-template-columns:1fr !important;} }
+  /* Modal sekarang jauh lebih lebar dari drawer lama -- di layar lebar,
+     daftar sholat & koreksi menit (tab Jadwal) dipecah 2 kolom supaya tidak
+     memanjang percuma sebagai kartu tunggal setinggi layar. Isi & JS-nya
+     (renderPrayerRows dkk) tidak berubah sama sekali, cuma wadahnya jadi grid. */
+  @media (min-width:761px){
+    #prayerRows{display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:start;}
+    #correctionRows.day-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  }
 
   /* ---------- Modal Jadwal Tahunan (lebar, di tengah -- beda dari drawer Pengaturan) ---------- */
   .yearly-panel{
@@ -583,16 +665,20 @@
 <!-- ============ PANEL PENGATURAN (drawer bertab) ============ -->
 <div class="overlay" id="overlay">
   <div class="panel">
+    <div class="panel-rail">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="lokasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Lokasi</button>
+        <button class="tab-btn" data-tab="jadwal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Jadwal</button>
+        <button class="tab-btn" data-tab="kerja"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>Jam Kerja</button>
+        <button class="tab-btn" data-tab="audio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>Audio</button>
+        <button class="tab-btn" data-tab="lainnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>Lainnya</button>
+      </div>
+    </div>
+
+    <div class="panel-main">
     <div class="panel-head">
       <h2>Pengaturan</h2>
       <button class="panel-close" id="panelCloseX">&times;</button>
-    </div>
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="lokasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Lokasi</button>
-      <button class="tab-btn" data-tab="jadwal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Jadwal</button>
-      <button class="tab-btn" data-tab="kerja"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>Jam Kerja</button>
-      <button class="tab-btn" data-tab="audio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>Audio</button>
-      <button class="tab-btn" data-tab="lainnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>Lainnya</button>
     </div>
 
     <div class="tab-panes">
@@ -664,35 +750,37 @@
 
       <!-- ---- TAB: JAM KERJA ---- -->
       <div class="tab-pane" data-pane="kerja">
-        <div class="sub">Pengingat jam masuk &amp; jam pulang kerja, memakai sistem yang sama dengan pengingat sholat (bar popup &amp; suara) tapi menunya terpisah. Diatur sendiri-sendiri untuk tiap hari Senin-Sabtu (Minggu dianggap libur, tidak ada pengingat).</div>
+        <div class="sub">Pengingat jam masuk, jam istirahat, &amp; jam pulang kerja, memakai sistem yang sama dengan pengingat sholat (bar popup &amp; suara) tapi menunya terpisah. Diatur sendiri-sendiri untuk tiap hari Senin-Sabtu (Minggu dianggap libur, tidak ada pengingat). Jam istirahat sengaja tidak ada nilai bawaan -- isi &amp; aktifkan sendiri sesuai jam istirahat masing-masing hari.</div>
 
-        <div class="audio-block" style="margin-bottom:14px;">
-          <div class="atitle">Salin cepat</div>
-          <div class="astat">Atur jam &amp; menit pengingat hari <b>Senin</b> di bawah dulu, lalu klik tombol ini untuk menyalinnya ke Selasa-Sabtu -- sesudahnya tetap bisa diubah manual per hari kalau ada yang beda (mis. Sabtu pulang lebih awal).</div>
-          <button class="btn" id="applyWorkToAllDaysBtn" style="width:100%; margin-top:10px;">Salin Senin ke Selasa - Sabtu</button>
-        </div>
+        <div style="display:grid; grid-template-columns:1fr 1.3fr; gap:14px; margin-bottom:18px;" class="kerja-quick-grid">
+          <div class="audio-block" style="margin-bottom:0;">
+            <div class="atitle">Salin cepat</div>
+            <div class="astat">Atur jam &amp; menit pengingat hari <b>Senin</b> di tabel bawah dulu, lalu klik tombol ini untuk menyalinnya ke Selasa-Sabtu -- sesudahnya tetap bisa diubah manual per hari kalau ada yang beda (mis. Sabtu pulang lebih awal).</div>
+            <button class="btn" id="applyWorkToAllDaysBtn" style="width:100%; margin-top:10px;">Salin Senin ke Selasa - Sabtu</button>
+          </div>
 
-        <div class="audio-block" style="margin-bottom:14px;">
-          <div class="atitle">🔒 Closing bulanan &amp; jam pulang otomatis</div>
-          <div class="astat">Jam pulang khusus (kalau ada pengumuman "pulang dimajukan") &amp; jadwal closing bulanan diambil otomatis dari Bot Komunitas "gus-asisten" -- admin/AI mendeteksinya dari topik "Pengingat Umum" atau Google Calendar, tanggal closing bulanan dihitung sendiri tiap bulan oleh bot. App ini cuma polling datanya secara berkala, PAKAI TOKEN AKSES YANG SAMA dengan tab Audio &gt; Buat Suara AI (tidak perlu isi lagi di sini).</div>
-          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:10px;">
-            <span class="switch"><input type="checkbox" id="closingBulananEnabled"><span class="switch-track"></span></span>
-            Aktifkan closing bulanan &amp; jam pulang otomatis
-          </label>
-          <div class="prayer-row-sub" style="margin-top:10px;">
-            Peringatan <input type="number" id="closingBulananMenit" min="0" max="120" style="width:60px;"> menit sebelum jam closing bulanan
+          <div class="audio-block" style="margin-bottom:0;">
+            <div class="atitle">🔒 Closing bulanan &amp; jam pulang otomatis</div>
+            <div class="astat">Jam pulang khusus &amp; closing bulanan diambil otomatis dari Bot Komunitas "gus-asisten" (topik "Pengingat Umum"/Google Calendar). PAKAI TOKEN AKSES YANG SAMA dengan tab Audio &gt; Buat Suara AI.</div>
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:10px;">
+              <span class="switch"><input type="checkbox" id="closingBulananEnabled"><span class="switch-track"></span></span>
+              Aktifkan closing bulanan &amp; jam pulang otomatis
+            </label>
+            <div class="prayer-row-sub" style="margin-top:10px;">
+              Peringatan <input type="number" id="closingBulananMenit" min="0" max="120" style="width:60px;"> menit sebelum jam closing bulanan
+            </div>
+            <div class="audio-controls" style="margin-top:10px;">
+              <button class="btn" id="closingBulananSyncBtn">Sinkronkan data sekarang</button>
+            </div>
+            <div class="hint" id="closingBulananStatus" style="margin-top:8px;">Belum pernah disinkronkan.</div>
           </div>
-          <div class="audio-controls" style="margin-top:10px;">
-            <button class="btn" id="closingBulananSyncBtn">Sinkronkan data sekarang</button>
-          </div>
-          <div class="hint" id="closingBulananStatus" style="margin-top:8px;">Belum pernah disinkronkan.</div>
         </div>
 
         <div id="workRows"></div>
 
-        <div class="section-title">Suara khusus Jam Masuk, Jam Pulang &amp; Closing Bulanan</div>
+        <div class="section-title">Suara khusus Jam Masuk, Istirahat, Jam Pulang &amp; Closing Bulanan</div>
         <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
-          Opsional. Kalau dikosongkan, jam masuk/pulang tetap memakai suara pengingat/notifikasi <b>default</b> di tab Audio (termasuk kalau default itu hasil suara AI ElevenLabs). Isi di sini kalau mau suara yang BEDA khusus utk jam masuk/pulang -- mis. bikin di tab "Suara AI" teks "Selamat pagi, saatnya presensi masuk" lalu simpan sebagai "Jam Masuk Kerja -- Pengingat".
+          Opsional. Kalau dikosongkan, jam masuk/istirahat/pulang tetap memakai suara pengingat/notifikasi <b>default</b> di tab Audio (termasuk kalau default itu hasil suara AI ElevenLabs). Isi di sini kalau mau suara yang BEDA khusus utk salah satu jam tsb -- mis. bikin di tab "Suara AI" teks "Selamat pagi, saatnya presensi masuk" lalu simpan sebagai "Jam Masuk Kerja -- Pengingat", atau "Waktunya istirahat" sebagai "Notifikasi Istirahat -- Notifikasi (saat jam tiba)".
         </div>
         <div id="workAudioRows"></div>
       </div>
@@ -797,7 +885,8 @@
     </div>
 
     <div class="panel-footer">
-      <button class="btn primary" id="saveBtn" style="width:100%;">Simpan &amp; tutup</button>
+      <button class="btn primary" id="saveBtn">Simpan &amp; tutup</button>
+    </div>
     </div>
   </div>
 </div>
@@ -903,7 +992,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.25.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.24.0: TAMBAH volume mini per-titik upload (tiap sholat, bagian Jumat, jam kerja, closing)
+const APP_VERSION = "1.27.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.26.0: DESAIN ULANG panel Pengaturan (drawer sempit 420px -> modal lebar 960px + rel navigasi vertikal) & tab Jam Kerja jadi tabel mingguan (chip+popover) supaya tidak sesak lagi
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -957,14 +1046,19 @@ const DEFAULTS = {
   // azan). Diatur PER HARI (Senin=1 .. Sabtu=6, key = Date.getDay()),
   // supaya tiap hari boleh beda jam (mis. Jumat/Sabtu pulang lebih awal).
   // Minggu (0) sengaja tidak ada -- dianggap libur, tidak pernah diingatkan.
+  // "istirahat_mulai"/"istirahat_selesai" SENGAJA tidak dikasih jam default
+  // (time:"") & dalam keadaan mati (enabled/azanEnabled:false) -- beda dgn
+  // masuk/pulang yang sudah dikasih jam standar kantor. Jam istirahat wajib
+  // diisi & diaktifkan sendiri oleh pengguna per hari lewat tab "Jam Kerja",
+  // karena jam istirahat tiap kantor/hari bisa beda-beda (custom).
   workHours: {
     perDay: {
-      1: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} },
-      2: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} },
-      3: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} },
-      4: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} },
-      5: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} },
-      6: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} }
+      1: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, istirahat_mulai:{enabled:false, azanEnabled:false, time:"", minutes:10}, istirahat_selesai:{enabled:false, azanEnabled:false, time:"", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} },
+      2: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, istirahat_mulai:{enabled:false, azanEnabled:false, time:"", minutes:10}, istirahat_selesai:{enabled:false, azanEnabled:false, time:"", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} },
+      3: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, istirahat_mulai:{enabled:false, azanEnabled:false, time:"", minutes:10}, istirahat_selesai:{enabled:false, azanEnabled:false, time:"", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} },
+      4: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, istirahat_mulai:{enabled:false, azanEnabled:false, time:"", minutes:10}, istirahat_selesai:{enabled:false, azanEnabled:false, time:"", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} },
+      5: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, istirahat_mulai:{enabled:false, azanEnabled:false, time:"", minutes:10}, istirahat_selesai:{enabled:false, azanEnabled:false, time:"", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} },
+      6: { masuk:{enabled:true, azanEnabled:true, time:"08:00", minutes:10}, istirahat_mulai:{enabled:false, azanEnabled:false, time:"", minutes:10}, istirahat_selesai:{enabled:false, azanEnabled:false, time:"", minutes:10}, pulang:{enabled:true, azanEnabled:true, time:"17:00", minutes:10} }
     }
   },
   // ---------- Closing Bulanan & Jam Pulang Khusus (BARU) ----------
@@ -1015,9 +1109,14 @@ const DAY_NAMES = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
    key di settings.workHours.perDay, supaya tidak perlu konversi bolak-balik. */
 const WORK_DAYS = [1,2,3,4,5,6];
 const WORK_DAY_LABEL = {1:"Senin", 2:"Selasa", 3:"Rabu", 4:"Kamis", 5:"Jumat", 6:"Sabtu"};
-const WORK_ITEMS = ["masuk","pulang"];
-const WORK_ITEM_LABEL = {masuk:"Jam Masuk Kerja", pulang:"Jam Pulang Kerja"};
-const WORK_ITEM_EMOJI = {masuk:"💼", pulang:"🏃"};
+// "istirahat_mulai"/"istirahat_selesai" disisipkan di ANTARA masuk & pulang
+// (urutan array ini juga menentukan urutan tampil di form) -- BEDA dgn
+// masuk/pulang, jam istirahat SENGAJA tidak dikasih waktu default (lihat
+// DEFAULTS.workHours di bawah, time:"") supaya wajib diisi sendiri per
+// hari oleh pengguna (jam istirahat kantor sering beda-beda/custom).
+const WORK_ITEMS = ["masuk","istirahat_mulai","istirahat_selesai","pulang"];
+const WORK_ITEM_LABEL = {masuk:"Jam Masuk Kerja", istirahat_mulai:"Notifikasi Istirahat", istirahat_selesai:"Jam Selesai Istirahat", pulang:"Jam Pulang Kerja"};
+const WORK_ITEM_EMOJI = {masuk:"💼", istirahat_mulai:"🍽️", istirahat_selesai:"⏰", pulang:"🏃"};
 function parseHHMM(str){
   const m = /^(\d{1,2}):(\d{2})$/.exec(String(str||"").trim());
   if(!m) return null;
@@ -2651,6 +2750,14 @@ function wirePaVolControls(box){
     if(labelEl) labelEl.textContent = v + "%";
     range.addEventListener("input", ()=>{
       if(labelEl) labelEl.textContent = range.value + "%";
+      // PENTING: kalau titik INI yang sedang diuji-coba (sedang bunyi),
+      // langsung terapkan ke audio yang lagi diputar SAAT ITU JUGA --
+      // sebelumnya slider cuma mengubah teks label sampai dilepas
+      // (event "change"), jadi kedengarannya "tidak ngefek" kalau
+      // digeser sambil suaranya masih jalan.
+      if(sedangUjiCoba === `${kind}_${key}`){
+        document.getElementById("audioEl").volume = parseInt(range.value,10)/100;
+      }
     });
     range.addEventListener("change", ()=>{
       setVolumeOverride(kind, key, parseInt(range.value,10)/100);
@@ -3098,52 +3205,125 @@ function readCorrectionRowsIntoSettings(){
    atas (pakai class "prayer-row" yang sama) supaya konsisten secara visual,
    tapi datanya sepenuhnya terpisah (settings.workHours), bukan
    settings.prayerSettings. */
-const WORK_LABEL_SHORT = { masuk:"jam masuk", pulang:"jam pulang" };
+const WORK_LABEL_SHORT = { masuk:"jam masuk", istirahat_mulai:"jam istirahat", istirahat_selesai:"jam selesai istirahat", pulang:"jam pulang" };
+/* Kolom tabel mingguan: "Masuk" & "Pulang" masing-masing 1 item, "Istirahat"
+   menggabungkan 2 item (istirahat_mulai -> istirahat_selesai) jadi 1 kolom
+   bergaya "dari -- sampai". Cuma soal TAMPILAN pengelompokan -- data & kunci
+   penyimpanan tiap item tetap sepenuhnya independen spt biasa. */
+const WORK_TABLE_COLUMNS = [
+  { label:"Masuk", emoji:WORK_ITEM_EMOJI.masuk, items:["masuk"] },
+  { label:"Istirahat", emoji:WORK_ITEM_EMOJI.istirahat_mulai, items:["istirahat_mulai","istirahat_selesai"] },
+  { label:"Pulang", emoji:WORK_ITEM_EMOJI.pulang, items:["pulang"] }
+];
+/* Satu "chip" = tombol kecil menampilkan jam & status (titik hijau/abu),
+   diklik utk membuka popover berisi kontrol ASLI (.workTimeInput dkk --
+   SAMA PERSIS class & data-item dgn versi lama), cuma dipindah taruh di
+   dalam popover. Jadi readWorkRowsIntoSettings() & tombol "Salin Senin"
+   di bawah TIDAK perlu diubah sama sekali. */
+function workChipHtml(item, wc){
+  const timeLabel = wc.time ? wc.time : "isi jam";
+  const active = wc.enabled || wc.azanEnabled;
+  return `
+    <span class="chip-wrap">
+      <button type="button" class="chip${active?"":" off"}" data-chip-item="${item}">
+        <span class="dot"></span><span class="t${wc.time?"":" empty"}">${timeLabel}</span>
+      </button>
+      <div class="popover" data-popover-item="${item}">
+        <div class="pv-title">${WORK_ITEM_EMOJI[item]} ${WORK_ITEM_LABEL[item]}</div>
+        <div class="pv-row"><input type="time" class="workTimeInput" data-item="${item}" value="${wc.time}"></div>
+        <div class="pv-row">
+          <label class="pv-switch-label"><span class="switch"><input type="checkbox" class="workReminderEnable" data-item="${item}" ${wc.enabled?"checked":""}><span class="switch-track"></span></span>Pengingat</label>
+          <span><input type="number" class="workMinutesInput" data-item="${item}" min="0" max="120" value="${wc.minutes}"> mnt</span>
+        </div>
+        <div class="pv-row">
+          <label class="pv-switch-label"><span class="switch"><input type="checkbox" class="workAzanEnable" data-item="${item}" ${wc.azanEnabled?"checked":""}><span class="switch-track"></span></span>Saat jam tiba</label>
+        </div>
+      </div>
+    </span>`;
+}
 function renderWorkRows(){
   const box = document.getElementById("workRows");
   if(!box) return;
-  box.innerHTML = "";
+  box.innerHTML = `
+    <div class="week-table-wrap">
+      <table class="week-table">
+        <thead><tr>
+          <th>Hari</th>
+          ${WORK_TABLE_COLUMNS.map(col=>`<th class="col-item">${col.emoji} ${col.label}</th>`).join("")}
+        </tr></thead>
+        <tbody id="workTableBody"></tbody>
+      </table>
+    </div>`;
+  const tbody = document.getElementById("workTableBody");
   WORK_DAYS.forEach(day=>{
     const cfg = settings.workHours.perDay[day];
-    const row = document.createElement("div");
     const adaYangAktif = WORK_ITEMS.some(item=> cfg[item].enabled || cfg[item].azanEnabled);
-    row.className = "prayer-row" + (adaYangAktif ? "" : " off");
-    row.dataset.day = day;
-    row.innerHTML = `
-      <div class="prayer-row-top">
-        <div class="prayer-row-name">${WORK_DAY_LABEL[day]}</div>
-      </div>
-      ${WORK_ITEMS.map(item=>{
-        const wc = cfg[item];
-        return `
-      <div class="prayer-row-sub" style="margin-top:${item==="masuk"?"10px":"14px"}; ${item==="pulang"?"border-top:1px dashed var(--line); padding-top:10px;":""}">
-        <span style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          ${WORK_ITEM_EMOJI[item]} ${WORK_LABEL_SHORT[item]} pukul
-          <input type="time" class="workTimeInput" data-item="${item}" value="${wc.time}" style="width:96px; text-align:left; padding-left:8px;">
-        </span>
-      </div>
-      <div class="prayer-row-sub">
-        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; flex-wrap:wrap;">
-          <span class="switch"><input type="checkbox" class="workReminderEnable" data-item="${item}" ${wc.enabled?"checked":""}><span class="switch-track"></span></span>
-          Pengingat <input type="number" class="workMinutesInput" data-item="${item}" min="0" max="120" value="${wc.minutes}"> menit sebelum jam ${WORK_LABEL_SHORT[item]}
-        </label>
-      </div>
-      <div class="prayer-row-sub">
-        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-          <span class="switch"><input type="checkbox" class="workAzanEnable" data-item="${item}" ${wc.azanEnabled?"checked":""}><span class="switch-track"></span></span>
-          Notifikasi saat jam ${WORK_LABEL_SHORT[item]} tiba
-        </label>
-      </div>`;
+    const tr = document.createElement("tr");
+    tr.className = "prayer-row" + (adaYangAktif ? "" : " off");
+    tr.dataset.day = day;
+    tr.innerHTML = `
+      <td class="day-cell">${WORK_DAY_LABEL[day]}</td>
+      ${WORK_TABLE_COLUMNS.map(col=>{
+        const chips = col.items.map(item=> workChipHtml(item, cfg[item])).join(`<span class="arrow">→</span>`);
+        return `<td class="col-item">${col.items.length>1?`<span class="break-chip">${chips}</span>`:chips}</td>`;
       }).join("")}
     `;
-    const updateOffState = ()=>{
-      const anyOn = Array.from(row.querySelectorAll(".workReminderEnable, .workAzanEnable")).some(el=>el.checked);
-      row.classList.toggle("off", !anyOn);
-    };
-    row.querySelectorAll(".workReminderEnable, .workAzanEnable").forEach(el=> el.addEventListener("change", updateOffState));
-    box.appendChild(row);
+    tbody.appendChild(tr);
   });
 }
+/* Sinkronkan tampilan chip (jam & titik status) dgn nilai input di dalam
+   popover-nya -- dipanggil tiap ada perubahan, atau sesudah tombol "Salin
+   Senin" mengisi form secara terprogram (yang TIDAK memicu event "change"). */
+function syncWorkChipDisplay(tr, item){
+  const timeEl = tr.querySelector(`.workTimeInput[data-item="${item}"]`);
+  const remEl = tr.querySelector(`.workReminderEnable[data-item="${item}"]`);
+  const azanEl = tr.querySelector(`.workAzanEnable[data-item="${item}"]`);
+  const chipBtn = tr.querySelector(`.chip[data-chip-item="${item}"]`);
+  if(!timeEl || !chipBtn) return;
+  const active = remEl.checked || azanEl.checked;
+  chipBtn.classList.toggle("off", !active);
+  const tSpan = chipBtn.querySelector(".t");
+  if(timeEl.value){ tSpan.textContent = timeEl.value; tSpan.classList.remove("empty"); }
+  else { tSpan.textContent = "isi jam"; tSpan.classList.add("empty"); }
+  const anyOn = Array.from(tr.querySelectorAll(".workReminderEnable, .workAzanEnable")).some(el=>el.checked);
+  tr.classList.toggle("off", !anyOn);
+}
+/* Delegasi event dipasang SEKALI di #workRows (elemen ini persis di HTML,
+   tidak ikut dibuat ulang tiap renderWorkRows()) -- supaya tidak numpuk
+   listener duplikat tiap panel Pengaturan dibuka berkali-kali. */
+(function setupWorkTableEvents(){
+  const box = document.getElementById("workRows");
+  if(!box) return;
+  box.addEventListener("click", (e)=>{
+    const chipBtn = e.target.closest(".chip");
+    if(!chipBtn) return;
+    e.stopPropagation();
+    const wrap = chipBtn.closest(".chip-wrap");
+    const pop = wrap.querySelector(".popover");
+    const wasOpen = pop.classList.contains("open");
+    box.querySelectorAll(".popover.open").forEach(p=>{ p.classList.remove("open"); });
+    if(wasOpen) return;
+    // Buka ke ATAS kalau ruang di bawah dalam area scroll tidak cukup,
+    // supaya popover tidak kepotong di baris-baris dekat bagian bawah tabel.
+    const scrollBox = box.closest(".tab-panes");
+    if(scrollBox){
+      const spaceBelow = scrollBox.getBoundingClientRect().bottom - chipBtn.getBoundingClientRect().bottom;
+      pop.classList.toggle("popover-up", spaceBelow < 170);
+    }
+    pop.classList.add("open");
+  });
+  box.addEventListener("change", (e)=>{
+    const item = e.target.dataset && e.target.dataset.item;
+    if(!item) return;
+    const tr = e.target.closest("tr.prayer-row");
+    if(tr) syncWorkChipDisplay(tr, item);
+  });
+  document.addEventListener("click", (e)=>{
+    if(!e.target.closest("#workRows .chip-wrap")){
+      box.querySelectorAll(".popover.open").forEach(p=> p.classList.remove("open"));
+    }
+  });
+})();
 function readWorkRowsIntoSettings(){
   document.querySelectorAll("#workRows .prayer-row").forEach(row=>{
     const day = row.dataset.day;
@@ -3178,8 +3358,8 @@ document.getElementById("applyWorkToAllDaysBtn").addEventListener("click", ()=>{
       targetRow.querySelector(`.workMinutesInput[data-item="${item}"]`).value = srcMin.value;
       targetRow.querySelector(`.workReminderEnable[data-item="${item}"]`).checked = srcRem.checked;
       targetRow.querySelector(`.workAzanEnable[data-item="${item}"]`).checked = srcAzan.checked;
+      syncWorkChipDisplay(targetRow, item);
     });
-    targetRow.classList.toggle("off", !Array.from(targetRow.querySelectorAll(".workReminderEnable, .workAzanEnable")).some(el=>el.checked));
   });
   showToast("Jam Senin disalin ke Selasa-Sabtu -- klik \"Simpan & tutup\" untuk menyimpan.", "ok");
 });
