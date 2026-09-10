@@ -676,7 +676,12 @@
     "2026-09-10": {
       "pollId": "6129504757636662590",
       "threadId": 9028,
-      "answers": {},
+      "answers": {
+        "223975427": {
+          "name": "Pangeran Herry",
+          "choice": 1
+        }
+      },
       "options": [
         "Tetep siyam",
         "Boten"
