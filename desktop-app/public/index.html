@@ -330,27 +330,30 @@
     .panel-footer .btn{width:100%;}
   }
 
-  /* ================= TABEL MINGGUAN JAM KERJA (chip + popover) =================
+  /* ================= TABEL MINGGUAN JAM KERJA (chip + baris detail) =================
      Ganti tumpukan 6 kartu vertikal (satu per hari) jadi 1 tabel: baris=hari,
      kolom=Masuk/Istirahat/Pulang, supaya seluruh minggu kebaca sekaligus.
-     Tiap sel jam adalah "chip" -- diklik utk buka popover kecil berisi jam,
-     menit pengingat, & toggle notifikasi (input aslinya sama persis dgn versi
-     lama: .workTimeInput/.workMinutesInput/.workReminderEnable/.workAzanEnable,
-     cuma dipindah taruh di dalam popover -- jadi readWorkRowsIntoSettings()
-     & tombol "salin Senin" TIDAK perlu diubah sama sekali). */
+     PERBAIKAN dari versi sebelumnya: pengaturan detail (jam, menit, toggle)
+     TIDAK lagi pakai popover melayang (position:absolute) -- versi itu bisa
+     salah posisi & nyangkut "open" menutupi/menangkap klik elemen LAIN di
+     bawahnya (termasuk slider volume). Sekarang klik sebuah chip membuka
+     BARIS TAMBAHAN tepat di bawah baris hari itu (ikut alur dokumen biasa,
+     tidak pernah melayang/menutupi apa pun). Input aslinya tetap sama persis
+     (.workTimeInput/.workMinutesInput/.workReminderEnable/.workAzanEnable)
+     cuma dipindah taruh di baris detail ini. */
   .week-table-wrap{border:1px solid var(--line); border-radius:16px; overflow-x:auto;}
   table.week-table{width:100%; border-collapse:collapse; font-size:13px;}
   .week-table thead th{text-align:left; font-family:'Inter Tight',sans-serif; font-weight:700; font-size:11.5px;
     color:var(--muted); background:var(--surface-2); padding:12px 14px; border-bottom:1px solid var(--line);}
   .week-table thead th.col-item{text-align:center;}
-  .week-table tbody tr{border-bottom:1px solid var(--line);}
-  .week-table tbody tr:last-child{border-bottom:none;}
-  .week-table tbody tr:hover{background:var(--gold-light);}
-  .week-table tbody tr.off{opacity:.55;}
+  .week-table tbody tr.prayer-row{border-bottom:1px solid var(--line); cursor:default;}
+  .week-table tbody tr.work-detail-row + tr.prayer-row, .week-table tbody tr.prayer-row:last-of-type{border-bottom:none;}
+  .week-table tbody tr.prayer-row:hover{background:var(--gold-light);}
+  .week-table tbody tr.prayer-row.off{opacity:.55;}
+  .week-table tbody tr.prayer-row.row-expanded{background:var(--primary-50);}
   .week-table td{padding:12px; vertical-align:middle;}
   .day-cell{font-family:'Inter Tight',sans-serif; font-weight:700; font-size:13.5px; white-space:nowrap;}
   .col-item{text-align:center;}
-  .chip-wrap{position:relative; display:inline-block;}
   .chip{display:inline-flex; align-items:center; gap:7px; background:var(--surface); border:1px solid var(--line);
     border-radius:10px; padding:7px 10px 7px 8px; cursor:pointer; transition:.15s; font-family:inherit;}
   .chip:hover{border-color:var(--primary);}
@@ -361,26 +364,20 @@
   .chip .t.empty{color:var(--muted-dim); font-weight:600; font-style:italic; font-size:11.5px;}
   .break-chip{display:inline-flex; align-items:center; gap:6px;}
   .break-chip .arrow{color:var(--muted-dim); font-size:11px;}
-  .popover{position:absolute; z-index:8; top:calc(100% + 8px); left:50%; width:216px;
-    background:var(--surface); color:var(--text); border:1px solid var(--line); border-radius:14px; padding:13px 14px;
-    box-shadow:var(--shadow-lg); font-size:12px; text-align:left;
-    opacity:0; visibility:hidden; pointer-events:none; transform:translateX(-50%) translateY(-4px); transition:opacity .15s, transform .15s;}
-  .popover.open{opacity:1; visibility:visible; pointer-events:auto; transform:translateX(-50%) translateY(0);}
-  .popover.popover-up{top:auto; bottom:calc(100% + 8px); transform:translateX(-50%) translateY(4px);}
-  .popover.popover-up.open{transform:translateX(-50%) translateY(0);}
-  .week-table td.col-item:nth-child(2) .popover{left:0; transform:translateX(0) translateY(-4px);}
-  .week-table td.col-item:nth-child(2) .popover.open{transform:translateX(0) translateY(0);}
-  .week-table td.col-item:nth-child(4) .popover{left:auto; right:0; transform:translateX(0) translateY(-4px);}
-  .week-table td.col-item:nth-child(4) .popover.open{transform:translateX(0) translateY(0);}
-  .popover .pv-title{font-weight:700; font-family:'Inter Tight',sans-serif; font-size:12px; margin-bottom:9px; color:var(--gold-soft);}
-  .popover .pv-row{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 0; border-top:1px dashed var(--line);}
-  .popover .pv-row:first-of-type{border-top:none; padding-top:0;}
-  .popover .pv-row input[type=time]{width:100%; background:var(--surface-2); border:1px solid var(--line); color:var(--text);
-    border-radius:8px; padding:6px 8px; font-size:12.5px; font-family:inherit;}
-  .popover .pv-row input[type=number]{width:42px; background:var(--surface-2); border:1.5px solid var(--muted-dim); color:var(--text);
-    border-radius:8px; padding:4px 6px; font-size:12px; text-align:center;}
-  .pv-switch-label{display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12px; color:var(--muted);}
-  @media (max-width:760px){ .popover{width:190px;} .kerja-quick-grid{grid-template-columns:1fr !important;} }
+  /* baris detail: TIDAK absolute -- ikut alur tabel biasa, jadi tidak akan
+     pernah menutupi elemen lain di luar tabel ini. */
+  .work-detail-row td{background:var(--surface-2); padding:14px 16px 16px; border-bottom:1px solid var(--line);}
+  .detail-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:10px;}
+  .detail-item{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:11px 12px; transition:.2s;}
+  .detail-item.flash{border-color:var(--gold); box-shadow:0 0 0 3px var(--gold-light);}
+  .detail-item .di-head{display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; margin-bottom:9px; font-family:'Inter Tight',sans-serif;}
+  .detail-item input[type=time]{width:100%; background:var(--surface-2); border:1px solid var(--line); color:var(--text);
+    border-radius:8px; padding:6px 8px; font-size:12.5px; font-family:inherit; margin-bottom:8px;}
+  .detail-item .di-row{display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:11.5px; color:var(--muted); margin-top:7px;}
+  .detail-item input[type=number]{width:40px; background:var(--surface-2); border:1.5px solid var(--muted-dim); color:var(--text);
+    border-radius:7px; padding:4px 6px; font-size:12px; text-align:center;}
+  .pv-switch-label{display:flex; align-items:center; gap:7px; cursor:pointer; font-size:11.5px; color:var(--muted);}
+  @media (max-width:760px){ .kerja-quick-grid{grid-template-columns:1fr !important;} .detail-grid{grid-template-columns:1fr 1fr;} }
   /* Modal sekarang jauh lebih lebar dari drawer lama -- di layar lebar,
      daftar sholat & koreksi menit (tab Jadwal) dipecah 2 kolom supaya tidak
      memanjang percuma sebagai kartu tunggal setinggi layar. Isi & JS-nya
@@ -992,7 +989,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.27.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.26.0: DESAIN ULANG panel Pengaturan (drawer sempit 420px -> modal lebar 960px + rel navigasi vertikal) & tab Jam Kerja jadi tabel mingguan (chip+popover) supaya tidak sesak lagi
+const APP_VERSION = "1.27.2"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.27.1: PERBAIKAN slider Volume suara pengingat/adzan (default, tab Audio) supaya langsung tersimpan begitu digeser -- sebelumnya cuma tersimpan kalau tombol "Simpan & tutup" diklik, beda dgn slider per-item yg sudah auto-simpan, jadi kalau panel ditutup pakai "✕" perubahan volumenya batal
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -3200,11 +3197,10 @@ function readCorrectionRowsIntoSettings(){
   });
 }
 
-/* ---------------- Pengaturan Jam Kerja (masuk/pulang), per hari Senin-Sabtu ----------------
-   Pola markup & event-nya sengaja dibuat MIRIP dgn renderPrayerRows() di
-   atas (pakai class "prayer-row" yang sama) supaya konsisten secara visual,
-   tapi datanya sepenuhnya terpisah (settings.workHours), bukan
-   settings.prayerSettings. */
+/* ---------------- Pengaturan Jam Kerja (masuk/istirahat/pulang), per hari Senin-Sabtu ----------------
+   Tabel mingguan: baris=hari, kolom=Masuk/Istirahat/Pulang. Klik salah satu
+   jam ("chip") membuka BARIS DETAIL tepat di bawahnya (bukan popover
+   melayang -- lihat catatan di CSS soal kenapa versi popover diganti). */
 const WORK_LABEL_SHORT = { masuk:"jam masuk", istirahat_mulai:"jam istirahat", istirahat_selesai:"jam selesai istirahat", pulang:"jam pulang" };
 /* Kolom tabel mingguan: "Masuk" & "Pulang" masing-masing 1 item, "Istirahat"
    menggabungkan 2 item (istirahat_mulai -> istirahat_selesai) jadi 1 kolom
@@ -3215,31 +3211,32 @@ const WORK_TABLE_COLUMNS = [
   { label:"Istirahat", emoji:WORK_ITEM_EMOJI.istirahat_mulai, items:["istirahat_mulai","istirahat_selesai"] },
   { label:"Pulang", emoji:WORK_ITEM_EMOJI.pulang, items:["pulang"] }
 ];
-/* Satu "chip" = tombol kecil menampilkan jam & status (titik hijau/abu),
-   diklik utk membuka popover berisi kontrol ASLI (.workTimeInput dkk --
-   SAMA PERSIS class & data-item dgn versi lama), cuma dipindah taruh di
-   dalam popover. Jadi readWorkRowsIntoSettings() & tombol "Salin Senin"
-   di bawah TIDAK perlu diubah sama sekali. */
-function workChipHtml(item, wc){
+/* Satu "chip" = tombol kecil menampilkan jam & status (titik hijau/abu).
+   Diklik utk buka/tutup baris detail hari itu -- TIDAK menyimpan input apa
+   pun sendiri, cuma penanda ringkasan. */
+function workChipHtml(day, item, wc){
   const timeLabel = wc.time ? wc.time : "isi jam";
   const active = wc.enabled || wc.azanEnabled;
+  return `<button type="button" class="chip${active?"":" off"}" data-chip-day="${day}" data-chip-item="${item}">
+    <span class="dot"></span><span class="t${wc.time?"":" empty"}">${timeLabel}</span>
+  </button>`;
+}
+/* Kartu kontrol ASLI (.workTimeInput/.workMinutesInput/.workReminderEnable/
+   .workAzanEnable -- class & data-item SAMA PERSIS dgn versi sebelumnya)
+   utk 1 item, ditaruh di dalam baris detail. */
+function workDetailItemHtml(item, wc){
   return `
-    <span class="chip-wrap">
-      <button type="button" class="chip${active?"":" off"}" data-chip-item="${item}">
-        <span class="dot"></span><span class="t${wc.time?"":" empty"}">${timeLabel}</span>
-      </button>
-      <div class="popover" data-popover-item="${item}">
-        <div class="pv-title">${WORK_ITEM_EMOJI[item]} ${WORK_ITEM_LABEL[item]}</div>
-        <div class="pv-row"><input type="time" class="workTimeInput" data-item="${item}" value="${wc.time}"></div>
-        <div class="pv-row">
-          <label class="pv-switch-label"><span class="switch"><input type="checkbox" class="workReminderEnable" data-item="${item}" ${wc.enabled?"checked":""}><span class="switch-track"></span></span>Pengingat</label>
-          <span><input type="number" class="workMinutesInput" data-item="${item}" min="0" max="120" value="${wc.minutes}"> mnt</span>
-        </div>
-        <div class="pv-row">
-          <label class="pv-switch-label"><span class="switch"><input type="checkbox" class="workAzanEnable" data-item="${item}" ${wc.azanEnabled?"checked":""}><span class="switch-track"></span></span>Saat jam tiba</label>
-        </div>
+    <div class="detail-item" data-detail-item="${item}">
+      <div class="di-head">${WORK_ITEM_EMOJI[item]} ${WORK_ITEM_LABEL[item]}</div>
+      <input type="time" class="workTimeInput" data-item="${item}" value="${wc.time}">
+      <div class="di-row">
+        <label class="pv-switch-label"><span class="switch"><input type="checkbox" class="workReminderEnable" data-item="${item}" ${wc.enabled?"checked":""}><span class="switch-track"></span></span>Pengingat</label>
+        <span><input type="number" class="workMinutesInput" data-item="${item}" min="0" max="120" value="${wc.minutes}"> mnt</span>
       </div>
-    </span>`;
+      <div class="di-row">
+        <label class="pv-switch-label"><span class="switch"><input type="checkbox" class="workAzanEnable" data-item="${item}" ${wc.azanEnabled?"checked":""}><span class="switch-track"></span></span>Saat jam tiba</label>
+      </div>
+    </div>`;
 }
 function renderWorkRows(){
   const box = document.getElementById("workRows");
@@ -3253,8 +3250,10 @@ function renderWorkRows(){
         </tr></thead>
         <tbody id="workTableBody"></tbody>
       </table>
-    </div>`;
+    </div>
+    <div class="hint" style="margin-top:8px;">Klik salah satu jam di atas utk atur menit pengingat &amp; suara notifikasinya.</div>`;
   const tbody = document.getElementById("workTableBody");
+  const colspan = WORK_TABLE_COLUMNS.length + 1;
   WORK_DAYS.forEach(day=>{
     const cfg = settings.workHours.perDay[day];
     const adaYangAktif = WORK_ITEMS.some(item=> cfg[item].enabled || cfg[item].azanEnabled);
@@ -3264,29 +3263,39 @@ function renderWorkRows(){
     tr.innerHTML = `
       <td class="day-cell">${WORK_DAY_LABEL[day]}</td>
       ${WORK_TABLE_COLUMNS.map(col=>{
-        const chips = col.items.map(item=> workChipHtml(item, cfg[item])).join(`<span class="arrow">→</span>`);
+        const chips = col.items.map(item=> workChipHtml(day, item, cfg[item])).join(`<span class="arrow">→</span>`);
         return `<td class="col-item">${col.items.length>1?`<span class="break-chip">${chips}</span>`:chips}</td>`;
       }).join("")}
     `;
     tbody.appendChild(tr);
+    const detailTr = document.createElement("tr");
+    detailTr.className = "work-detail-row";
+    detailTr.dataset.day = day;
+    detailTr.hidden = true;
+    detailTr.innerHTML = `<td colspan="${colspan}"><div class="detail-grid">${WORK_ITEMS.map(item=> workDetailItemHtml(item, cfg[item])).join("")}</div></td>`;
+    tbody.appendChild(detailTr);
   });
 }
-/* Sinkronkan tampilan chip (jam & titik status) dgn nilai input di dalam
-   popover-nya -- dipanggil tiap ada perubahan, atau sesudah tombol "Salin
-   Senin" mengisi form secara terprogram (yang TIDAK memicu event "change"). */
-function syncWorkChipDisplay(tr, item){
-  const timeEl = tr.querySelector(`.workTimeInput[data-item="${item}"]`);
-  const remEl = tr.querySelector(`.workReminderEnable[data-item="${item}"]`);
-  const azanEl = tr.querySelector(`.workAzanEnable[data-item="${item}"]`);
-  const chipBtn = tr.querySelector(`.chip[data-chip-item="${item}"]`);
+/* Sinkronkan tampilan chip (jam & titik status) di baris utama dgn nilai
+   input di baris detail hari yang sama -- dipanggil tiap ada perubahan,
+   atau sesudah tombol "Salin Senin" mengisi form secara terprogram (yang
+   TIDAK memicu event "change"). */
+function syncWorkChipDisplay(day, item){
+  const box = document.getElementById("workRows");
+  const mainRow = box && box.querySelector(`tr.prayer-row[data-day="${day}"]`);
+  const detailRow = box && box.querySelector(`tr.work-detail-row[data-day="${day}"]`);
+  if(!mainRow || !detailRow) return;
+  const timeEl = detailRow.querySelector(`.workTimeInput[data-item="${item}"]`);
+  const remEl = detailRow.querySelector(`.workReminderEnable[data-item="${item}"]`);
+  const azanEl = detailRow.querySelector(`.workAzanEnable[data-item="${item}"]`);
+  const chipBtn = mainRow.querySelector(`.chip[data-chip-item="${item}"]`);
   if(!timeEl || !chipBtn) return;
-  const active = remEl.checked || azanEl.checked;
-  chipBtn.classList.toggle("off", !active);
+  chipBtn.classList.toggle("off", !(remEl.checked || azanEl.checked));
   const tSpan = chipBtn.querySelector(".t");
   if(timeEl.value){ tSpan.textContent = timeEl.value; tSpan.classList.remove("empty"); }
   else { tSpan.textContent = "isi jam"; tSpan.classList.add("empty"); }
-  const anyOn = Array.from(tr.querySelectorAll(".workReminderEnable, .workAzanEnable")).some(el=>el.checked);
-  tr.classList.toggle("off", !anyOn);
+  const anyOn = Array.from(detailRow.querySelectorAll(".workReminderEnable, .workAzanEnable")).some(el=>el.checked);
+  mainRow.classList.toggle("off", !anyOn);
 }
 /* Delegasi event dipasang SEKALI di #workRows (elemen ini persis di HTML,
    tidak ikut dibuat ulang tiap renderWorkRows()) -- supaya tidak numpuk
@@ -3297,41 +3306,35 @@ function syncWorkChipDisplay(tr, item){
   box.addEventListener("click", (e)=>{
     const chipBtn = e.target.closest(".chip");
     if(!chipBtn) return;
-    e.stopPropagation();
-    const wrap = chipBtn.closest(".chip-wrap");
-    const pop = wrap.querySelector(".popover");
-    const wasOpen = pop.classList.contains("open");
-    box.querySelectorAll(".popover.open").forEach(p=>{ p.classList.remove("open"); });
-    if(wasOpen) return;
-    // Buka ke ATAS kalau ruang di bawah dalam area scroll tidak cukup,
-    // supaya popover tidak kepotong di baris-baris dekat bagian bawah tabel.
-    const scrollBox = box.closest(".tab-panes");
-    if(scrollBox){
-      const spaceBelow = scrollBox.getBoundingClientRect().bottom - chipBtn.getBoundingClientRect().bottom;
-      pop.classList.toggle("popover-up", spaceBelow < 170);
-    }
-    pop.classList.add("open");
+    const day = chipBtn.dataset.chipDay;
+    const detailRow = box.querySelector(`tr.work-detail-row[data-day="${day}"]`);
+    const mainRow = box.querySelector(`tr.prayer-row[data-day="${day}"]`);
+    if(!detailRow) return;
+    const wasOpen = !detailRow.hidden;
+    box.querySelectorAll("tr.work-detail-row").forEach(r=>{ r.hidden = true; });
+    box.querySelectorAll("tr.prayer-row").forEach(r=> r.classList.remove("row-expanded"));
+    if(wasOpen) return; // klik lagi di hari yg sama -> tutup (toggle)
+    detailRow.hidden = false;
+    if(mainRow) mainRow.classList.add("row-expanded");
+    const card = detailRow.querySelector(`[data-detail-item="${chipBtn.dataset.chipItem}"]`);
+    if(card){ card.classList.add("flash"); setTimeout(()=> card.classList.remove("flash"), 700); }
   });
   box.addEventListener("change", (e)=>{
     const item = e.target.dataset && e.target.dataset.item;
-    if(!item) return;
-    const tr = e.target.closest("tr.prayer-row");
-    if(tr) syncWorkChipDisplay(tr, item);
-  });
-  document.addEventListener("click", (e)=>{
-    if(!e.target.closest("#workRows .chip-wrap")){
-      box.querySelectorAll(".popover.open").forEach(p=> p.classList.remove("open"));
-    }
+    const detailRow = e.target.closest("tr.work-detail-row");
+    if(!item || !detailRow) return;
+    syncWorkChipDisplay(detailRow.dataset.day, item);
   });
 })();
 function readWorkRowsIntoSettings(){
-  document.querySelectorAll("#workRows .prayer-row").forEach(row=>{
-    const day = row.dataset.day;
+  WORK_DAYS.forEach(day=>{
+    const detailRow = document.querySelector(`#workRows tr.work-detail-row[data-day="${day}"]`);
+    if(!detailRow) return;
     WORK_ITEMS.forEach(item=>{
-      const timeEl = row.querySelector(`.workTimeInput[data-item="${item}"]`);
-      const minEl = row.querySelector(`.workMinutesInput[data-item="${item}"]`);
-      const remEl = row.querySelector(`.workReminderEnable[data-item="${item}"]`);
-      const azanEl = row.querySelector(`.workAzanEnable[data-item="${item}"]`);
+      const timeEl = detailRow.querySelector(`.workTimeInput[data-item="${item}"]`);
+      const minEl = detailRow.querySelector(`.workMinutesInput[data-item="${item}"]`);
+      const remEl = detailRow.querySelector(`.workReminderEnable[data-item="${item}"]`);
+      const azanEl = detailRow.querySelector(`.workAzanEnable[data-item="${item}"]`);
       const wc = settings.workHours.perDay[day][item];
       wc.time = parseHHMM(timeEl.value) ? timeEl.value : wc.time;
       wc.minutes = Math.max(0, parseInt(minEl.value,10) || 0);
@@ -3344,21 +3347,21 @@ function readWorkRowsIntoSettings(){
    DI FORM (belum tersimpan), lalu tempelkan ke baris Selasa..Sabtu di
    form yang sama. Tetap perlu klik "Simpan & tutup" sesudahnya spt biasa. */
 document.getElementById("applyWorkToAllDaysBtn").addEventListener("click", ()=>{
-  const seninRow = document.querySelector('#workRows .prayer-row[data-day="1"]');
-  if(!seninRow) return;
+  const seninDetail = document.querySelector('#workRows tr.work-detail-row[data-day="1"]');
+  if(!seninDetail) return;
   WORK_DAYS.filter(d=>d!==1).forEach(day=>{
-    const targetRow = document.querySelector(`#workRows .prayer-row[data-day="${day}"]`);
-    if(!targetRow) return;
+    const targetDetail = document.querySelector(`#workRows tr.work-detail-row[data-day="${day}"]`);
+    if(!targetDetail) return;
     WORK_ITEMS.forEach(item=>{
-      const srcTime = seninRow.querySelector(`.workTimeInput[data-item="${item}"]`);
-      const srcMin = seninRow.querySelector(`.workMinutesInput[data-item="${item}"]`);
-      const srcRem = seninRow.querySelector(`.workReminderEnable[data-item="${item}"]`);
-      const srcAzan = seninRow.querySelector(`.workAzanEnable[data-item="${item}"]`);
-      targetRow.querySelector(`.workTimeInput[data-item="${item}"]`).value = srcTime.value;
-      targetRow.querySelector(`.workMinutesInput[data-item="${item}"]`).value = srcMin.value;
-      targetRow.querySelector(`.workReminderEnable[data-item="${item}"]`).checked = srcRem.checked;
-      targetRow.querySelector(`.workAzanEnable[data-item="${item}"]`).checked = srcAzan.checked;
-      syncWorkChipDisplay(targetRow, item);
+      const srcTime = seninDetail.querySelector(`.workTimeInput[data-item="${item}"]`);
+      const srcMin = seninDetail.querySelector(`.workMinutesInput[data-item="${item}"]`);
+      const srcRem = seninDetail.querySelector(`.workReminderEnable[data-item="${item}"]`);
+      const srcAzan = seninDetail.querySelector(`.workAzanEnable[data-item="${item}"]`);
+      targetDetail.querySelector(`.workTimeInput[data-item="${item}"]`).value = srcTime.value;
+      targetDetail.querySelector(`.workMinutesInput[data-item="${item}"]`).value = srcMin.value;
+      targetDetail.querySelector(`.workReminderEnable[data-item="${item}"]`).checked = srcRem.checked;
+      targetDetail.querySelector(`.workAzanEnable[data-item="${item}"]`).checked = srcAzan.checked;
+      syncWorkChipDisplay(day, item);
     });
   });
   showToast("Jam Senin disalin ke Selasa-Sabtu -- klik \"Simpan & tutup\" untuk menyimpan.", "ok");
@@ -3701,6 +3704,21 @@ document.getElementById("inVolumeReminder").addEventListener("input", (e)=>{
 });
 document.getElementById("inVolumeAzan").addEventListener("input", (e)=>{
   document.getElementById("volumeAzanVal").textContent = e.target.value+"%";
+});
+/* PENTING: volume default (Reminder/Azan) DULU cuma tersimpan kalau tombol
+   "Simpan & tutup" diklik -- beda dgn slider per-item (di bagian "Suara
+   khusus...") yang langsung tersimpan begitu digeser. Ini bikin bingung:
+   kalau panel ditutup pakai "✕" (bukan "Simpan & tutup") sesudah mengecilkan
+   volume default, perubahannya batal & notifikasi ASLI berikutnya tetap
+   kedengaran keras spt semula. Sekarang disamakan: simpan LANGSUNG saat
+   slider dilepas (event "change"), TIDAK perlu tunggu "Simpan & tutup" lagi. */
+document.getElementById("inVolumeReminder").addEventListener("change", (e)=>{
+  settings.volumeReminder = parseInt(e.target.value,10)/100;
+  saveSettings();
+});
+document.getElementById("inVolumeAzan").addEventListener("change", (e)=>{
+  settings.volumeAzan = parseInt(e.target.value,10)/100;
+  saveSettings();
 });
 
 document.getElementById("resetBtn").addEventListener("click", ()=>{
