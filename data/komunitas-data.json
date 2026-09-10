@@ -361,8 +361,7 @@
     28,
     201,
     11,
-    30,
-    59
+    30
   ],
   "puasaVariantQueuePoolSize": 249,
   "kajian": [
@@ -673,6 +672,15 @@
         "Iya, puasa",
         "Tidak puasa"
       ]
+    },
+    "2026-09-10": {
+      "pollId": "6129504757636662590",
+      "threadId": 9028,
+      "answers": {},
+      "options": [
+        "Tetep siyam",
+        "Boten"
+      ]
     }
   },
   "puasaVoterRoster": {
@@ -684,7 +692,7 @@
     "1244930074": "Mila Paramita",
     "6859256255": "INFO UMUM HALAWA INV"
   },
-  "lastPuasaPollSentDate": "2026-09-07",
+  "lastPuasaPollSentDate": "2026-09-10",
   "lastKajianCheckDate": "2026-09-10",
   "maintenanceReports": [],
   "maintenanceTopicKey": null,
