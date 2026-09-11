@@ -540,7 +540,11 @@
       "preReminder": {
         "date": "2026-09-11",
         "time": "16:00",
-        "sent": false
+        "sent": true,
+        "attendance": {
+          "pollId": "6134287109231477977",
+          "answers": {}
+        }
       },
       "googleEventId": "qfa0fspkqmbo1q74ml86rfgqoc"
     }
