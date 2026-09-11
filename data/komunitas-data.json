@@ -544,6 +544,10 @@
         "attendance": {
           "pollId": "6134287109231477977",
           "answers": {
+            "141131037": {
+              "name": "Tangguh Prima Viernanto",
+              "choice": 0
+            },
             "451730890": {
               "name": "Ulva Halawa",
               "choice": 0
@@ -753,6 +757,7 @@
   },
   "attendanceVoterRoster": {
     "121822437": "KH TOYYIB MUBAROQ LC. MA",
+    "141131037": "Tangguh Prima Viernanto",
     "223975427": "Pangeran Herry",
     "451730890": "Ulva Halawa",
     "1244930074": "Mila Paramita",
