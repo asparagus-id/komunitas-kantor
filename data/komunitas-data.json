@@ -543,7 +543,12 @@
         "sent": true,
         "attendance": {
           "pollId": "6134287109231477977",
-          "answers": {}
+          "answers": {
+            "451730890": {
+              "name": "Ulva Halawa",
+              "choice": 0
+            }
+          }
         }
       },
       "googleEventId": "qfa0fspkqmbo1q74ml86rfgqoc"
