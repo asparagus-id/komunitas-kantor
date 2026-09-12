@@ -535,8 +535,8 @@
         "date": "2026-09-12",
         "time": "08:00"
       },
-      "enabled": true,
-      "lastSentDate": null,
+      "enabled": false,
+      "lastSentDate": "2026-09-12",
       "preReminder": {
         "date": "2026-09-11",
         "time": "16:00",
@@ -567,7 +567,11 @@
           }
         }
       },
-      "googleEventId": "qfa0fspkqmbo1q74ml86rfgqoc"
+      "googleEventId": "qfa0fspkqmbo1q74ml86rfgqoc",
+      "attendance": {
+        "pollId": "6136538909045162877",
+        "answers": {}
+      }
     }
   ],
   "liburReminder": {
