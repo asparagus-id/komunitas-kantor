@@ -13,7 +13,7 @@
   supaya klien lama otomatis ambil versi baru (pola sama seperti sw.js
   di aplikasi Habit).
 */
-const CACHE_VERSION = "admkom-v15"; // naik dari v14 -- index.html diupdate: tabel Kajian/Riwayat Kajian/Pengingat Umum dapat kolom "Kehadiran" (badge Hadir/Tidak hadir/Belum pasti + popup detail), card baru "Rekap Kehadiran Notifikasi Kalender" di halaman Google Calendar. Menyusul fitur poll kehadiran otomatis di Worker (v2.26.0).
+const CACHE_VERSION = "admkom-v16"; // naik dari v15 -- index.html diupdate: form "Tambah pengingat" di halaman Pengingat Umum dapat pilihan baru "Jenis pesan" (Polling / Informasi saja), tabel Pengingat Umum dapat tag penanda jenis pesan tiap baris. Menyusul fitur needsPoll di Worker (v2.27.0).
 const APP_SHELL = [
   "./",
   "./index.html",

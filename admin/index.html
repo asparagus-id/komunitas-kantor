@@ -575,7 +575,7 @@
       <section class="page" id="page-pengingat">
         <div class="card">
           <h2>🔔 Pengingat umum</h2>
-          <div class="desc">Sama dengan <code>/ingat_tambah</code>. Bebas judul &amp; pesan, ke topik mana saja, sekali/harian/mingguan/bulanan. Otomatis tersinkron ke Google Calendar kalau sudah dikonfigurasi (termasuk sebagai recurring event asli untuk yang berulang). <b>Tips:</b> pilih topik <code>pengumuman</code> di dropdown Topik untuk bikin pengumuman — ini fitur yang SAMA PERSIS dengan command <code>/pengumuman &lt;judul&gt; | &lt;pesan&gt; | &lt;jadwal&gt;</code> di Telegram (cuma lebih singkat karena topiknya otomatis).</div>
+          <div class="desc">Sama dengan <code>/ingat_tambah</code>. Bebas judul &amp; pesan, ke topik mana saja, sekali/harian/mingguan/bulanan. Otomatis tersinkron ke Google Calendar kalau sudah dikonfigurasi (termasuk sebagai recurring event asli untuk yang berulang). <b>Tips:</b> pilih topik <code>pengumuman</code> di dropdown Topik untuk bikin pengumuman — ini fitur yang SAMA PERSIS dengan command <code>/pengumuman &lt;judul&gt; | &lt;pesan&gt; | &lt;jadwal&gt;</code> di Telegram (cuma lebih singkat karena topiknya otomatis). 🆕 Tiap pengingat sekarang bisa dipilih jenis pesannya: <b>Polling</b> (notif disusul tanya jawab kehadiran) atau <b>Informasi saja</b> (notif teks biasa, tanpa poll) — pilihan yang sama juga tersedia lewat <code>/ingat_tambah</code> &amp; <code>/pengumuman</code> di Telegram.</div>
           <div class="table-wrap"><table id="remindersTable"><thead><tr><th>Judul</th><th>Jadwal</th><th>Topik</th><th>Status</th><th>Kehadiran</th><th></th></tr></thead><tbody></tbody></table></div>
           <div class="row" style="margin-top:14px;">
             <div class="field"><label>Judul</label><input type="text" id="newRemTitle" placeholder="Rapat Bulanan"></div>
@@ -604,6 +604,16 @@
           <div class="row" id="remFieldMonthly" style="display:none;">
             <div class="field" style="max-width:140px;"><label>Tanggal tiap bulan</label><input type="number" id="newRemDom" min="1" max="31" value="1"></div>
           </div>
+          <div class="row" style="margin-top:6px;">
+            <div class="field">
+              <label>Jenis pesan</label>
+              <select id="newRemPollType">
+                <option value="poll">📊 Polling — tanya siapa hadir/ikut</option>
+                <option value="info">📢 Informasi saja — tanpa polling</option>
+              </select>
+            </div>
+          </div>
+          <div class="hint" id="remPollTypeHint">Polling otomatis mengirim tanya jawab kehadiran (Hadir / Tidak hadir / Belum pasti) begitu notifikasi terkirim — pas buat acara yang perlu dikonfirmasi kehadirannya. Pilih "Informasi saja" kalau pesannya cuma pemberitahuan biasa yang tidak perlu direspons siapa pun.</div>
           <div class="field" style="margin-top:6px;"><label><input type="checkbox" id="newRemPreEnabled"> Tambah reminder awal (opsional)</label></div>
           <div class="row" id="remFieldPre" style="display:none;">
             <div class="field"><label>Tanggal reminder awal</label><input type="date" id="newRemPreDate"></div>
@@ -2291,13 +2301,16 @@ function renderReminders(){
     // Prioritas ke poll pengingat UTAMA (lebih dekat ke jadwal asli),
     // fallback ke poll pengingat AWAL kalau pengingat utama belum sempat kirim.
     const att = (r.attendance && r.attendance.pollId) ? r.attendance : (r.preReminder && r.preReminder.attendance);
+    const kehadiranCell = r.needsPoll === false
+      ? `<span class="hint" style="margin:0;">— info saja</span>`
+      : attendanceBadgeHtml(att, `Kehadiran — ${r.title}`, "ingat-"+r.id);
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${r.title}${r.googleEventId ? ' <span title="Tersinkron Google Calendar">🗓️</span>':''}</td>
+      <td>${r.title}${r.googleEventId ? ' <span title="Tersinkron Google Calendar">🗓️</span>':''}${r.needsPoll === false ? ' <span class="badge" title="Notifikasi biasa, tanpa polling kehadiran">📢 info saja</span>':' <span class="badge" title="Notifikasi disusul polling kehadiran">📊 polling</span>'}</td>
       <td>${formatJadwalUmum(r.schedule)}${r.preReminder ? `<br><span class="hint" style="margin:0;">⏳ awal: ${formatPreReminderHtml(r.preReminder)}${r.preReminder.sent?' (terkirim)':''}</span>` : ''}</td>
       <td><code>${r.topicKey}</code></td>
       <td><span class="badge ${r.enabled?"on":"off"}">${r.enabled?"Aktif":"Nonaktif"}</span></td>
-      <td>${attendanceBadgeHtml(att, `Kehadiran — ${r.title}`, "ingat-"+r.id)}</td>
+      <td>${kehadiranCell}</td>
       <td class="td-actions">
         <button class="btn small" data-toggle-rem="${r.id}">${r.enabled?"Matikan":"Aktifkan"}</button>
         <button class="btn small danger" data-del-rem="${r.id}">Hapus</button>
@@ -2370,8 +2383,9 @@ document.getElementById("addRemBtn").addEventListener("click", async ()=>{
     if(!preDate){ toast("Isi tanggal reminder awal dulu (atau matikan centangnya kalau tidak perlu).", true); return; }
     preReminder = { date: preDate, time: preTime };
   }
+  const needsPoll = document.getElementById("newRemPollType").value !== "info";
   try{
-    const res = await apiAction("/reminder-tambah", { title, message, topicKey, schedule, preReminder });
+    const res = await apiAction("/reminder-tambah", { title, message, topicKey, schedule, preReminder, needsPoll });
     toast(res.reminder && res.reminder.googleEventId ? "Tersimpan ✓ 🗓️ tersinkron ke Google Calendar." : "Tersimpan ✓");
     await loadData();
     document.getElementById("newRemTitle").value = "";
@@ -2380,6 +2394,7 @@ document.getElementById("addRemBtn").addEventListener("click", async ()=>{
     document.getElementById("remFieldPre").style.display = "none";
     document.getElementById("remPreHint").style.display = "none";
     document.getElementById("newRemPreDate").value = "";
+    document.getElementById("newRemPollType").value = "poll";
   }catch(e){ toast("Gagal simpan: " + e.message, true); }
 });
 
