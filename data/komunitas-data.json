@@ -570,7 +570,12 @@
       "googleEventId": "qfa0fspkqmbo1q74ml86rfgqoc",
       "attendance": {
         "pollId": "6136538909045162877",
-        "answers": {}
+        "answers": {
+          "451730890": {
+            "name": "Ulva Halawa",
+            "choice": 0
+          }
+        }
       }
     }
   ],
