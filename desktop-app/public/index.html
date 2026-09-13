@@ -868,6 +868,15 @@
         <button class="btn primary" id="elevenGenerateBtn" style="width:100%; margin-bottom:6px;">🎙️ Buat &amp; Simpan Suara</button>
         <div class="hint" id="elevenGenStatus"></div>
 
+        <div class="section-title">🚨 Notifikasi Gagal (Bot Monitor)</div>
+        <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
+          Opsional -- kalau diisi, setiap perintah nyala/mati BARDI (Speaker Server / Lampu Halaman) yang <b>ternyata tidak nyambung</b> (device tetap online tapi statusnya beda dari yang diminta) akan dikirim sbg DM Telegram lewat <b>bot Monitor</b> (bukan cuma toast di jendela app ini yang belum tentu sedang dibuka). Minta Token & URL Worker Monitor ke yang mengurus Worker-nya.
+        </div>
+        <div class="field-row">
+          <div class="field"><label>URL Worker Monitor</label><input type="text" id="bardiAlertUrl" placeholder="https://sda-octopus-bot.edw-yoga2.workers.dev"></div>
+          <div class="field"><label>Token Monitor Utama</label><input type="password" id="bardiAlertSecret" placeholder="Token khusus (BARDI_ALERT_SECRET)"></div>
+        </div>
+
         <div class="section-title">🔊 Speaker Server (BARDI)</div>
         <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
           Perangkat BARDI (smart plug) yang menyalakan ampli/speaker sebelum notifikasi (pengingat/adzan sholat, pengingat/notifikasi jam kerja, peringatan closing bulanan), lalu <b>TETAP MENYALA TERUS</b> sampai sesudah notifikasinya tiba (tidak mati-nyala di antaranya) -- biar relay tidak sering diklik. PAKAI TOKEN AKSES YANG SAMA dengan Suara AI di atas.
@@ -1092,7 +1101,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.32.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.31.0: PERBAIKAN pola nyala/mati Speaker Server -- SEBELUMNYA "pengingat sebelum" & "notifikasi tiba" dihitung sbg 2 jendela [-lead,+tail] TERPISAH, jadi kalau jaraknya cukup jauh speaker sempat MATI dulu lalu NYALA LAGI (relay sering diklik, cepat aus). SEKARANG 1 event (mis. Subuh) = 1 interval MENYAMBUNG dari (pengingat - leadMinutes) sampai (notifikasi tiba + tailMinutes) -- speaker TETAP MENYALA TERUS di antaranya, tidak peduli seberapa jauh jaraknya. Fungsi baru: collectNotificationIntervalsToday (gantikan collectNotificationMomentsToday).
+const APP_VERSION = "1.33.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.32.0: BARU -- (1) Mode Libur Otomatis: pakai endpoint /libur-status YANG SUDAH ADA di gus-asisten (nasional/internal/Minggu), semua otomasi BARDI (Speaker Server & Lampu Halaman) di-skip total di hari libur, dicek 1x/hari via refreshLiburStatusForToday. (2) Verifikasi command BARDI: setelah kirim nyala/mati, dicek ulang ~20 detik kemudian (verifyBardiCommandApplied) -- kalau device online tapi statusnya tidak sesuai, tampil toast DAN (opsional, kalau "URL Worker Monitor"+"Token Monitor Utama" diisi di tab Audio) dikirim ke bot Monitor via POST /api/bardi-alert (Worker_Monitor_Utama.js v10) -- lebih pasti kelihatan drpd toast doang. tauri.conf.json: tambah domain sda-octopus-bot.edw-yoga2.workers.dev ke scope HTTP.
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -2009,6 +2018,7 @@ async function ensureScheduleForToday(){
   let tms = scheduleFromCache(tmr);
   if(ts){
     todaySchedule = ts; tomorrowSchedule = tms; scheduleDateStr = key;
+    refreshLiburStatusForToday(key);
     setOnline(navigator.onLine);
     const cov = offlineCoverageDays();
     document.getElementById("footnote").textContent = navigator.onLine
@@ -2025,6 +2035,7 @@ async function ensureScheduleForToday(){
     ts = scheduleFromCache(today); tms = scheduleFromCache(tmr);
     if(!ts) throw new Error("Data kalender tidak lengkap");
     todaySchedule = ts; tomorrowSchedule = tms; scheduleDateStr = key;
+    refreshLiburStatusForToday(key);
     setOnline(true);
     document.getElementById("footnote").textContent = "Jadwal tersinkron • " + new Date().toLocaleTimeString("id-ID") + ` • cadangan offline ${offlineCoverageDays()} hari ke depan`;
     markLastSync();
@@ -3175,7 +3186,39 @@ async function refreshPrayerAudioStatus(){
    checkTriggers() spt file MP3 biasa (tidak perlu koneksi internet lagi
    sesudahnya utk memutarnya). */
 const ELEVEN_WORKER_URL = "https://gus-asisten.rempahecho.workers.dev";
+// ---- Mode Libur Otomatis (idе baru) -- pakai endpoint /libur-status
+// yang SUDAH ADA di Worker gus-asisten (dipakai juga oleh dashboard &
+// Rincian Pemesanan, TIDAK ada endpoint/perubahan Worker baru sama
+// sekali di sini) -- balikin apakah HARI INI libur nasional (feed
+// publik Google), libur internal (event "LIBUR: ..." di Google
+// Calendar kantor), ATAU hari Minggu. Kalau libur, SEMUA otomasi BARDI
+// (Speaker Server & Lampu Halaman) di-skip total hari itu -- kantor
+// kosong, tidak perlu nyala-nyalain apa pun. Dicek 1x/hari saja
+// (di-cache per tanggal, dipicu dari ensureScheduleForToday), BUKAN
+// tiap tick -- fail-open kalau gagal fetch (dianggap BUKAN libur,
+// supaya 1x gangguan jaringan tidak bikin otomasi macet total di hari
+// kerja biasa).
+let liburHariIniCache = { dateKey: null, libur: false, alasan: null, checked: false };
+async function refreshLiburStatusForToday(key){
+  if(liburHariIniCache.dateKey === key && liburHariIniCache.checked) return; // sudah dicek hari ini
+  const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
+  if(!token){ liburHariIniCache = { dateKey: key, libur: false, alasan: null, checked: true }; return; } // token blm diisi -- anggap bukan libur, jangan blokir otomasi
+  try{
+    const res = await fetch(`${ELEVEN_WORKER_URL}/libur-status`, { headers:{ "Authorization":"Bearer "+token } });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const data = await res.json();
+    liburHariIniCache = { dateKey: key, libur: !!data.libur, alasan: data.namaLibur || null, checked: true };
+  }catch(e){
+    console.log("Gagal cek status libur hari ini (otomasi BARDI tetap jalan spt biasa):", e);
+    liburHariIniCache = { dateKey: key, libur: false, alasan: null, checked: true }; // gagal -> fail-open, anggap bukan libur
+  }
+}
+function isLiburHariIniCached(now){
+  return liburHariIniCache.dateKey === dateKey(now) && liburHariIniCache.libur;
+}
 const ELEVEN_KEY_STORAGE = "elevenlabsWorkerToken";
+const BARDI_ALERT_URL_STORAGE = "bardiAlertWorkerUrl";
+const BARDI_ALERT_SECRET_STORAGE = "bardiAlertSecret";
 
 /* ---------------- Speaker Server (BARDI/Tuya) -- auto nyala/mati BARU ----------------
    Perangkat smart plug DIPILIH LEWAT DROPDOWN di tab Audio (bukan ketik
@@ -3196,6 +3239,58 @@ let bardiDeviceListCache = []; // hasil /bardi-devices terakhir dimuat di sesi i
 function speakerServerConfig(){
   return (settings && settings.speakerServer) || DEFAULTS.speakerServer;
 }
+// ---- Verifikasi command BARDI beneran nyambung (idе baru: "harusnya
+// nyala tapi tidak merespons") -- dipanggil FIRE-AND-FORGET (tanpa
+// await) SETELAH kirim /bardi-toggle, nunggu beberapa detik dulu
+// (device/Tuya Cloud butuh waktu update status), lalu cek ulang
+// /bardi-devices. Kalau status device TIDAK sesuai yang diminta,
+// tampilkan toast peringatan di jendela utama -- TIDAK retry otomatis,
+// cukup kasih tahu supaya user cek device/koneksi listriknya sendiri.
+// CATATAN: toast cuma kelihatan kalau jendela utama app sedang
+// dibuka/terlihat -- ini pakai showToast() yang sudah ada, bukan
+// notifikasi OS (app ini belum ada wiring notifikasi OS sama sekali).
+const BARDI_VERIFY_DELAY_MS = 20000; // 20 detik -- kasih waktu device/Tuya Cloud update status
+async function verifyBardiCommandApplied(deviceId, expectedOn, deviceLabel){
+  await new Promise((r) => setTimeout(r, BARDI_VERIFY_DELAY_MS));
+  const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
+  if(!token || !deviceId) return;
+  try{
+    const res = await fetch(`${ELEVEN_WORKER_URL}/bardi-devices`, { headers:{ "Authorization":"Bearer "+token } });
+    if(!res.ok) return; // gagal cek -- diam saja, JANGAN tambah alarm palsu krn masalah verifikasi itu sendiri
+    const data = await res.json();
+    const dev = (data.devices||[]).find((d) => d.id === deviceId);
+    if(!dev) return;
+    // dev.online===false SENGAJA tidak dianggap "gagal nyala" tersendiri
+    // di sini -- device offline sudah kelihatan lewat cara lain, jangan
+    // dobel alarm utk penyebab yang sama.
+    if(dev.online && !!dev.on !== !!expectedOn){
+      const pesan = `${deviceLabel} diminta ${expectedOn?"nyala":"mati"}, tapi statusnya masih ${dev.on?"nyala":"mati"}. Cek device/koneksi listriknya.`;
+      showToast(`⚠️ ${pesan}`, "err"); // tetap tampil di app JUGA (kalau kebetulan lagi dibuka)
+      sendBardiAlertToMonitorBot(pesan); // fire-and-forget -- utama-nya lewat sini (Telegram, lebih pasti kelihatan drpd toast)
+    }
+  }catch(e){
+    // gagal verifikasi (mis. offline sebentar) -- diam saja, JANGAN
+    // munculkan alarm palsu.
+  }
+}
+// Kirim alert ke bot Monitor lewat endpoint POST /api/bardi-alert
+// (lihat Worker_Monitor_Utama.js) -- OPSIONAL, diam total kalau URL/
+// Token Monitor belum diisi di tab Audio (fitur toast tetap jalan spt
+// biasa walau ini tidak dikonfigurasi).
+async function sendBardiAlertToMonitorBot(pesan){
+  const url = localStorage.getItem(BARDI_ALERT_URL_STORAGE);
+  const secret = localStorage.getItem(BARDI_ALERT_SECRET_STORAGE);
+  if(!url || !secret) return;
+  try{
+    await fetch(`${url}/api/bardi-alert`, {
+      method: "POST",
+      headers: { "X-Alert-Secret": secret, "Content-Type": "application/json" },
+      body: JSON.stringify({ message: pesan })
+    });
+  }catch(e){
+    console.log("Gagal kirim alert BARDI ke bot Monitor:", e);
+  }
+}
 async function setSpeakerServerPower(on){
   if(speakerServerCurrentOn === on) return; // sudah di kondisi itu, tidak perlu kirim command lagi
   const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
@@ -3208,6 +3303,7 @@ async function setSpeakerServerPower(on){
       headers: { "Authorization": "Bearer "+token, "Content-Type": "application/json" },
       body: JSON.stringify({ deviceId: cfg.deviceId, code: "switch_1", value: on })
     });
+    verifyBardiCommandApplied(cfg.deviceId, on, "Speaker Server"); // fire-and-forget, TIDAK di-await -- jangan tunda tick berikutnya
   }catch(e){
     console.log("Speaker Server: gagal set daya:", e);
   }
@@ -3283,6 +3379,13 @@ function updateSpeakerServerBySchedule(now){
   if(!cfg.enabled || !cfg.deviceId){
     // Kalau baru dinonaktifkan/device dikosongkan & kebetulan masih
     // dalam kondisi nyala, matikan dulu sekali supaya tidak nyangkut.
+    if(speakerServerCurrentOn === true) setSpeakerServerPower(false);
+    return;
+  }
+  // Mode Libur Otomatis -- hari ini libur (nasional/internal/Minggu)
+  // -> tidak ada notifikasi yang relevan, jangan nyalakan apa pun.
+  // Kalau kebetulan masih nyala dari kemarin, matikan.
+  if(isLiburHariIniCached(now)){
     if(speakerServerCurrentOn === true) setSpeakerServerPower(false);
     return;
   }
@@ -3397,6 +3500,11 @@ function applyLampuHalamanSourceUI(){
 function updateLampuHalamanBySchedule(now){
   const cfg = lampuHalamanConfig();
   if(!cfg.enabled || !cfg.deviceId) return;
+  // Mode Libur Otomatis -- hari ini libur -> tidak perlu nyala/mati apa
+  // pun (kantor kosong). Beda dari Speaker Server, di sini TIDAK ada
+  // "matikan paksa" krn Lampu Halaman memang tidak dijamin nyala
+  // sebelumnya -- cukup lewati nyala/mati hari ini.
+  if(isLiburHariIniCached(now)) return;
   const key = dateKey(now);
   // ---- NYALA (pas/sebelum adzan `prayerKey`) -- cuma kalau source == "adzan" ----
   const prayerKey = REMINDABLE.includes(cfg.prayerKey) ? cfg.prayerKey : "Maghrib";
@@ -3429,6 +3537,7 @@ async function sendLampuHalamanCommand(deviceId, on){
       headers: { "Authorization": "Bearer "+token, "Content-Type": "application/json" },
       body: JSON.stringify({ deviceId, code: "switch_1", value: on })
     });
+    verifyBardiCommandApplied(deviceId, on, "Lampu Halaman"); // fire-and-forget, sama pola dgn Speaker Server
   }catch(e){
     console.log("Lampu Halaman: gagal kirim perintah:", e);
   }
@@ -3563,6 +3672,8 @@ function elevenTargetOptions(){
 }
 function setupElevenLabsTab(){
   document.getElementById("elevenApiKey").value = localStorage.getItem(ELEVEN_KEY_STORAGE) || "";
+  document.getElementById("bardiAlertUrl").value = localStorage.getItem(BARDI_ALERT_URL_STORAGE) || "";
+  document.getElementById("bardiAlertSecret").value = localStorage.getItem(BARDI_ALERT_SECRET_STORAGE) || "";
   document.getElementById("elevenQuotaStatus").textContent = "";
   document.getElementById("elevenGenStatus").textContent = "";
   document.getElementById("elevenText").value = "";
@@ -3577,6 +3688,12 @@ document.getElementById("elevenText").addEventListener("input", (e)=>{
 });
 document.getElementById("elevenApiKey").addEventListener("change", (e)=>{
   localStorage.setItem(ELEVEN_KEY_STORAGE, e.target.value.trim());
+});
+document.getElementById("bardiAlertUrl").addEventListener("change", (e)=>{
+  localStorage.setItem(BARDI_ALERT_URL_STORAGE, e.target.value.trim().replace(/\/+$/,"")); // buang trailing slash
+});
+document.getElementById("bardiAlertSecret").addEventListener("change", (e)=>{
+  localStorage.setItem(BARDI_ALERT_SECRET_STORAGE, e.target.value.trim());
 });
 // Baca pesan error dari Worker (format {"error":"..."}); null kalau body bukan JSON.
 async function elevenWorkerErrorMessage(res){
