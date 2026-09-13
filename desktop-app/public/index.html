@@ -867,6 +867,26 @@
         <div class="hint" id="elevenCharCount" style="margin-top:-8px; margin-bottom:10px;">0 karakter</div>
         <button class="btn primary" id="elevenGenerateBtn" style="width:100%; margin-bottom:6px;">🎙️ Buat &amp; Simpan Suara</button>
         <div class="hint" id="elevenGenStatus"></div>
+
+        <div class="section-title">🔊 Speaker Server (BARDI)</div>
+        <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
+          Perangkat BARDI (smart plug) yang menyalakan ampli/speaker otomatis SEBELUM ada notifikasi (pengingat/adzan sholat, pengingat/notifikasi jam kerja, peringatan closing bulanan) lalu mematikannya lagi SESUDAHNYA. PAKAI TOKEN AKSES YANG SAMA dengan Suara AI di atas.
+        </div>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:6px;">
+          <span class="switch"><input type="checkbox" id="speakerServerEnabled"><span class="switch-track"></span></span>
+          Aktifkan auto nyala/mati Speaker Server
+        </label>
+        <div class="field-row" style="margin-top:10px;">
+          <div class="field"><label>Nama device di BARDI</label><input type="text" id="speakerServerDeviceName" placeholder="Speaker Server"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Nyala berapa menit SEBELUM notifikasi</label><input type="number" id="speakerServerLeadMinutes" min="0" max="60" style="width:100%;"></div>
+          <div class="field"><label>Mati berapa menit SESUDAH notifikasi</label><input type="number" id="speakerServerTailMinutes" min="0" max="60" style="width:100%;"></div>
+        </div>
+        <div class="audio-controls" style="margin-top:6px;">
+          <button class="btn" id="speakerServerTestBtn">Tes koneksi</button>
+        </div>
+        <div class="hint" id="speakerServerTestStatus" style="margin-top:8px;"></div>
       </div>
 
 
@@ -997,7 +1017,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.27.3"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.27.2: PERBAIKAN kartu detail Jam Kerja yang sesak/kepotong -- grid detail 4 kolom -> 2 kolom (kurang lega di modal 960px), kotak menit dilebarkan & panah bawaan browser disembunyikan (sebelumnya memakan ruang sampai angka spt "20" kelihatan kepotong)
+const APP_VERSION = "1.28.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.27.3: BARU -- Speaker Server (perangkat BARDI/Tuya) sekarang otomatis dinyalakan & dimatikan mengikuti jadwal notifikasi apa pun (pengingat/adzan sholat, pengingat/notifikasi jam kerja, peringatan closing bulanan), lewat Worker gus-asisten (/bardi-devices & /bardi-toggle) -- pakai Token Akses yang sama dgn fitur Suara AI. Diatur di tab Audio > "Speaker Server (BARDI)": aktif/nonaktif, nama device, & berapa menit sebelum/sesudah (default 5/5) -- BUKAN di panel admin, murni pengaturan lokal app ini. Kalau belum diaktifkan/device belum ketemu, fitur ini diam saja & tidak mengganggu apa pun.
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -1078,6 +1098,14 @@ const DEFAULTS = {
   closingBulanan: {
     enabled: false,          // default OFF sampai Token Akses (tab Audio) diisi
     warningMinutes: 10       // peringatan sebelum jam closing bulanan (menit)
+  },
+  // Speaker Server (BARDI/Tuya) -- auto nyala/mati mengikuti jadwal
+  // notifikasi. Pakai Token Akses YANG SAMA dgn ElevenLabs (tab Audio).
+  speakerServer: {
+    enabled: false,     // default OFF sampai diaktifkan manual di tab Audio
+    deviceName: "Speaker Server", // dicocokkan (case-insensitive) ke nama device di BARDI
+    leadMinutes: 5,      // nyala mulai sekian menit SEBELUM momen notifikasi
+    tailMinutes: 5        // tetap nyala sampai sekian menit SESUDAH momen notifikasi
   }
 };
 
@@ -2299,6 +2327,11 @@ function checkTriggers(now){
       showClosingPopup(closingMs);
     }
   }
+
+  // ---- Speaker Server (BARDI) -- auto nyala 5 menit sebelum & mati 5
+  // menit sesudah momen notifikasi apa pun di atas (lihat definisi
+  // fungsinya & catatan lengkap dekat ELEVEN_WORKER_URL). ----
+  updateSpeakerServerBySchedule(now);
 }
 function flashNowBadge(key, prayerTimeMs){
   const label = displayLabel(key, prayerTimeMs != null ? new Date(prayerTimeMs) : null);
@@ -2451,6 +2484,12 @@ function openSettings(){
   document.getElementById("closingBulananEnabled").checked = !!(settings.closingBulanan && settings.closingBulanan.enabled);
   document.getElementById("closingBulananMenit").value = (settings.closingBulanan && settings.closingBulanan.warningMinutes) || 10;
   refreshClosingBulananStatus();
+  const ssCfg = settings.speakerServer || DEFAULTS.speakerServer;
+  document.getElementById("speakerServerEnabled").checked = !!ssCfg.enabled;
+  document.getElementById("speakerServerDeviceName").value = ssCfg.deviceName || "Speaker Server";
+  document.getElementById("speakerServerLeadMinutes").value = ssCfg.leadMinutes != null ? ssCfg.leadMinutes : 5;
+  document.getElementById("speakerServerTailMinutes").value = ssCfg.tailMinutes != null ? ssCfg.tailMinutes : 5;
+  document.getElementById("speakerServerTestStatus").textContent = "";
   refreshAudioStatus();
   document.getElementById("urlReminder").value = localStorage.getItem("reminderAudioUrl") || "";
   document.getElementById("urlAzan").value = localStorage.getItem("azanAudioUrl") || "";
@@ -3025,6 +3064,150 @@ async function refreshPrayerAudioStatus(){
    sesudahnya utk memutarnya). */
 const ELEVEN_WORKER_URL = "https://gus-asisten.rempahecho.workers.dev";
 const ELEVEN_KEY_STORAGE = "elevenlabsWorkerToken";
+
+/* ---------------- Speaker Server (BARDI/Tuya) -- auto nyala/mati BARU ----------------
+   Perangkat smart plug (nama diatur pengguna sendiri di tab Audio,
+   default "Speaker Server", dicocokkan case-insensitive lewat
+   /bardi-devices -- id-nya di-cache di localStorage supaya tidak perlu
+   tanya ulang tiap kali, dibuang ulang otomatis kalau nama diganti)
+   dinyalakan otomatis sekian menit SEBELUM ada notifikasi (pengingat
+   sebelum adzan, adzan tiba, pengingat jam kerja, jam kerja tiba,
+   peringatan closing bulanan), lalu dimatikan lagi sekian menit SESUDAH
+   momen notifikasi itu -- semua bisa diatur (aktif/nonaktif, nama
+   device, menit sebelum/sesudah) di tab Audio > "Speaker Server (BARDI)".
+   Dipakai token & endpoint Worker gus-asisten YANG SAMA dgn fitur
+   ElevenLabs di atas (Authorization: Bearer <ELEVEN_KEY_STORAGE>) --
+   kalau belum diaktifkan / token belum diisi / device belum ketemu di
+   BARDI, fungsi ini diam saja (tidak mengganggu fitur lain). */
+const SPEAKER_SERVER_ID_CACHE_KEY = "speakerServerDeviceId";
+const SPEAKER_SERVER_ID_CACHE_NAME_KEY = "speakerServerDeviceIdForName"; // nama device saat id itu di-cache -- kalau nama di settings berubah, cache dibuang & dicari ulang
+let speakerServerDeviceId = null;
+let speakerServerLookupFailed = false; // supaya tidak nembak /bardi-devices berulang tiap detik kalau memang belum ketemu device-nya
+let speakerServerCurrentOn = null; // null = belum diketahui, dipaksa sinkron di panggilan pertama
+function speakerServerConfig(){
+  return (settings && settings.speakerServer) || DEFAULTS.speakerServer;
+}
+// Nama device dipakai sbg bagian dari cache key -- ganti nama di
+// pengaturan otomatis bikin id lama dianggap tidak valid lagi & dicari
+// ulang, tanpa perlu tombol "reset" terpisah.
+function loadCachedSpeakerServerId(){
+  const cfg = speakerServerConfig();
+  const cachedName = localStorage.getItem(SPEAKER_SERVER_ID_CACHE_NAME_KEY);
+  const cachedId = localStorage.getItem(SPEAKER_SERVER_ID_CACHE_KEY);
+  if(cachedId && cachedName === (cfg.deviceName||"").trim().toLowerCase()) return cachedId;
+  return null;
+}
+async function resolveSpeakerServerDeviceId(){
+  const cfg = speakerServerConfig();
+  const cached = loadCachedSpeakerServerId();
+  if(cached){ speakerServerDeviceId = cached; return cached; }
+  if(speakerServerLookupFailed) return null;
+  const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
+  if(!token) return null;
+  try{
+    const res = await fetch(`${ELEVEN_WORKER_URL}/bardi-devices`, { headers:{ "Authorization":"Bearer "+token } });
+    if(!res.ok){ speakerServerLookupFailed = true; return null; }
+    const data = await res.json();
+    const target = (cfg.deviceName||"").trim().toLowerCase();
+    const dev = (data.devices||[]).find(d => (d.name||"").trim().toLowerCase() === target);
+    if(dev){
+      speakerServerDeviceId = dev.id;
+      localStorage.setItem(SPEAKER_SERVER_ID_CACHE_KEY, dev.id);
+      localStorage.setItem(SPEAKER_SERVER_ID_CACHE_NAME_KEY, target);
+      return dev.id;
+    }
+    speakerServerLookupFailed = true; // device dgn nama itu memang belum ada -- jangan coba lagi tiap tick
+    return null;
+  }catch(e){
+    console.log("Speaker Server: gagal cari device id:", e);
+    return null; // error jaringan sementara -- BOLEH dicoba lagi tick berikutnya (tidak set lookupFailed)
+  }
+}
+async function setSpeakerServerPower(on){
+  if(speakerServerCurrentOn === on) return; // sudah di kondisi itu, tidak perlu kirim command lagi
+  const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
+  if(!token) return;
+  const devId = await resolveSpeakerServerDeviceId();
+  if(!devId) return;
+  speakerServerCurrentOn = on; // ditandai OPTIMISTIC dulu sebelum await, supaya tick berikutnya (walau await ini belum selesai) tidak ikut kirim command yang sama berkali-kali
+  try{
+    await fetch(`${ELEVEN_WORKER_URL}/bardi-toggle`, {
+      method: "POST",
+      headers: { "Authorization": "Bearer "+token, "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceId: devId, code: "switch_1", value: on })
+    });
+  }catch(e){
+    console.log("Speaker Server: gagal set daya:", e);
+  }
+}
+// Kumpulkan semua "momen notifikasi" hari ini yang statusnya AKTIF (baik
+// pengingat-sebelum maupun saat-tiba, sholat maupun jam kerja maupun
+// closing bulanan) -- dipakai KHUSUS utk auto nyala/mati Speaker Server,
+// TIDAK memutar suara apa pun (itu tetap logic asli checkTriggers di atas).
+function collectNotificationMomentsToday(now){
+  const moments = [];
+  if(todaySchedule){
+    for(const pKey of REMINDABLE){
+      const ps = settings.prayerSettings[pKey];
+      if(!ps) continue;
+      const prayerTime = todaySchedule[pKey].getTime();
+      if(ps.enabled) moments.push(prayerTime - reminderMinutesFor(pKey, todaySchedule[pKey])*60000);
+      if(ps.azanEnabled) moments.push(prayerTime);
+    }
+  }
+  const hariIni = now.getDay();
+  const cfgHariIni = settings.workHours && settings.workHours.perDay && settings.workHours.perDay[hariIni];
+  if(cfgHariIni){
+    for(const item of WORK_ITEMS){
+      const wc = cfgHariIni[item];
+      if(!wc) continue;
+      let target = workTimeToday(now, wc.time);
+      if(item === "pulang"){
+        const override = getPulangOverrideToday(now);
+        if(override) target = override;
+      }
+      if(!target) continue;
+      const targetMs = target.getTime();
+      if(wc.enabled) moments.push(targetMs - Math.max(0, wc.minutes||0)*60000);
+      if(wc.azanEnabled) moments.push(targetMs);
+    }
+  }
+  const closingTarget = getClosingBulananToday(now);
+  if(closingTarget){
+    const warnMin = Math.max(0, (settings.closingBulanan && settings.closingBulanan.warningMinutes) || 10);
+    moments.push(closingTarget.getTime() - warnMin*60000);
+  }
+  return moments;
+}
+function updateSpeakerServerBySchedule(now){
+  const cfg = speakerServerConfig();
+  if(!cfg.enabled){
+    // Kalau baru dinonaktifkan & kebetulan masih dalam kondisi nyala,
+    // matikan dulu sekali supaya tidak nyangkut nyala terus.
+    if(speakerServerCurrentOn === true) setSpeakerServerPower(false);
+    return;
+  }
+  const leadMs = Math.max(0, cfg.leadMinutes!=null ? cfg.leadMinutes : 5) * 60000;
+  const tailMs = Math.max(0, cfg.tailMinutes!=null ? cfg.tailMinutes : 5) * 60000;
+  const moments = collectNotificationMomentsToday(now);
+  const nowMs = now.getTime();
+  const shouldBeOn = moments.some(m => nowMs >= m - leadMs && nowMs <= m + tailMs);
+  setSpeakerServerPower(shouldBeOn);
+}
+// Tombol "Tes koneksi" di tab Audio -- paksa cari ulang device (abaikan
+// cache & lookupFailed) & balikin pesan status yang jelas ke UI.
+async function testSpeakerServerConnection(){
+  speakerServerLookupFailed = false;
+  localStorage.removeItem(SPEAKER_SERVER_ID_CACHE_KEY);
+  localStorage.removeItem(SPEAKER_SERVER_ID_CACHE_NAME_KEY);
+  speakerServerDeviceId = null;
+  const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
+  if(!token) return { ok:false, message:"❌ Isi Token Akses dulu (di atas)." };
+  const devId = await resolveSpeakerServerDeviceId();
+  const cfg = speakerServerConfig();
+  if(!devId) return { ok:false, message:`❌ Device "${cfg.deviceName}" tidak ditemukan di BARDI. Cek nama persis di panel Admin Bot Komunitas.` };
+  return { ok:true, message:`✅ Device "${cfg.deviceName}" ditemukan (id: ${devId}).` };
+}
 let elevenTargetsCache = [];
 function elevenTargetOptions(){
   const opts = [];
@@ -3407,6 +3590,22 @@ document.getElementById("closingBulananSyncBtn").addEventListener("click", async
   if(!ok) showToast("Gagal mengambil data dari Worker. Cek Token Akses & koneksi internet.", "err");
 });
 
+document.getElementById("speakerServerTestBtn").addEventListener("click", async ()=>{
+  const btn = document.getElementById("speakerServerTestBtn");
+  const statusEl = document.getElementById("speakerServerTestStatus");
+  // pakai nilai yang lagi diketik user di form, BUKAN yg tersimpan --
+  // pola sama spt sinkron closing bulanan di atas, biar tes langsung
+  // relevan walau belum diklik "Simpan".
+  settings.speakerServer = settings.speakerServer || structuredClone(DEFAULTS.speakerServer);
+  settings.speakerServer.deviceName = document.getElementById("speakerServerDeviceName").value.trim() || "Speaker Server";
+  statusEl.textContent = "Mencari device…";
+  btn.disabled = true;
+  const { ok, message } = await testSpeakerServerConnection();
+  btn.disabled = false;
+  statusEl.textContent = message;
+  statusEl.style.color = ok ? "var(--ok, #2e9e5b)" : "var(--danger, #d9534f)";
+});
+
 /* ---------------- Suara khusus per-item Jam Masuk/Pulang ----------------
    Beda dari renderWorkRows() (yang mengulang per HARI Senin-Sabtu),
    audio-nya cuma 2 baris SAJA (satu utk "masuk", satu utk "pulang") --
@@ -3748,6 +3947,11 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
     settings.closingBulanan = settings.closingBulanan || structuredClone(DEFAULTS.closingBulanan);
     settings.closingBulanan.enabled = document.getElementById("closingBulananEnabled").checked;
     settings.closingBulanan.warningMinutes = Math.max(0, parseInt(document.getElementById("closingBulananMenit").value,10) || 10);
+    settings.speakerServer = settings.speakerServer || structuredClone(DEFAULTS.speakerServer);
+    settings.speakerServer.enabled = document.getElementById("speakerServerEnabled").checked;
+    settings.speakerServer.deviceName = document.getElementById("speakerServerDeviceName").value.trim() || "Speaker Server";
+    settings.speakerServer.leadMinutes = Math.max(0, parseInt(document.getElementById("speakerServerLeadMinutes").value,10) || 0);
+    settings.speakerServer.tailMinutes = Math.max(0, parseInt(document.getElementById("speakerServerTailMinutes").value,10) || 0);
     saveSettings();
     closeSettings();
     showToast("Pengaturan berhasil disimpan.", "ok");
