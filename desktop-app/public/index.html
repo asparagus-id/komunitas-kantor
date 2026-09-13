@@ -891,6 +891,77 @@
           <div class="field"><label>Mati berapa menit SESUDAH notifikasi</label><input type="number" id="speakerServerTailMinutes" min="0" max="60" style="width:100%;"></div>
         </div>
         <div class="hint" id="speakerServerTestStatus" style="margin-top:8px;"></div>
+
+        <div class="section-title" style="margin-top:16px;">🧪 Tes fitur ini</div>
+        <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
+          1) Pilih device di dropdown atas &amp; klik tombol di bawah -- kalau speaker beneran nyala/mati, berarti koneksi ke BARDI &amp; kontrolnya SUDAH BENAR (bagian tersulit). 2) Klik "Lihat jadwal hari ini" utk cek jam berapa saja speaker AKAN nyala/mati otomatis hari ini, TANPA perlu nunggu jam-nya beneran tiba.
+        </div>
+        <div class="audio-controls">
+          <button class="btn" id="speakerServerTestOnBtn">🔛 Coba nyalakan sekarang</button>
+          <button class="btn" id="speakerServerTestOffBtn">⏹️ Coba matikan sekarang</button>
+          <button class="btn" id="speakerServerPreviewBtn">📋 Lihat jadwal hari ini</button>
+        </div>
+        <div class="hint" id="speakerServerManualStatus" style="margin-top:8px;"></div>
+        <div class="hint" id="speakerServerPreviewResult" style="margin-top:4px; white-space:pre-line;"></div>
+
+        <div class="section-title" style="margin-top:16px;">💡 Lampu Halaman (BARDI)</div>
+        <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
+          Nyala otomatis pas/sebelum adzan sholat pilihanmu (default Maghrib, bisa diganti sholat lain). Mati -- <b>opsional</b>, default diserahkan sepenuhnya ke jadwal/otomasi SmartLife, tapi bisa diaktifkan juga di sini (sekian jam setelah adzan Subuh) kalau mau. PAKAI TOKEN AKSES YANG SAMA dengan Suara AI di atas.
+        </div>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:6px;">
+          <span class="switch"><input type="checkbox" id="lampuHalamanEnabled"><span class="switch-track"></span></span>
+          Aktifkan auto nyala Lampu Halaman
+        </label>
+        <div class="field" style="margin-top:10px;">
+          <label>Sumber jadwal nyala</label>
+          <select id="lampuHalamanSource">
+            <option value="adzan">Ikuti adzan sholat pilihan (dihitung app ini)</option>
+            <option value="smartlife">Ikuti jadwal SmartLife (app ini tidak kirim perintah nyala sama sekali)</option>
+          </select>
+        </div>
+        <div class="field-row" style="margin-top:10px;">
+          <div class="field" id="lampuHalamanPrayerField">
+            <label>Sholat acuan nyala</label>
+            <select id="lampuHalamanPrayerSelect">
+              <option value="Fajr">Subuh</option>
+              <option value="Dhuhr">Dzuhur</option>
+              <option value="Asr">Ashar</option>
+              <option value="Maghrib">Maghrib</option>
+              <option value="Isha">Isya</option>
+            </select>
+          </div>
+          <div class="field" id="lampuHalamanLeadField"><label>Nyala berapa menit SEBELUM adzan (0 = pas adzan)</label><input type="number" id="lampuHalamanLeadMinutes" min="0" max="60" style="width:100%;"></div>
+        </div>
+        <div class="field-row" style="margin-top:10px;">
+          <div class="field">
+            <label>Device di BARDI</label>
+            <select id="lampuHalamanDeviceSelect"><option value="">— klik "Muat daftar device" —</option></select>
+          </div>
+          <div class="field" style="max-width:150px; justify-content:flex-end;">
+            <label>&nbsp;</label>
+            <button class="btn" id="lampuHalamanLoadBtn" style="width:100%;">Muat daftar device</button>
+          </div>
+        </div>
+        <div class="hint" id="lampuHalamanStatus" style="margin-top:8px;"></div>
+
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:14px;">
+          <span class="switch"><input type="checkbox" id="lampuHalamanOffEnabled"><span class="switch-track"></span></span>
+          Matikan otomatis sekian jam setelah adzan Subuh
+        </label>
+        <div class="hint" style="margin-top:2px; margin-bottom:8px;">
+          Opsional -- kalau TIDAK diaktifkan, mati 100% tetap diserahkan ke SmartLife spt biasa (tidak ada perubahan). Independen dari "Sumber jadwal nyala" di atas -- bisa dikombinasi bebas (mis. nyala via SmartLife, tapi tetap mati otomatis lewat app ini).
+        </div>
+        <div class="field-row">
+          <div class="field" id="lampuHalamanOffHoursField"><label>Mati berapa JAM setelah adzan Subuh</label><input type="number" id="lampuHalamanOffHours" min="0" max="12" step="0.5" style="width:100%;"></div>
+        </div>
+
+        <div class="audio-controls" style="margin-top:6px;">
+          <button class="btn" id="lampuHalamanTestOnBtn">🔛 Coba nyalakan sekarang</button>
+          <button class="btn" id="lampuHalamanTestOffBtn">⏹️ Coba matikan sekarang</button>
+          <button class="btn" id="lampuHalamanPreviewBtn">📋 Lihat jadwal hari ini</button>
+        </div>
+        <div class="hint" id="lampuHalamanManualStatus" style="margin-top:8px;"></div>
+        <div class="hint" id="lampuHalamanPreviewResult" style="margin-top:4px; white-space:pre-line;"></div>
       </div>
 
 
@@ -1021,7 +1092,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.28.1"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.28.0: Speaker Server (BARDI) sekarang dipilih lewat DROPDOWN ("Muat daftar device", isi otomatis dari /bardi-devices) drpd ketik nama manual -- id device tersimpan langsung, jadi runtime tidak perlu cari by nama lagi tiap kali (cuma /bardi-toggle pakai id tersimpan). Field "Nama device" manual dibuang.
+const APP_VERSION = "1.31.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.30.0: BARU -- Lampu Halaman sekarang bisa pilih SHOLAT ACUAN nyala (dropdown "Sholat acuan nyala": Subuh/Dzuhur/Ashar/Maghrib/Isya, default tetap Maghrib spt semula), bukan hardcode Maghrib lagi -- field "menit SEBELUM" tetap ada & boleh 0 (pas adzan). Setting baru: settings.lampuHalaman.prayerKey. Tetap murni client-side, TIDAK menyentuh KV/D1 Worker.
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -1111,6 +1182,25 @@ const DEFAULTS = {
     deviceName: "",       // nama device, cuma buat DITAMPILKAN (label dropdown/status), tidak dipakai buat mencari
     leadMinutes: 5,      // nyala mulai sekian menit SEBELUM momen notifikasi
     tailMinutes: 5        // tetap nyala sampai sekian menit SESUDAH momen notifikasi
+  },
+  // Lampu Halaman (BARDI/Tuya) -- urus NYALA (pas/sebelum adzan sholat
+  // PILIHAN, default Maghrib) & OPSIONAL urus MATI juga (sekian jam
+  // setelah adzan Subuh -- default NONAKTIF, jadi kalau tidak
+  // diaktifkan, mati 100% tetap diserahkan ke jadwal/otomasi SmartLife
+  // spt semula). `source`: "adzan" = app ini yang kirim perintah nyala
+  // pas/sebelum `prayerKey`; "smartlife" = app diam total soal NYALA
+  // (tidak kirim perintah nyala sama sekali), device dikontrol
+  // SmartLife. `offEnabled` independen dari `source` -- bisa nyala via
+  // SmartLife tapi tetap mati otomatis via app ini, atau sebaliknya.
+  lampuHalaman: {
+    enabled: false,
+    source: "adzan",     // "adzan" | "smartlife" -- CUMA soal NYALA
+    prayerKey: "Maghrib", // sholat ACUAN nyala -- salah satu dari REMINDABLE (Fajr/Dhuhr/Asr/Maghrib/Isha)
+    deviceId: "",
+    deviceName: "",
+    leadMinutes: 0,        // nyala berapa menit SEBELUM adzan `prayerKey` (0 = pas adzan)
+    offEnabled: false,     // default OFF -- kalau tidak diaktifkan, app TIDAK PERNAH kirim perintah mati (spt semula)
+    offHoursAfterSubuh: 1   // mati berapa JAM setelah adzan Subuh (boleh pecahan, mis. 0.5 = 30 menit)
   }
 };
 
@@ -2337,6 +2427,9 @@ function checkTriggers(now){
   // menit sesudah momen notifikasi apa pun di atas (lihat definisi
   // fungsinya & catatan lengkap dekat ELEVEN_WORKER_URL). ----
   updateSpeakerServerBySchedule(now);
+  // ---- Lampu Halaman (BARDI) -- CUMA nyala pas/sebelum adzan Maghrib,
+  // sekali sehari. Mati diserahkan ke SmartLife (lihat fungsinya). ----
+  updateLampuHalamanBySchedule(now);
 }
 function flashNowBadge(key, prayerTimeMs){
   const label = displayLabel(key, prayerTimeMs != null ? new Date(prayerTimeMs) : null);
@@ -2494,7 +2587,21 @@ function openSettings(){
   document.getElementById("speakerServerLeadMinutes").value = ssCfg.leadMinutes != null ? ssCfg.leadMinutes : 5;
   document.getElementById("speakerServerTailMinutes").value = ssCfg.tailMinutes != null ? ssCfg.tailMinutes : 5;
   document.getElementById("speakerServerTestStatus").textContent = "";
+  document.getElementById("speakerServerManualStatus").textContent = "";
+  document.getElementById("speakerServerPreviewResult").textContent = "";
   populateSpeakerServerDeviceSelect(null); // null = belum ada daftar baru, cuma tampilkan device tersimpan (kalau ada) sbg satu-satunya opsi dulu
+  const lhCfg = settings.lampuHalaman || DEFAULTS.lampuHalaman;
+  document.getElementById("lampuHalamanEnabled").checked = !!lhCfg.enabled;
+  document.getElementById("lampuHalamanSource").value = lhCfg.source || "adzan";
+  document.getElementById("lampuHalamanPrayerSelect").value = REMINDABLE.includes(lhCfg.prayerKey) ? lhCfg.prayerKey : "Maghrib";
+  document.getElementById("lampuHalamanLeadMinutes").value = lhCfg.leadMinutes != null ? lhCfg.leadMinutes : 0;
+  document.getElementById("lampuHalamanOffEnabled").checked = !!lhCfg.offEnabled;
+  document.getElementById("lampuHalamanOffHours").value = lhCfg.offHoursAfterSubuh != null ? lhCfg.offHoursAfterSubuh : 1;
+  document.getElementById("lampuHalamanStatus").textContent = "";
+  document.getElementById("lampuHalamanManualStatus").textContent = "";
+  document.getElementById("lampuHalamanPreviewResult").textContent = "";
+  populateLampuHalamanDeviceSelect(null);
+  applyLampuHalamanSourceUI();
   refreshAudioStatus();
   document.getElementById("urlReminder").value = localStorage.getItem("reminderAudioUrl") || "";
   document.getElementById("urlAzan").value = localStorage.getItem("azanAudioUrl") || "";
@@ -3085,7 +3192,7 @@ const ELEVEN_KEY_STORAGE = "elevenlabsWorkerToken";
    kalau belum diaktifkan / token belum diisi / device belum dipilih,
    fungsi ini diam saja (tidak mengganggu fitur lain). */
 let speakerServerCurrentOn = null; // null = belum diketahui, dipaksa sinkron di panggilan pertama
-let speakerServerDeviceListCache = []; // hasil /bardi-devices terakhir dimuat di sesi ini, dipakai isi dropdown
+let bardiDeviceListCache = []; // hasil /bardi-devices terakhir dimuat di sesi ini, dipakai isi dropdown
 function speakerServerConfig(){
   return (settings && settings.speakerServer) || DEFAULTS.speakerServer;
 }
@@ -3160,7 +3267,7 @@ function updateSpeakerServerBySchedule(now){
   setSpeakerServerPower(shouldBeOn);
 }
 // Isi <select> dropdown device -- kalau `freshList` diberikan (hasil
-// /bardi-devices baru), dipakai & di-cache di speakerServerDeviceListCache.
+// /bardi-devices baru), dipakai & di-cache di bardiDeviceListCache.
 // Kalau tidak (null, dipanggil dari openSettings sebelum sempat "Muat
 // daftar device"), device yang SUDAH TERSIMPAN tetap ditampilkan sbg 1
 // opsi (dari cfg.deviceId/deviceName) supaya tidak keliatan kosong,
@@ -3168,8 +3275,8 @@ function updateSpeakerServerBySchedule(now){
 function populateSpeakerServerDeviceSelect(freshList){
   const cfg = speakerServerConfig();
   const sel = document.getElementById("speakerServerDeviceSelect");
-  if(freshList) speakerServerDeviceListCache = freshList;
-  const list = speakerServerDeviceListCache;
+  if(freshList) bardiDeviceListCache = freshList;
+  const list = bardiDeviceListCache;
   if(!list.length){
     sel.innerHTML = cfg.deviceId
       ? `<option value="${cfg.deviceId}">${cfg.deviceName || cfg.deviceId} (tersimpan -- klik "Muat daftar device" utk refresh)</option>`
@@ -3182,23 +3289,232 @@ function populateSpeakerServerDeviceSelect(freshList){
   }).join("");
   if(cfg.deviceId && list.some(d=>d.id===cfg.deviceId)) sel.value = cfg.deviceId;
 }
+// Fetch /bardi-devices SEKALI, isi KEDUA dropdown (Speaker Server &
+// Lampu Halaman) sekaligus dari hasil yang sama -- supaya klik salah
+// satu tombol "Muat daftar device" otomatis me-refresh dua-duanya,
+// tidak perlu request terpisah dua kali ke Tuya Cloud.
+async function fetchBardiDeviceList(){
+  const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
+  if(!token) throw new Error("Token Akses belum diisi");
+  const res = await fetch(`${ELEVEN_WORKER_URL}/bardi-devices`, { headers:{ "Authorization":"Bearer "+token } });
+  if(!res.ok) throw new Error("HTTP "+res.status);
+  const data = await res.json();
+  const list = data.devices || [];
+  populateSpeakerServerDeviceSelect(list);
+  populateLampuHalamanDeviceSelect(list);
+  return list;
+}
 async function loadSpeakerServerDeviceOptions(){
   const statusEl = document.getElementById("speakerServerTestStatus");
-  const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
-  if(!token){ statusEl.textContent = "❌ Isi Token Akses dulu (di tab Audio > Suara AI)."; statusEl.style.color = "var(--danger, #d9534f)"; return; }
   statusEl.textContent = "Memuat daftar device dari BARDI…"; statusEl.style.color = "";
   try{
-    const res = await fetch(`${ELEVEN_WORKER_URL}/bardi-devices`, { headers:{ "Authorization":"Bearer "+token } });
-    if(!res.ok) throw new Error("HTTP "+res.status);
-    const data = await res.json();
-    const list = data.devices || [];
-    populateSpeakerServerDeviceSelect(list);
+    const list = await fetchBardiDeviceList();
     statusEl.textContent = list.length ? `✓ ${list.length} device dimuat.` : "Tidak ada device BARDI ditemukan.";
     statusEl.style.color = "var(--ok, #2e9e5b)";
   }catch(e){
     statusEl.textContent = "❌ Gagal memuat daftar device: " + e.message;
     statusEl.style.color = "var(--danger, #d9534f)";
   }
+}
+async function loadLampuHalamanDeviceOptions(){
+  const statusEl = document.getElementById("lampuHalamanStatus");
+  statusEl.textContent = "Memuat daftar device dari BARDI…"; statusEl.style.color = "";
+  try{
+    const list = await fetchBardiDeviceList();
+    statusEl.textContent = list.length ? `✓ ${list.length} device dimuat.` : "Tidak ada device BARDI ditemukan.";
+    statusEl.style.color = "var(--ok, #2e9e5b)";
+  }catch(e){
+    statusEl.textContent = "❌ Gagal memuat daftar device: " + e.message;
+    statusEl.style.color = "var(--danger, #d9534f)";
+  }
+}
+function lampuHalamanConfig(){
+  return (settings && settings.lampuHalaman) || DEFAULTS.lampuHalaman;
+}
+function populateLampuHalamanDeviceSelect(freshList){
+  const cfg = lampuHalamanConfig();
+  const sel = document.getElementById("lampuHalamanDeviceSelect");
+  if(freshList) bardiDeviceListCache = freshList;
+  const list = bardiDeviceListCache;
+  if(!list.length){
+    sel.innerHTML = cfg.deviceId
+      ? `<option value="${cfg.deviceId}">${cfg.deviceName || cfg.deviceId} (tersimpan -- klik "Muat daftar device" utk refresh)</option>`
+      : `<option value="">— klik "Muat daftar device" —</option>`;
+    return;
+  }
+  sel.innerHTML = list.map(d=>{
+    const label = `${d.name}${d.online === false ? " (offline)" : ""}`;
+    return `<option value="${d.id}">${label}</option>`;
+  }).join("");
+  if(cfg.deviceId && list.some(d=>d.id===cfg.deviceId)) sel.value = cfg.deviceId;
+}
+// Nonaktifkan (bukan sembunyikan -- biar jelas kenapa) field device &
+// menit sebelum kalau sumbernya "smartlife", soalnya app sama sekali
+// tidak akan memakainya buat kirim perintah nyala saat itu.
+function applyLampuHalamanSourceUI(){
+  const isAdzan = document.getElementById("lampuHalamanSource").value === "adzan";
+  document.getElementById("lampuHalamanLeadMinutes").disabled = !isAdzan;
+  document.getElementById("lampuHalamanPrayerSelect").disabled = !isAdzan;
+}
+// ---- Auto-nyala & (opsional) auto-mati Lampu Halaman -- SATU KALI per
+// hari masing-masing (dedup via triggeredLog YANG SAMA dgn
+// reminder/adzan lain, supaya konsisten & tersinkron antar jendela
+// main/widget). NYALA: pas/sebelum adzan sholat PILIHAN (`prayerKey`,
+// default Maghrib), kalau `source`=="adzan" (kalau "smartlife", bagian
+// nyala di-skip -- device dikontrol SmartLife). MATI: sekian jam
+// setelah adzan Subuh, HANYA kalau `offEnabled` diaktifkan manual --
+// independen dari `source`/`prayerKey`, jadi bisa dikombinasi bebas
+// (nyala via SmartLife tapi tetap mati via app ini, atau sebaliknya).
+// Kalau offEnabled=false (default), TIDAK PERNAH kirim perintah mati
+// sama sekali -- diserahkan 100% ke SmartLife. */
+function updateLampuHalamanBySchedule(now){
+  const cfg = lampuHalamanConfig();
+  if(!cfg.enabled || !cfg.deviceId) return;
+  const key = dateKey(now);
+  // ---- NYALA (pas/sebelum adzan `prayerKey`) -- cuma kalau source == "adzan" ----
+  const prayerKey = REMINDABLE.includes(cfg.prayerKey) ? cfg.prayerKey : "Maghrib";
+  if(cfg.source === "adzan" && todaySchedule && todaySchedule[prayerKey]){
+    const leadMs = Math.max(0, cfg.leadMinutes||0) * 60000;
+    const target = todaySchedule[prayerKey].getTime() - leadMs;
+    const onLogKey = `${key}:lampuHalaman:on`;
+    if(!triggeredLog[onLogKey] && now.getTime() >= target && now.getTime() < target + 60000){
+      triggeredLog[onLogKey] = true; saveTriggerLog();
+      sendLampuHalamanCommand(cfg.deviceId, true);
+    }
+  }
+  // ---- MATI (sekian jam setelah Subuh) -- cuma kalau offEnabled ----
+  if(cfg.offEnabled && todaySchedule && todaySchedule.Fajr){
+    const offMs = Math.max(0, cfg.offHoursAfterSubuh!=null ? cfg.offHoursAfterSubuh : 1) * 3600000;
+    const offTarget = todaySchedule.Fajr.getTime() + offMs;
+    const offLogKey = `${key}:lampuHalaman:off`;
+    if(!triggeredLog[offLogKey] && now.getTime() >= offTarget && now.getTime() < offTarget + 60000){
+      triggeredLog[offLogKey] = true; saveTriggerLog();
+      sendLampuHalamanCommand(cfg.deviceId, false);
+    }
+  }
+}
+async function sendLampuHalamanCommand(deviceId, on){
+  const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
+  if(!token || !deviceId) return;
+  try{
+    await fetch(`${ELEVEN_WORKER_URL}/bardi-toggle`, {
+      method: "POST",
+      headers: { "Authorization": "Bearer "+token, "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceId, code: "switch_1", value: on })
+    });
+  }catch(e){
+    console.log("Lampu Halaman: gagal kirim perintah:", e);
+  }
+}
+async function manualTestLampuHalamanToggle(on){
+  const statusEl = document.getElementById("lampuHalamanManualStatus");
+  const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
+  const sel = document.getElementById("lampuHalamanDeviceSelect");
+  const devId = sel.value;
+  const devName = sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].textContent : "";
+  if(!token){ statusEl.textContent = "❌ Isi Token Akses dulu."; statusEl.style.color = "var(--danger, #d9534f)"; return; }
+  if(!devId){ statusEl.textContent = "❌ Pilih device dulu (klik \"Muat daftar device\" kalau dropdown masih kosong)."; statusEl.style.color = "var(--danger, #d9534f)"; return; }
+  statusEl.textContent = (on ? "Mengirim perintah nyala…" : "Mengirim perintah mati…"); statusEl.style.color = "";
+  try{
+    const res = await fetch(`${ELEVEN_WORKER_URL}/bardi-toggle`, {
+      method: "POST",
+      headers: { "Authorization": "Bearer "+token, "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceId: devId, code: "switch_1", value: on })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(res.ok && data.success !== false){
+      statusEl.textContent = `✅ Perintah "${on?"nyala":"mati"}" berhasil dikirim ke ${devName}. Cek langsung lampunya.`;
+      statusEl.style.color = "var(--ok, #2e9e5b)";
+    }else{
+      statusEl.textContent = `❌ Gagal: ${JSON.stringify(data)}`;
+      statusEl.style.color = "var(--danger, #d9534f)";
+    }
+  }catch(e){
+    statusEl.textContent = "❌ Gagal kirim perintah: " + e.message;
+    statusEl.style.color = "var(--danger, #d9534f)";
+  }
+}
+function previewLampuHalamanScheduleToday(){
+  const resultEl = document.getElementById("lampuHalamanPreviewResult");
+  const fmt = (ms) => new Date(ms).toLocaleTimeString("id-ID", { hour:"2-digit", minute:"2-digit" });
+  const baris = [];
+  const sourceAdzan = document.getElementById("lampuHalamanSource").value === "adzan";
+  const prayerKey = document.getElementById("lampuHalamanPrayerSelect").value || "Maghrib";
+  const prayerLabel = PRAYER_LABEL[prayerKey] || prayerKey;
+  if(!sourceAdzan){
+    baris.push("• Nyala: sumber = SmartLife -- app ini tidak menjadwalkan, cek langsung di app SmartLife.");
+  }else if(!todaySchedule || !todaySchedule[prayerKey]){
+    baris.push("• Nyala: jadwal sholat hari ini belum siap, coba lagi sebentar.");
+  }else{
+    const leadMin = Math.max(0, parseInt(document.getElementById("lampuHalamanLeadMinutes").value,10) || 0);
+    const target = todaySchedule[prayerKey].getTime() - leadMin*60000;
+    baris.push(`• Nyala pukul ${fmt(target)} (${prayerLabel} ${fmt(todaySchedule[prayerKey].getTime())}).`);
+  }
+  const offOn = document.getElementById("lampuHalamanOffEnabled").checked;
+  if(!offOn){
+    baris.push("• Mati: TIDAK diatur di sini -- diserahkan ke SmartLife.");
+  }else if(!todaySchedule || !todaySchedule.Fajr){
+    baris.push("• Mati: jadwal sholat hari ini belum siap, coba lagi sebentar.");
+  }else{
+    const offHours = Math.max(0, parseFloat(document.getElementById("lampuHalamanOffHours").value) || 0);
+    const offTarget = todaySchedule.Fajr.getTime() + offHours*3600000;
+    baris.push(`• Mati pukul ${fmt(offTarget)} (${offHours} jam setelah Subuh ${fmt(todaySchedule.Fajr.getTime())}).`);
+  }
+  resultEl.textContent = "Jadwal Lampu Halaman hari ini:\n" + baris.join("\n");
+}
+
+// ---- Tombol tes MANUAL (langsung kirim /bardi-toggle SEKARANG, tidak
+// peduli jadwal apa pun) -- dipakai utk mastiin ujung-ke-ujung (token +
+// device + Worker + Tuya) beneran nyambung, TANPA perlu nunggu jam
+// notifikasi beneran tiba. Dipakai dropdown & token yang SEDANG
+// diketik/dipilih di form (belum tentu sudah "Simpan"). */
+async function manualTestSpeakerServerToggle(on){
+  const statusEl = document.getElementById("speakerServerManualStatus");
+  const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
+  const sel = document.getElementById("speakerServerDeviceSelect");
+  const devId = sel.value;
+  const devName = sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].textContent : "";
+  if(!token){ statusEl.textContent = "❌ Isi Token Akses dulu."; statusEl.style.color = "var(--danger, #d9534f)"; return; }
+  if(!devId){ statusEl.textContent = "❌ Pilih device dulu (klik \"Muat daftar device\" kalau dropdown masih kosong)."; statusEl.style.color = "var(--danger, #d9534f)"; return; }
+  statusEl.textContent = (on ? "Mengirim perintah nyala…" : "Mengirim perintah mati…"); statusEl.style.color = "";
+  try{
+    const res = await fetch(`${ELEVEN_WORKER_URL}/bardi-toggle`, {
+      method: "POST",
+      headers: { "Authorization": "Bearer "+token, "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceId: devId, code: "switch_1", value: on })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(res.ok && data.success !== false){
+      statusEl.textContent = `✅ Perintah "${on?"nyala":"mati"}" berhasil dikirim ke ${devName}. Cek langsung speaker-nya -- kalau responnya sesuai, kontrolnya SUDAH BENAR.`;
+      statusEl.style.color = "var(--ok, #2e9e5b)";
+      speakerServerCurrentOn = on; // sinkron biar auto-scheduler tidak langsung kirim ulang perintah yang sama
+    }else{
+      statusEl.textContent = `❌ Gagal: ${JSON.stringify(data)}`;
+      statusEl.style.color = "var(--danger, #d9534f)";
+    }
+  }catch(e){
+    statusEl.textContent = "❌ Gagal kirim perintah: " + e.message;
+    statusEl.style.color = "var(--danger, #d9534f)";
+  }
+}
+// ---- Preview jadwal hari ini -- pakai LOGIKA & PENGATURAN YANG SEDANG
+// DIKETIK di form (belum tentu tersimpan), supaya bisa dicoba-coba dulu
+// sebelum "Simpan". Menampilkan tiap momen notifikasi hari ini beserta
+// jendela nyala/mati Speaker Server di sekitarnya -- TANPA mengirim
+// perintah apa pun ke device (murni simulasi/perhitungan). */
+function previewSpeakerServerScheduleToday(){
+  const resultEl = document.getElementById("speakerServerPreviewResult");
+  if(!todaySchedule){ resultEl.textContent = "Jadwal sholat hari ini belum siap, coba lagi sebentar."; return; }
+  const leadMin = Math.max(0, parseInt(document.getElementById("speakerServerLeadMinutes").value,10) || 0);
+  const tailMin = Math.max(0, parseInt(document.getElementById("speakerServerTailMinutes").value,10) || 0);
+  const now = new Date();
+  const moments = collectNotificationMomentsToday(now);
+  if(!moments.length){ resultEl.textContent = "Tidak ada notifikasi yang aktif hari ini (cek toggle di tab Jadwal/Jam Kerja)."; return; }
+  const fmt = (ms) => new Date(ms).toLocaleTimeString("id-ID", { hour:"2-digit", minute:"2-digit" });
+  const baris = moments
+    .sort((a,b)=>a-b)
+    .map(m => `• Nyala ${fmt(m-leadMin*60000)} → notifikasi ${fmt(m)} → mati ${fmt(m+tailMin*60000)}`);
+  resultEl.textContent = `Jadwal Speaker Server hari ini (${moments.length} momen notifikasi):\n` + baris.join("\n");
 }
 let elevenTargetsCache = [];
 function elevenTargetOptions(){
@@ -3583,6 +3899,14 @@ document.getElementById("closingBulananSyncBtn").addEventListener("click", async
 });
 
 document.getElementById("speakerServerLoadBtn").addEventListener("click", loadSpeakerServerDeviceOptions);
+document.getElementById("speakerServerTestOnBtn").addEventListener("click", ()=> manualTestSpeakerServerToggle(true));
+document.getElementById("speakerServerTestOffBtn").addEventListener("click", ()=> manualTestSpeakerServerToggle(false));
+document.getElementById("speakerServerPreviewBtn").addEventListener("click", previewSpeakerServerScheduleToday);
+document.getElementById("lampuHalamanLoadBtn").addEventListener("click", loadLampuHalamanDeviceOptions);
+document.getElementById("lampuHalamanTestOnBtn").addEventListener("click", ()=> manualTestLampuHalamanToggle(true));
+document.getElementById("lampuHalamanTestOffBtn").addEventListener("click", ()=> manualTestLampuHalamanToggle(false));
+document.getElementById("lampuHalamanPreviewBtn").addEventListener("click", previewLampuHalamanScheduleToday);
+document.getElementById("lampuHalamanSource").addEventListener("change", applyLampuHalamanSourceUI);
 
 /* ---------------- Suara khusus per-item Jam Masuk/Pulang ----------------
    Beda dari renderWorkRows() (yang mengulang per HARI Senin-Sabtu),
@@ -3935,6 +4259,21 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
     settings.speakerServer.leadMinutes = Math.max(0, parseInt(document.getElementById("speakerServerLeadMinutes").value,10) || 0);
     settings.speakerServer.tailMinutes = Math.max(0, parseInt(document.getElementById("speakerServerTailMinutes").value,10) || 0);
     speakerServerCurrentOn = null; // paksa sinkron ulang tick berikutnya -- device/status barusan mungkin beda dari sebelumnya
+    settings.lampuHalaman = settings.lampuHalaman || structuredClone(DEFAULTS.lampuHalaman);
+    settings.lampuHalaman.enabled = document.getElementById("lampuHalamanEnabled").checked;
+    settings.lampuHalaman.source = document.getElementById("lampuHalamanSource").value === "smartlife" ? "smartlife" : "adzan";
+    {
+      const pk = document.getElementById("lampuHalamanPrayerSelect").value;
+      settings.lampuHalaman.prayerKey = REMINDABLE.includes(pk) ? pk : "Maghrib";
+    }
+    {
+      const sel = document.getElementById("lampuHalamanDeviceSelect");
+      settings.lampuHalaman.deviceId = sel.value || "";
+      settings.lampuHalaman.deviceName = sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].textContent.replace(/\s*\(offline\)\s*$/,"").replace(/\s*\(tersimpan.*\)\s*$/,"") : "";
+    }
+    settings.lampuHalaman.leadMinutes = Math.max(0, parseInt(document.getElementById("lampuHalamanLeadMinutes").value,10) || 0);
+    settings.lampuHalaman.offEnabled = document.getElementById("lampuHalamanOffEnabled").checked;
+    settings.lampuHalaman.offHoursAfterSubuh = Math.max(0, parseFloat(document.getElementById("lampuHalamanOffHours").value) || 0);
     saveSettings();
     closeSettings();
     showToast("Pengaturan berhasil disimpan.", "ok");
