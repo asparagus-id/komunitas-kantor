@@ -870,7 +870,7 @@
 
         <div class="section-title">🔊 Speaker Server (BARDI)</div>
         <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
-          Perangkat BARDI (smart plug) yang menyalakan ampli/speaker otomatis SEBELUM ada notifikasi (pengingat/adzan sholat, pengingat/notifikasi jam kerja, peringatan closing bulanan) lalu mematikannya lagi SESUDAHNYA. PAKAI TOKEN AKSES YANG SAMA dengan Suara AI di atas.
+          Perangkat BARDI (smart plug) yang menyalakan ampli/speaker sebelum notifikasi (pengingat/adzan sholat, pengingat/notifikasi jam kerja, peringatan closing bulanan), lalu <b>TETAP MENYALA TERUS</b> sampai sesudah notifikasinya tiba (tidak mati-nyala di antaranya) -- biar relay tidak sering diklik. PAKAI TOKEN AKSES YANG SAMA dengan Suara AI di atas.
         </div>
         <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:6px;">
           <span class="switch"><input type="checkbox" id="speakerServerEnabled"><span class="switch-track"></span></span>
@@ -887,8 +887,8 @@
           </div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Nyala berapa menit SEBELUM notifikasi</label><input type="number" id="speakerServerLeadMinutes" min="0" max="60" style="width:100%;"></div>
-          <div class="field"><label>Mati berapa menit SESUDAH notifikasi</label><input type="number" id="speakerServerTailMinutes" min="0" max="60" style="width:100%;"></div>
+          <div class="field"><label>Nyala berapa menit SEBELUM pengingat</label><input type="number" id="speakerServerLeadMinutes" min="0" max="60" style="width:100%;"></div>
+          <div class="field"><label>Mati berapa menit SESUDAH notifikasi tiba</label><input type="number" id="speakerServerTailMinutes" min="0" max="60" style="width:100%;"></div>
         </div>
         <div class="hint" id="speakerServerTestStatus" style="margin-top:8px;"></div>
 
@@ -1092,7 +1092,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.31.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.30.0: BARU -- Lampu Halaman sekarang bisa pilih SHOLAT ACUAN nyala (dropdown "Sholat acuan nyala": Subuh/Dzuhur/Ashar/Maghrib/Isya, default tetap Maghrib spt semula), bukan hardcode Maghrib lagi -- field "menit SEBELUM" tetap ada & boleh 0 (pas adzan). Setting baru: settings.lampuHalaman.prayerKey. Tetap murni client-side, TIDAK menyentuh KV/D1 Worker.
+const APP_VERSION = "1.32.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.31.0: PERBAIKAN pola nyala/mati Speaker Server -- SEBELUMNYA "pengingat sebelum" & "notifikasi tiba" dihitung sbg 2 jendela [-lead,+tail] TERPISAH, jadi kalau jaraknya cukup jauh speaker sempat MATI dulu lalu NYALA LAGI (relay sering diklik, cepat aus). SEKARANG 1 event (mis. Subuh) = 1 interval MENYAMBUNG dari (pengingat - leadMinutes) sampai (notifikasi tiba + tailMinutes) -- speaker TETAP MENYALA TERUS di antaranya, tidak peduli seberapa jauh jaraknya. Fungsi baru: collectNotificationIntervalsToday (gantikan collectNotificationMomentsToday).
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -3212,19 +3212,43 @@ async function setSpeakerServerPower(on){
     console.log("Speaker Server: gagal set daya:", e);
   }
 }
-// Kumpulkan semua "momen notifikasi" hari ini yang statusnya AKTIF (baik
-// pengingat-sebelum maupun saat-tiba, sholat maupun jam kerja maupun
-// closing bulanan) -- dipakai KHUSUS utk auto nyala/mati Speaker Server,
-// TIDAK memutar suara apa pun (itu tetap logic asli checkTriggers di atas).
-function collectNotificationMomentsToday(now){
-  const moments = [];
+// Kumpulkan JENDELA MENYALA (interval [mulai, selesai], bukan titik) hari
+// ini yang statusnya AKTIF -- dipakai KHUSUS utk auto nyala/mati Speaker
+// Server, TIDAK memutar suara apa pun (itu tetap logic asli checkTriggers
+// di atas). SATU EVENT (mis. "Subuh", "Masuk Kerja") = SATU interval
+// MENYAMBUNG dari (waktu pengingat - leadMinutes) sampai (waktu
+// notifikasi tiba + tailMinutes) -- BUKAN dua jendela terpisah lagi.
+// Ini SENGAJA diubah (permintaan: "jangan sering mati-nyala, device
+// gampang rusak") -- sebelumnya pengingat & notifikasi-tiba dihitung
+// sbg 2 titik terpisah yg masing2 dikasih jendela [-lead,+tail] SENDIRI,
+// jadi kalau jarak keduanya cukup jauh (mis. pengingat 15 menit sebelum
+// adzan, tailMinutes cuma 5), speaker sempat MATI di antara keduanya
+// lalu NYALA LAGI tak lama kemudian -- persis pola yang bikin relay
+// cepat aus. Sekarang: begitu pengingat mulai, TETAP MENYALA TERUS
+// (tidak peduli seberapa jauh jaraknya) sampai leadMinutes SEBELUM
+// notifikasi tiba pun sudah lewat + tailMinutes SESUDAHNYA.
+// Kalau CUMA salah satu yg aktif (pengingat saja, atau notifikasi-tiba
+// saja), jendelanya tetap [-lead,+tail] di sekitar momen itu sendiri --
+// perilaku lama, wajar krn tidak ada pasangan utk disambung.
+function collectNotificationIntervalsToday(now, leadMs, tailMs){
+  const intervals = [];
+  const pushEvent = (remindTime, arriveTime) => {
+    if(remindTime != null && arriveTime != null){
+      intervals.push([remindTime - leadMs, arriveTime + tailMs]); // MENYAMBUNG, satu interval
+    }else if(remindTime != null){
+      intervals.push([remindTime - leadMs, remindTime + tailMs]);
+    }else if(arriveTime != null){
+      intervals.push([arriveTime - leadMs, arriveTime + tailMs]);
+    }
+  };
   if(todaySchedule){
     for(const pKey of REMINDABLE){
       const ps = settings.prayerSettings[pKey];
       if(!ps) continue;
       const prayerTime = todaySchedule[pKey].getTime();
-      if(ps.enabled) moments.push(prayerTime - reminderMinutesFor(pKey, todaySchedule[pKey])*60000);
-      if(ps.azanEnabled) moments.push(prayerTime);
+      const remindTime = ps.enabled ? prayerTime - reminderMinutesFor(pKey, todaySchedule[pKey])*60000 : null;
+      const arriveTime = ps.azanEnabled ? prayerTime : null;
+      pushEvent(remindTime, arriveTime);
     }
   }
   const hariIni = now.getDay();
@@ -3240,16 +3264,19 @@ function collectNotificationMomentsToday(now){
       }
       if(!target) continue;
       const targetMs = target.getTime();
-      if(wc.enabled) moments.push(targetMs - Math.max(0, wc.minutes||0)*60000);
-      if(wc.azanEnabled) moments.push(targetMs);
+      const remindTime = wc.enabled ? targetMs - Math.max(0, wc.minutes||0)*60000 : null;
+      const arriveTime = wc.azanEnabled ? targetMs : null;
+      pushEvent(remindTime, arriveTime);
     }
   }
   const closingTarget = getClosingBulananToday(now);
   if(closingTarget){
     const warnMin = Math.max(0, (settings.closingBulanan && settings.closingBulanan.warningMinutes) || 10);
-    moments.push(closingTarget.getTime() - warnMin*60000);
+    // Closing bulanan sudah alami berbentuk "pengingat -> tiba" (remindAt
+    // -> closingMs), jadi langsung disambung SATU interval juga.
+    pushEvent(closingTarget.getTime() - warnMin*60000, closingTarget.getTime());
   }
-  return moments;
+  return intervals;
 }
 function updateSpeakerServerBySchedule(now){
   const cfg = speakerServerConfig();
@@ -3261,9 +3288,9 @@ function updateSpeakerServerBySchedule(now){
   }
   const leadMs = Math.max(0, cfg.leadMinutes!=null ? cfg.leadMinutes : 5) * 60000;
   const tailMs = Math.max(0, cfg.tailMinutes!=null ? cfg.tailMinutes : 5) * 60000;
-  const moments = collectNotificationMomentsToday(now);
+  const intervals = collectNotificationIntervalsToday(now, leadMs, tailMs);
   const nowMs = now.getTime();
-  const shouldBeOn = moments.some(m => nowMs >= m - leadMs && nowMs <= m + tailMs);
+  const shouldBeOn = intervals.some(([start,end]) => nowMs >= start && nowMs <= end);
   setSpeakerServerPower(shouldBeOn);
 }
 // Isi <select> dropdown device -- kalau `freshList` diberikan (hasil
@@ -3508,13 +3535,13 @@ function previewSpeakerServerScheduleToday(){
   const leadMin = Math.max(0, parseInt(document.getElementById("speakerServerLeadMinutes").value,10) || 0);
   const tailMin = Math.max(0, parseInt(document.getElementById("speakerServerTailMinutes").value,10) || 0);
   const now = new Date();
-  const moments = collectNotificationMomentsToday(now);
-  if(!moments.length){ resultEl.textContent = "Tidak ada notifikasi yang aktif hari ini (cek toggle di tab Jadwal/Jam Kerja)."; return; }
+  const intervals = collectNotificationIntervalsToday(now, leadMin*60000, tailMin*60000);
+  if(!intervals.length){ resultEl.textContent = "Tidak ada notifikasi yang aktif hari ini (cek toggle di tab Jadwal/Jam Kerja)."; return; }
   const fmt = (ms) => new Date(ms).toLocaleTimeString("id-ID", { hour:"2-digit", minute:"2-digit" });
-  const baris = moments
-    .sort((a,b)=>a-b)
-    .map(m => `• Nyala ${fmt(m-leadMin*60000)} → notifikasi ${fmt(m)} → mati ${fmt(m+tailMin*60000)}`);
-  resultEl.textContent = `Jadwal Speaker Server hari ini (${moments.length} momen notifikasi):\n` + baris.join("\n");
+  const baris = intervals
+    .sort((a,b)=>a[0]-b[0])
+    .map(([start,end]) => `• Nyala ${fmt(start)} → tetap menyala → mati ${fmt(end)}`);
+  resultEl.textContent = `Jadwal Speaker Server hari ini (${intervals.length} jendela menyala):\n` + baris.join("\n");
 }
 let elevenTargetsCache = [];
 function elevenTargetOptions(){
