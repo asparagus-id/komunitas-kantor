@@ -868,6 +868,16 @@
         <button class="btn primary" id="elevenGenerateBtn" style="width:100%; margin-bottom:6px;">🎙️ Buat &amp; Simpan Suara</button>
         <div class="hint" id="elevenGenStatus"></div>
 
+        <div class="section-title">🏖️ Mode Libur Otomatis</div>
+        <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
+          Kalau AKTIF: pas hari libur (nasional/internal/Minggu -- dicek otomatis dari Google Calendar lewat Worker gus-asisten, endpoint <code>/libur-status</code>), Speaker Server & Lampu Halaman TIDAK akan nyala sama sekali. Kalau NONAKTIF, hari libur diabaikan -- otomasi BARDI tetap jalan spt hari kerja biasa (cocok kalau memang selalu ada piket).
+        </div>
+        <div class="hint" id="liburStatusHariIni" style="margin-bottom:10px;"></div>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+          <span class="switch"><input type="checkbox" id="liburOtomatisEnabled"><span class="switch-track"></span></span>
+          Aktifkan Mode Libur Otomatis
+        </label>
+
         <div class="section-title">🚨 Notifikasi Gagal (Bot Monitor)</div>
         <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
           Opsional -- kalau diisi, setiap perintah nyala/mati BARDI (Speaker Server / Lampu Halaman) yang <b>ternyata tidak nyambung</b> (device tetap online tapi statusnya beda dari yang diminta) akan dikirim sbg DM Telegram lewat <b>bot Monitor</b> (bukan cuma toast di jendela app ini yang belum tentu sedang dibuka). Minta Token & URL Worker Monitor ke yang mengurus Worker-nya.
@@ -1101,7 +1111,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.33.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.32.0: BARU -- (1) Mode Libur Otomatis: pakai endpoint /libur-status YANG SUDAH ADA di gus-asisten (nasional/internal/Minggu), semua otomasi BARDI (Speaker Server & Lampu Halaman) di-skip total di hari libur, dicek 1x/hari via refreshLiburStatusForToday. (2) Verifikasi command BARDI: setelah kirim nyala/mati, dicek ulang ~20 detik kemudian (verifyBardiCommandApplied) -- kalau device online tapi statusnya tidak sesuai, tampil toast DAN (opsional, kalau "URL Worker Monitor"+"Token Monitor Utama" diisi di tab Audio) dikirim ke bot Monitor via POST /api/bardi-alert (Worker_Monitor_Utama.js v10) -- lebih pasti kelihatan drpd toast doang. tauri.conf.json: tambah domain sda-octopus-bot.edw-yoga2.workers.dev ke scope HTTP.
+const APP_VERSION = "1.34.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.33.0: Mode Libur Otomatis sekarang ada saklar ON/OFF PERSISTEN di tab Audio ("Aktifkan Mode Libur Otomatis", settings.liburOtomatis.enabled, default AKTIF) -- kalau dimatikan, hari libur diabaikan total & otomasi BARDI selalu jalan spt hari kerja biasa (cocok kalau selalu ada piket). Juga tampil status "hari ini libur/tidak" langsung di tab itu. Tetap dicek dari /libur-status gus-asisten (TIDAK ada perubahan sumber data).
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -1210,6 +1220,13 @@ const DEFAULTS = {
     leadMinutes: 0,        // nyala berapa menit SEBELUM adzan `prayerKey` (0 = pas adzan)
     offEnabled: false,     // default OFF -- kalau tidak diaktifkan, app TIDAK PERNAH kirim perintah mati (spt semula)
     offHoursAfterSubuh: 1   // mati berapa JAM setelah adzan Subuh (boleh pecahan, mis. 0.5 = 30 menit)
+  },
+  // Mode Libur Otomatis -- saklar ON/OFF PERSISTEN (bukan per-tanggal)
+  // utk seluruh fitur "skip otomasi BARDI pas hari libur". Default AKTIF
+  // (perilaku semula) -- kalau dimatikan, hari libur diabaikan total,
+  // Speaker Server & Lampu Halaman selalu jalan spt hari kerja biasa.
+  liburOtomatis: {
+    enabled: true
   }
 };
 
@@ -3216,6 +3233,15 @@ async function refreshLiburStatusForToday(key){
 function isLiburHariIniCached(now){
   return liburHariIniCache.dateKey === dateKey(now) && liburHariIniCache.libur;
 }
+// ---- Saklar ON/OFF persisten (tersimpan di settings, BUKAN per-tanggal)
+// -- kalau NONAKTIF, Mode Libur Otomatis diabaikan total & otomasi BARDI
+// selalu jalan spt hari kerja biasa (cocok kalau memang selalu ada piket
+// di kantor). Default AKTIF (spt perilaku semula).
+function isLiburEfektifHariIni(now){
+  const cfg = (settings && settings.liburOtomatis) || DEFAULTS.liburOtomatis;
+  if(!cfg.enabled) return false; // fitur dimatikan -- anggap TIDAK PERNAH libur
+  return isLiburHariIniCached(now);
+}
 const ELEVEN_KEY_STORAGE = "elevenlabsWorkerToken";
 const BARDI_ALERT_URL_STORAGE = "bardiAlertWorkerUrl";
 const BARDI_ALERT_SECRET_STORAGE = "bardiAlertSecret";
@@ -3385,7 +3411,7 @@ function updateSpeakerServerBySchedule(now){
   // Mode Libur Otomatis -- hari ini libur (nasional/internal/Minggu)
   // -> tidak ada notifikasi yang relevan, jangan nyalakan apa pun.
   // Kalau kebetulan masih nyala dari kemarin, matikan.
-  if(isLiburHariIniCached(now)){
+  if(isLiburEfektifHariIni(now)){
     if(speakerServerCurrentOn === true) setSpeakerServerPower(false);
     return;
   }
@@ -3504,7 +3530,7 @@ function updateLampuHalamanBySchedule(now){
   // pun (kantor kosong). Beda dari Speaker Server, di sini TIDAK ada
   // "matikan paksa" krn Lampu Halaman memang tidak dijamin nyala
   // sebelumnya -- cukup lewati nyala/mati hari ini.
-  if(isLiburHariIniCached(now)) return;
+  if(isLiburEfektifHariIni(now)) return;
   const key = dateKey(now);
   // ---- NYALA (pas/sebelum adzan `prayerKey`) -- cuma kalau source == "adzan" ----
   const prayerKey = REMINDABLE.includes(cfg.prayerKey) ? cfg.prayerKey : "Maghrib";
@@ -3674,6 +3700,19 @@ function setupElevenLabsTab(){
   document.getElementById("elevenApiKey").value = localStorage.getItem(ELEVEN_KEY_STORAGE) || "";
   document.getElementById("bardiAlertUrl").value = localStorage.getItem(BARDI_ALERT_URL_STORAGE) || "";
   document.getElementById("bardiAlertSecret").value = localStorage.getItem(BARDI_ALERT_SECRET_STORAGE) || "";
+  const liburCfg = (settings && settings.liburOtomatis) || DEFAULTS.liburOtomatis;
+  document.getElementById("liburOtomatisEnabled").checked = !!liburCfg.enabled;
+  {
+    const statusEl = document.getElementById("liburStatusHariIni");
+    const now = new Date();
+    if(!liburHariIniCache.checked || liburHariIniCache.dateKey !== dateKey(now)){
+      statusEl.textContent = "Status hari ini: belum dicek (butuh Token Akses di atas & koneksi internet).";
+    }else if(liburHariIniCache.libur){
+      statusEl.textContent = `Status hari ini: 🏖️ LIBUR (${liburHariIniCache.alasan || "-"}).`;
+    }else{
+      statusEl.textContent = "Status hari ini: bukan libur, hari kerja biasa.";
+    }
+  }
   document.getElementById("elevenQuotaStatus").textContent = "";
   document.getElementById("elevenGenStatus").textContent = "";
   document.getElementById("elevenText").value = "";
@@ -4418,6 +4457,8 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
     settings.lampuHalaman.leadMinutes = Math.max(0, parseInt(document.getElementById("lampuHalamanLeadMinutes").value,10) || 0);
     settings.lampuHalaman.offEnabled = document.getElementById("lampuHalamanOffEnabled").checked;
     settings.lampuHalaman.offHoursAfterSubuh = Math.max(0, parseFloat(document.getElementById("lampuHalamanOffHours").value) || 0);
+    settings.liburOtomatis = settings.liburOtomatis || structuredClone(DEFAULTS.liburOtomatis);
+    settings.liburOtomatis.enabled = document.getElementById("liburOtomatisEnabled").checked;
     saveSettings();
     closeSettings();
     showToast("Pengaturan berhasil disimpan.", "ok");
