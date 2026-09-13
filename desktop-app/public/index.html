@@ -877,14 +877,18 @@
           Aktifkan auto nyala/mati Speaker Server
         </label>
         <div class="field-row" style="margin-top:10px;">
-          <div class="field"><label>Nama device di BARDI</label><input type="text" id="speakerServerDeviceName" placeholder="Speaker Server"></div>
+          <div class="field">
+            <label>Device di BARDI</label>
+            <select id="speakerServerDeviceSelect"><option value="">— klik "Muat daftar device" —</option></select>
+          </div>
+          <div class="field" style="max-width:150px; justify-content:flex-end;">
+            <label>&nbsp;</label>
+            <button class="btn" id="speakerServerLoadBtn" style="width:100%;">Muat daftar device</button>
+          </div>
         </div>
         <div class="field-row">
           <div class="field"><label>Nyala berapa menit SEBELUM notifikasi</label><input type="number" id="speakerServerLeadMinutes" min="0" max="60" style="width:100%;"></div>
           <div class="field"><label>Mati berapa menit SESUDAH notifikasi</label><input type="number" id="speakerServerTailMinutes" min="0" max="60" style="width:100%;"></div>
-        </div>
-        <div class="audio-controls" style="margin-top:6px;">
-          <button class="btn" id="speakerServerTestBtn">Tes koneksi</button>
         </div>
         <div class="hint" id="speakerServerTestStatus" style="margin-top:8px;"></div>
       </div>
@@ -1017,7 +1021,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.28.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.27.3: BARU -- Speaker Server (perangkat BARDI/Tuya) sekarang otomatis dinyalakan & dimatikan mengikuti jadwal notifikasi apa pun (pengingat/adzan sholat, pengingat/notifikasi jam kerja, peringatan closing bulanan), lewat Worker gus-asisten (/bardi-devices & /bardi-toggle) -- pakai Token Akses yang sama dgn fitur Suara AI. Diatur di tab Audio > "Speaker Server (BARDI)": aktif/nonaktif, nama device, & berapa menit sebelum/sesudah (default 5/5) -- BUKAN di panel admin, murni pengaturan lokal app ini. Kalau belum diaktifkan/device belum ketemu, fitur ini diam saja & tidak mengganggu apa pun.
+const APP_VERSION = "1.28.1"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.28.0: Speaker Server (BARDI) sekarang dipilih lewat DROPDOWN ("Muat daftar device", isi otomatis dari /bardi-devices) drpd ketik nama manual -- id device tersimpan langsung, jadi runtime tidak perlu cari by nama lagi tiap kali (cuma /bardi-toggle pakai id tersimpan). Field "Nama device" manual dibuang.
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -1103,7 +1107,8 @@ const DEFAULTS = {
   // notifikasi. Pakai Token Akses YANG SAMA dgn ElevenLabs (tab Audio).
   speakerServer: {
     enabled: false,     // default OFF sampai diaktifkan manual di tab Audio
-    deviceName: "Speaker Server", // dicocokkan (case-insensitive) ke nama device di BARDI
+    deviceId: "",        // id device BARDI terpilih (dari dropdown) -- SUMBER UTAMA, tidak perlu cari by nama lagi tiap kali
+    deviceName: "",       // nama device, cuma buat DITAMPILKAN (label dropdown/status), tidak dipakai buat mencari
     leadMinutes: 5,      // nyala mulai sekian menit SEBELUM momen notifikasi
     tailMinutes: 5        // tetap nyala sampai sekian menit SESUDAH momen notifikasi
   }
@@ -2486,10 +2491,10 @@ function openSettings(){
   refreshClosingBulananStatus();
   const ssCfg = settings.speakerServer || DEFAULTS.speakerServer;
   document.getElementById("speakerServerEnabled").checked = !!ssCfg.enabled;
-  document.getElementById("speakerServerDeviceName").value = ssCfg.deviceName || "Speaker Server";
   document.getElementById("speakerServerLeadMinutes").value = ssCfg.leadMinutes != null ? ssCfg.leadMinutes : 5;
   document.getElementById("speakerServerTailMinutes").value = ssCfg.tailMinutes != null ? ssCfg.tailMinutes : 5;
   document.getElementById("speakerServerTestStatus").textContent = "";
+  populateSpeakerServerDeviceSelect(null); // null = belum ada daftar baru, cuma tampilkan device tersimpan (kalau ada) sbg satu-satunya opsi dulu
   refreshAudioStatus();
   document.getElementById("urlReminder").value = localStorage.getItem("reminderAudioUrl") || "";
   document.getElementById("urlAzan").value = localStorage.getItem("azanAudioUrl") || "";
@@ -3066,75 +3071,35 @@ const ELEVEN_WORKER_URL = "https://gus-asisten.rempahecho.workers.dev";
 const ELEVEN_KEY_STORAGE = "elevenlabsWorkerToken";
 
 /* ---------------- Speaker Server (BARDI/Tuya) -- auto nyala/mati BARU ----------------
-   Perangkat smart plug (nama diatur pengguna sendiri di tab Audio,
-   default "Speaker Server", dicocokkan case-insensitive lewat
-   /bardi-devices -- id-nya di-cache di localStorage supaya tidak perlu
-   tanya ulang tiap kali, dibuang ulang otomatis kalau nama diganti)
-   dinyalakan otomatis sekian menit SEBELUM ada notifikasi (pengingat
+   Perangkat smart plug DIPILIH LEWAT DROPDOWN di tab Audio (bukan ketik
+   nama manual) -- id device-nya langsung tersimpan di settings begitu
+   dipilih, jadi saat runtime TIDAK PERLU tanya /bardi-devices lagi sama
+   sekali, cukup kirim /bardi-toggle pakai id yang sudah tersimpan.
+   Dinyalakan otomatis sekian menit SEBELUM ada notifikasi (pengingat
    sebelum adzan, adzan tiba, pengingat jam kerja, jam kerja tiba,
    peringatan closing bulanan), lalu dimatikan lagi sekian menit SESUDAH
-   momen notifikasi itu -- semua bisa diatur (aktif/nonaktif, nama
-   device, menit sebelum/sesudah) di tab Audio > "Speaker Server (BARDI)".
+   momen notifikasi itu -- semua bisa diatur (aktif/nonaktif, device,
+   menit sebelum/sesudah) di tab Audio > "Speaker Server (BARDI)".
    Dipakai token & endpoint Worker gus-asisten YANG SAMA dgn fitur
    ElevenLabs di atas (Authorization: Bearer <ELEVEN_KEY_STORAGE>) --
-   kalau belum diaktifkan / token belum diisi / device belum ketemu di
-   BARDI, fungsi ini diam saja (tidak mengganggu fitur lain). */
-const SPEAKER_SERVER_ID_CACHE_KEY = "speakerServerDeviceId";
-const SPEAKER_SERVER_ID_CACHE_NAME_KEY = "speakerServerDeviceIdForName"; // nama device saat id itu di-cache -- kalau nama di settings berubah, cache dibuang & dicari ulang
-let speakerServerDeviceId = null;
-let speakerServerLookupFailed = false; // supaya tidak nembak /bardi-devices berulang tiap detik kalau memang belum ketemu device-nya
+   kalau belum diaktifkan / token belum diisi / device belum dipilih,
+   fungsi ini diam saja (tidak mengganggu fitur lain). */
 let speakerServerCurrentOn = null; // null = belum diketahui, dipaksa sinkron di panggilan pertama
+let speakerServerDeviceListCache = []; // hasil /bardi-devices terakhir dimuat di sesi ini, dipakai isi dropdown
 function speakerServerConfig(){
   return (settings && settings.speakerServer) || DEFAULTS.speakerServer;
-}
-// Nama device dipakai sbg bagian dari cache key -- ganti nama di
-// pengaturan otomatis bikin id lama dianggap tidak valid lagi & dicari
-// ulang, tanpa perlu tombol "reset" terpisah.
-function loadCachedSpeakerServerId(){
-  const cfg = speakerServerConfig();
-  const cachedName = localStorage.getItem(SPEAKER_SERVER_ID_CACHE_NAME_KEY);
-  const cachedId = localStorage.getItem(SPEAKER_SERVER_ID_CACHE_KEY);
-  if(cachedId && cachedName === (cfg.deviceName||"").trim().toLowerCase()) return cachedId;
-  return null;
-}
-async function resolveSpeakerServerDeviceId(){
-  const cfg = speakerServerConfig();
-  const cached = loadCachedSpeakerServerId();
-  if(cached){ speakerServerDeviceId = cached; return cached; }
-  if(speakerServerLookupFailed) return null;
-  const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
-  if(!token) return null;
-  try{
-    const res = await fetch(`${ELEVEN_WORKER_URL}/bardi-devices`, { headers:{ "Authorization":"Bearer "+token } });
-    if(!res.ok){ speakerServerLookupFailed = true; return null; }
-    const data = await res.json();
-    const target = (cfg.deviceName||"").trim().toLowerCase();
-    const dev = (data.devices||[]).find(d => (d.name||"").trim().toLowerCase() === target);
-    if(dev){
-      speakerServerDeviceId = dev.id;
-      localStorage.setItem(SPEAKER_SERVER_ID_CACHE_KEY, dev.id);
-      localStorage.setItem(SPEAKER_SERVER_ID_CACHE_NAME_KEY, target);
-      return dev.id;
-    }
-    speakerServerLookupFailed = true; // device dgn nama itu memang belum ada -- jangan coba lagi tiap tick
-    return null;
-  }catch(e){
-    console.log("Speaker Server: gagal cari device id:", e);
-    return null; // error jaringan sementara -- BOLEH dicoba lagi tick berikutnya (tidak set lookupFailed)
-  }
 }
 async function setSpeakerServerPower(on){
   if(speakerServerCurrentOn === on) return; // sudah di kondisi itu, tidak perlu kirim command lagi
   const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
-  if(!token) return;
-  const devId = await resolveSpeakerServerDeviceId();
-  if(!devId) return;
+  const cfg = speakerServerConfig();
+  if(!token || !cfg.deviceId) return; // belum dikonfigurasi -- diam saja
   speakerServerCurrentOn = on; // ditandai OPTIMISTIC dulu sebelum await, supaya tick berikutnya (walau await ini belum selesai) tidak ikut kirim command yang sama berkali-kali
   try{
     await fetch(`${ELEVEN_WORKER_URL}/bardi-toggle`, {
       method: "POST",
       headers: { "Authorization": "Bearer "+token, "Content-Type": "application/json" },
-      body: JSON.stringify({ deviceId: devId, code: "switch_1", value: on })
+      body: JSON.stringify({ deviceId: cfg.deviceId, code: "switch_1", value: on })
     });
   }catch(e){
     console.log("Speaker Server: gagal set daya:", e);
@@ -3181,9 +3146,9 @@ function collectNotificationMomentsToday(now){
 }
 function updateSpeakerServerBySchedule(now){
   const cfg = speakerServerConfig();
-  if(!cfg.enabled){
-    // Kalau baru dinonaktifkan & kebetulan masih dalam kondisi nyala,
-    // matikan dulu sekali supaya tidak nyangkut nyala terus.
+  if(!cfg.enabled || !cfg.deviceId){
+    // Kalau baru dinonaktifkan/device dikosongkan & kebetulan masih
+    // dalam kondisi nyala, matikan dulu sekali supaya tidak nyangkut.
     if(speakerServerCurrentOn === true) setSpeakerServerPower(false);
     return;
   }
@@ -3194,19 +3159,46 @@ function updateSpeakerServerBySchedule(now){
   const shouldBeOn = moments.some(m => nowMs >= m - leadMs && nowMs <= m + tailMs);
   setSpeakerServerPower(shouldBeOn);
 }
-// Tombol "Tes koneksi" di tab Audio -- paksa cari ulang device (abaikan
-// cache & lookupFailed) & balikin pesan status yang jelas ke UI.
-async function testSpeakerServerConnection(){
-  speakerServerLookupFailed = false;
-  localStorage.removeItem(SPEAKER_SERVER_ID_CACHE_KEY);
-  localStorage.removeItem(SPEAKER_SERVER_ID_CACHE_NAME_KEY);
-  speakerServerDeviceId = null;
-  const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
-  if(!token) return { ok:false, message:"❌ Isi Token Akses dulu (di atas)." };
-  const devId = await resolveSpeakerServerDeviceId();
+// Isi <select> dropdown device -- kalau `freshList` diberikan (hasil
+// /bardi-devices baru), dipakai & di-cache di speakerServerDeviceListCache.
+// Kalau tidak (null, dipanggil dari openSettings sebelum sempat "Muat
+// daftar device"), device yang SUDAH TERSIMPAN tetap ditampilkan sbg 1
+// opsi (dari cfg.deviceId/deviceName) supaya tidak keliatan kosong,
+// walau daftar lengkapnya belum dimuat ulang.
+function populateSpeakerServerDeviceSelect(freshList){
   const cfg = speakerServerConfig();
-  if(!devId) return { ok:false, message:`❌ Device "${cfg.deviceName}" tidak ditemukan di BARDI. Cek nama persis di panel Admin Bot Komunitas.` };
-  return { ok:true, message:`✅ Device "${cfg.deviceName}" ditemukan (id: ${devId}).` };
+  const sel = document.getElementById("speakerServerDeviceSelect");
+  if(freshList) speakerServerDeviceListCache = freshList;
+  const list = speakerServerDeviceListCache;
+  if(!list.length){
+    sel.innerHTML = cfg.deviceId
+      ? `<option value="${cfg.deviceId}">${cfg.deviceName || cfg.deviceId} (tersimpan -- klik "Muat daftar device" utk refresh)</option>`
+      : `<option value="">— klik "Muat daftar device" —</option>`;
+    return;
+  }
+  sel.innerHTML = list.map(d=>{
+    const label = `${d.name}${d.online === false ? " (offline)" : ""}`;
+    return `<option value="${d.id}">${label}</option>`;
+  }).join("");
+  if(cfg.deviceId && list.some(d=>d.id===cfg.deviceId)) sel.value = cfg.deviceId;
+}
+async function loadSpeakerServerDeviceOptions(){
+  const statusEl = document.getElementById("speakerServerTestStatus");
+  const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
+  if(!token){ statusEl.textContent = "❌ Isi Token Akses dulu (di tab Audio > Suara AI)."; statusEl.style.color = "var(--danger, #d9534f)"; return; }
+  statusEl.textContent = "Memuat daftar device dari BARDI…"; statusEl.style.color = "";
+  try{
+    const res = await fetch(`${ELEVEN_WORKER_URL}/bardi-devices`, { headers:{ "Authorization":"Bearer "+token } });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const data = await res.json();
+    const list = data.devices || [];
+    populateSpeakerServerDeviceSelect(list);
+    statusEl.textContent = list.length ? `✓ ${list.length} device dimuat.` : "Tidak ada device BARDI ditemukan.";
+    statusEl.style.color = "var(--ok, #2e9e5b)";
+  }catch(e){
+    statusEl.textContent = "❌ Gagal memuat daftar device: " + e.message;
+    statusEl.style.color = "var(--danger, #d9534f)";
+  }
 }
 let elevenTargetsCache = [];
 function elevenTargetOptions(){
@@ -3590,21 +3582,7 @@ document.getElementById("closingBulananSyncBtn").addEventListener("click", async
   if(!ok) showToast("Gagal mengambil data dari Worker. Cek Token Akses & koneksi internet.", "err");
 });
 
-document.getElementById("speakerServerTestBtn").addEventListener("click", async ()=>{
-  const btn = document.getElementById("speakerServerTestBtn");
-  const statusEl = document.getElementById("speakerServerTestStatus");
-  // pakai nilai yang lagi diketik user di form, BUKAN yg tersimpan --
-  // pola sama spt sinkron closing bulanan di atas, biar tes langsung
-  // relevan walau belum diklik "Simpan".
-  settings.speakerServer = settings.speakerServer || structuredClone(DEFAULTS.speakerServer);
-  settings.speakerServer.deviceName = document.getElementById("speakerServerDeviceName").value.trim() || "Speaker Server";
-  statusEl.textContent = "Mencari device…";
-  btn.disabled = true;
-  const { ok, message } = await testSpeakerServerConnection();
-  btn.disabled = false;
-  statusEl.textContent = message;
-  statusEl.style.color = ok ? "var(--ok, #2e9e5b)" : "var(--danger, #d9534f)";
-});
+document.getElementById("speakerServerLoadBtn").addEventListener("click", loadSpeakerServerDeviceOptions);
 
 /* ---------------- Suara khusus per-item Jam Masuk/Pulang ----------------
    Beda dari renderWorkRows() (yang mengulang per HARI Senin-Sabtu),
@@ -3949,9 +3927,14 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
     settings.closingBulanan.warningMinutes = Math.max(0, parseInt(document.getElementById("closingBulananMenit").value,10) || 10);
     settings.speakerServer = settings.speakerServer || structuredClone(DEFAULTS.speakerServer);
     settings.speakerServer.enabled = document.getElementById("speakerServerEnabled").checked;
-    settings.speakerServer.deviceName = document.getElementById("speakerServerDeviceName").value.trim() || "Speaker Server";
+    {
+      const sel = document.getElementById("speakerServerDeviceSelect");
+      settings.speakerServer.deviceId = sel.value || "";
+      settings.speakerServer.deviceName = sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].textContent.replace(/\s*\(offline\)\s*$/,"").replace(/\s*\(tersimpan.*\)\s*$/,"") : "";
+    }
     settings.speakerServer.leadMinutes = Math.max(0, parseInt(document.getElementById("speakerServerLeadMinutes").value,10) || 0);
     settings.speakerServer.tailMinutes = Math.max(0, parseInt(document.getElementById("speakerServerTailMinutes").value,10) || 0);
+    speakerServerCurrentOn = null; // paksa sinkron ulang tick berikutnya -- device/status barusan mungkin beda dari sebelumnya
     saveSettings();
     closeSettings();
     showToast("Pengaturan berhasil disimpan.", "ok");
