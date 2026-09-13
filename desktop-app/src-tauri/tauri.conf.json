@@ -8,14 +8,14 @@
   },
   "package": {
     "productName": "Pengingat Sholat",
-    "version": "1.32.0"
+    "version": "1.33.0"
   },
   "tauri": {
     "allowlist": {
       "all": false,
       "http": {
         "all": true,
-        "scope": ["https://api.aladhan.com/*", "https://nominatim.openstreetmap.org/*", "https://gus-asisten.rempahecho.workers.dev/*"]
+        "scope": ["https://api.aladhan.com/*", "https://nominatim.openstreetmap.org/*", "https://gus-asisten.rempahecho.workers.dev/*", "https://sda-octopus-bot.edw-yoga2.workers.dev/*"]
       },
       "notification": {
         "all": true
