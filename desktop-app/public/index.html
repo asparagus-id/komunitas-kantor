@@ -1146,7 +1146,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.37.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.36.0: PERBAIKAN PENTING -- deteksi CCTV SEBELUMNYA pakai fetch() browser biasa, yang di production build SELALU diblokir "Mixed Content" (halaman https://tauri.localhost tidak boleh fetch http:// biasa) -- ini penyebab "Failed to fetch" yang dilaporkan, BUKAN soal allowlist. Diganti total ke window.__TAURI__.http.fetch (jalan lewat Rust, lolos dari mixed content) + Basic Auth (bukan Digest lagi -- Tauri v1 http API melempar exception utk status 401, jadi tidak bisa baca nonce dari situ spt fetch() browser). Fungsi baru: cctvTauriFetch() gantikan dahuaDigestFetch(). MD5 dipertahankan (tidak dipakai skr) jaga2 kalau Basic ternyata ditolak device & perlu balik ke Digest.
+const APP_VERSION = "1.39.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.38.0: BARU -- notifikasi gerakan CCTV sekarang bisa "diamkan" dari Telegram: balas notifikasinya dgn "abaikan"/"itu saya"/"tamu"/"karyawan" (ditangani Worker_Monitor_Utama.js v11) -> app ini cek status diam lewat GET /api/bardi-alert-status (endpoint BARU, auth SAMA dgn /api/bardi-alert) SEBELUM kirim notifikasi gerakan baru. Durasi diam bisa diatur admin sendiri lewat command "atur jeda cctv <menit>" di Telegram (default 60 menit) -- BUKAN diatur di app ini. Jeda antar notifikasi biasa (cooldownMinutes) tetap default 5 menit spt semula, tidak berubah.
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -3365,6 +3365,27 @@ async function sendBardiAlertToMonitorBot(pesan){
     console.log("Gagal kirim alert BARDI ke bot Monitor:", e);
   }
 }
+// BARU -- cek status "diam" gerakan CCTV ke bot Monitor (lihat endpoint
+// GET /api/bardi-alert-status di Worker_Monitor_Utama.js) -- admin
+// mengaktifkan ini dgn BALAS notifikasi gerakan sebelumnya di Telegram
+// pakai kata "abaikan"/"itu saya"/"tamu"/"karyawan". Dicek CUMA pas mau
+// kirim notifikasi baru (bukan tiap tick polling 3 detik) -- URL-nya
+// HTTPS (bukan http:// lokal spt CCTV), jadi TIDAK kena masalah "Mixed
+// Content", fetch() browser biasa aman dipakai di sini.
+async function isCctvMotionSnoozed(){
+  const url = localStorage.getItem(BARDI_ALERT_URL_STORAGE);
+  const secret = localStorage.getItem(BARDI_ALERT_SECRET_STORAGE);
+  if(!url || !secret) return false; // belum dikonfigurasi -- anggap TIDAK diam, jangan blokir notifikasi krn ini
+  try{
+    const res = await fetch(`${url}/api/bardi-alert-status`, { headers: { "X-Alert-Secret": secret } });
+    if(!res.ok) return false;
+    const data = await res.json();
+    return !!(data.snoozedUntil && data.snoozedUntil > Date.now());
+  }catch(e){
+    console.log("Gagal cek status diam CCTV (anggap TIDAK diam, fail-open):", e);
+    return false;
+  }
+}
 
 /* ============================================================
    Deteksi Gerakan CCTV Dahua -- MURNI LOKAL (LAN kantor), TIDAK
@@ -3384,12 +3405,11 @@ const CCTV_IP_STORAGE = "cctvDahuaIp";
 const CCTV_USER_STORAGE = "cctvDahuaUser";
 const CCTV_PASS_STORAGE = "cctvDahuaPass";
 const CCTV_POLL_INTERVAL_MS = 3000;
-// ---- MD5 (RFC 1321) -- SAAT INI TIDAK DIPAKAI (CCTV pindah ke Basic
-// Auth, lihat cctvTauriFetch) -- dipertahankan krn Digest Auth (yang
-// butuh MD5 ini) kemungkinan perlu diaktifkan lagi kalau ternyata
-// device MENOLAK Basic Auth. Implementasi standar, murni fungsi
-// matematika/algoritma publik (bukan konten kreatif siapa pun), sudah
-// divalidasi cocok dgn 3 test vector resmi RFC 1321.
+// ---- MD5 (RFC 1321) -- WAJIB ada sendiri krn Web Crypto API TIDAK
+// menyediakan MD5 (cuma SHA-*), padahal skema Digest Auth CCTV pakai
+// MD5 -- dipakai cctvTauriFetch() di bawah. Implementasi standar,
+// murni fungsi matematika/algoritma publik (bukan konten kreatif
+// siapa pun), sudah divalidasi cocok dgn 3 test vector resmi RFC 1321.
 function md5(input){
   function rotl(x,c){ return (x<<c)|(x>>>(32-c)); }
   const s = [7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,
@@ -3434,41 +3454,61 @@ function md5(input){
   return toHexLE(a0)+toHexLE(b0)+toHexLE(c0)+toHexLE(d0);
 }
 // ---- Akses CCTV lewat Tauri HTTP client (BUKAN fetch() browser biasa)
-// -- WAJIB begini, bukan pilihan gaya penulisan: app production Tauri
-// dibuka dari "https://tauri.localhost", sedangkan CCTV cuma "http://"
-// biasa -- browser/WebView OTOMATIS BLOKIR itu ("Mixed Content"), gagal
-// instan TANPA request pernah beneran terkirim ("Failed to fetch").
-// window.__TAURI__.http jalan lewat Rust (bukan lewat WebView), jadi
-// TIDAK kena aturan itu sama sekali.
-// PAKAI BASIC AUTH (bukan Digest lagi spt sebelumnya) -- alasannya:
-// Tauri v1 http API MELEMPAR ERROR utk status selain 200 (termasuk 401),
-// bukan mengembalikan responsnya spt fetch() browser -- jadi kita TIDAK
-// BISA baca header WWW-Authenticate dari respons 401 buat hitung Digest
-// (butuh "nonce" dari situ). Basic Auth TIDAK PERLU proses 401 dulu --
-// langsung kirim kredensial di request PERTAMA. Banyak firmware Dahua
-// tetap menerima Basic walau defaultnya minta Digest -- kalau device
-// KAMU ternyata menolak Basic sama sekali, tombol "Tes Deteksi" akan
-// menunjukkan error-nya persis, & itu perlu saya tangani terpisah.
-async function cctvTauriFetch(url, username, password){
+// -- WAJIB begini: app production Tauri dibuka dari "https://tauri.
+// localhost", sedangkan CCTV cuma "http://" biasa -- browser/WebView
+// OTOMATIS BLOKIR itu ("Mixed Content"). window.__TAURI__.http jalan
+// lewat Rust (bukan lewat WebView), jadi TIDAK kena aturan itu.
+// PAKAI DIGEST AUTH (kembali dari Basic -- device KAMU terbukti nolak
+// Basic, balas HTTP 401, dari hasil tes). Ternyata Tauri v1 di versi
+// ini TIDAK melempar exception utk status 401 (beda dari dugaan
+// sebelumnya) -- responsnya BISA dibaca normal, termasuk header-nya,
+// jadi Digest Auth (butuh baca nonce dari header WWW-Authenticate di
+// respons 401 pertama) BISA dijalankan lewat jalur ini. Alurnya: (1)
+// request TANPA Authorization -> device balas 401 + WWW-Authenticate
+// (berisi nonce), (2) hitung response pakai MD5 (fungsi md5() di
+// atas), (3) request ULANG dgn Authorization: Digest ... yang benar.
+function findHeaderCaseInsensitive(headers, name){
+  if(!headers) return null;
+  const key = Object.keys(headers).find((k) => k.toLowerCase() === name.toLowerCase());
+  return key ? headers[key] : null;
+}
+async function cctvTauriFetch(url, username, password, method){
+  method = method || "GET";
   const t = window.__TAURI__;
   if(!t || !t.http || !t.http.fetch) throw new Error("Tauri HTTP API tidak tersedia (window.__TAURI__.http). Pastikan app dibuild dgn fitur \"http-all\" (Cargo.toml) & withGlobalTauri:true (tauri.conf.json) -- keduanya SUDAH ada di project ini, jadi ini harusnya tidak terjadi kecuali app belum di-build ulang.");
-  const basicAuth = "Basic " + btoa(`${username}:${password}`);
   const responseType = (t.http.ResponseType && t.http.ResponseType.Text) || 2; // 2 = Text (fallback kalau enum tidak ke-expose)
-  let res;
-  try{
-    res = await t.http.fetch(url, {
-      method: "GET",
-      headers: { "Authorization": basicAuth },
-      responseType,
-      timeout: 8,
-    });
-  }catch(e){
-    // Tauri v1 MELEMPAR exception utk status non-2xx (lihat catatan di
-    // atas) -- jadi 401/403 pun masuk ke sini, BUKAN ke `res` di bawah.
-    throw new Error(`Request ditolak (kemungkinan device menolak Basic Auth, minta Digest, atau kredensial salah): ${(e && e.message) || e}`);
+  const doFetch = async (headers) => {
+    const res = await t.http.fetch(url, { method, headers: headers||{}, responseType, timeout: 8 });
+    const text = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
+    return { status: res.status, ok: res.status >= 200 && res.status < 300, text, headers: res.headers || {} };
+  };
+  const res1 = await doFetch();
+  if(res1.status !== 401) return res1; // device mungkin anonymous access aktif -- langsung pakai ini
+  const authHeader = findHeaderCaseInsensitive(res1.headers, "WWW-Authenticate");
+  if(!authHeader || !/digest/i.test(authHeader)){
+    throw new Error(`Device minta autentikasi yang tidak dikenali (bukan Digest) atau kredensial ditolak. Header WWW-Authenticate: ${authHeader || "(kosong)"}`);
   }
-  const text = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
-  return { status: res.status, ok: res.status >= 200 && res.status < 300, text };
+  const parts = {};
+  authHeader.replace(/(\w+)=("([^"]*)"|[^,]*)/g, (_m,key,val,quoted)=>{ parts[key] = quoted !== undefined ? quoted : val; });
+  const realm = parts.realm || "";
+  const nonce = parts.nonce || "";
+  const qop = parts.qop || "";
+  const opaque = parts.opaque;
+  const urlObj = new URL(url);
+  const uri = urlObj.pathname + urlObj.search;
+  const ha1 = md5(`${username}:${realm}:${password}`);
+  const ha2 = md5(`${method}:${uri}`);
+  const nc = "00000001";
+  const cnonce = Math.random().toString(16).slice(2,10);
+  let response, authValue;
+  if(qop){
+    response = md5(`${ha1}:${nonce}:${nc}:${cnonce}:${qop}:${ha2}`);
+    authValue = `Digest username="${username}", realm="${realm}", nonce="${nonce}", uri="${uri}", qop=${qop}, nc=${nc}, cnonce="${cnonce}", response="${response}"` + (opaque ? `, opaque="${opaque}"` : "");
+  }else{
+    response = md5(`${ha1}:${nonce}:${ha2}`);
+    authValue = `Digest username="${username}", realm="${realm}", nonce="${nonce}", uri="${uri}", response="${response}"` + (opaque ? `, opaque="${opaque}"` : "");
+  }
+  return doFetch({ "Authorization": authValue });
 }
 function cctvMotionUrl(){
   const ip = localStorage.getItem(CCTV_IP_STORAGE);
@@ -3530,8 +3570,16 @@ async function tickCctvMotion(){
       const cooldownMs = Math.max(0, cfg.cooldownMinutes!=null ? cfg.cooldownMinutes : 5) * 60000;
       const now = Date.now();
       if(now - cctvLastAlertAt >= cooldownMs){
-        cctvLastAlertAt = now;
-        sendBardiAlertToMonitorBot(`🎥 Gerakan terdeteksi di CCTV.`);
+        // BARU -- cek status "diam" (admin balas "abaikan"/"itu
+        // saya"/"tamu"/"karyawan" di Telegram) SEBELUM benar2 kirim.
+        // cctvLastAlertAt SENGAJA TIDAK di-update kalau lagi diam --
+        // supaya begitu masa diam habis, jeda notifikasi normal tetap
+        // dihitung dari notifikasi TERAKHIR YANG BENERAN TERKIRIM.
+        const snoozed = await isCctvMotionSnoozed();
+        if(!snoozed){
+          cctvLastAlertAt = now;
+          sendBardiAlertToMonitorBot(`🎥 Gerakan terdeteksi di CCTV.`);
+        }
       }
     }
   }catch(e){
