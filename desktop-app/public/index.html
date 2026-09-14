@@ -887,6 +887,10 @@
           <div class="field"><label>URL Worker Monitor</label><input type="text" id="bardiAlertUrl" placeholder="https://sda-octopus-bot.edw-yoga2.workers.dev"></div>
           <div class="field"><label>Token Monitor Utama</label><input type="password" id="bardiAlertSecret" placeholder="Token khusus (BARDI_ALERT_SECRET)"></div>
         </div>
+        <div class="audio-controls" style="margin-top:6px;">
+          <button class="btn" id="bardiAlertTestBtn">📨 Tes Kirim ke Bot Monitor</button>
+        </div>
+        <div class="hint" id="bardiAlertTestStatus" style="margin-top:8px;"></div>
 
         <div class="section-title">🔊 Speaker Server (BARDI)</div>
         <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
@@ -1167,7 +1171,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.42.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.41.0: PERBAIKAN parseCctvEventCount() -- ternyata device ini punya 2 bentuk respons: "channels[0]=N" (ada N event) DAN "Error: No Events" (kosong) -- kode sebelumnya cuma kenal bentuk pertama, "No Events" dianggap "format tidak dikenali" (gagal parse). Sekarang "No Events" dipetakan ke count=0 -- model bandingkan-angka yang sudah ada TETAP BENAR utk dua-duanya tanpa perlu logika tambahan (0 -> N = naik = alert; N -> N = tidak naik = tidak alert).
+const APP_VERSION = "1.43.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.42.0: BARU -- tombol "📨 Tes Kirim ke Bot Monitor" di tab Audio (dekat URL Worker Monitor/Token Monitor Utama) -- diagnostik KHUSUS utk isolasi masalah "notifikasi tidak masuk": pakai nilai form saat ini (blm perlu Simpan), SELALU laporkan hasil jelas (berhasil/HTTP error/gagal network) -- beda dari sendBardiAlertToMonitorBot() asli yang diam kalau gagal (cukup console.log, krn dipakai fitur background, bukan utk ditunggu user).
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -3386,6 +3390,39 @@ async function sendBardiAlertToMonitorBot(pesan){
     console.log("Gagal kirim alert BARDI ke bot Monitor:", e);
   }
 }
+// BARU -- tombol "Tes Kirim ke Bot Monitor" -- BEDA dari
+// sendBardiAlertToMonitorBot() di atas (yang dipakai fitur asli & diam
+// kalau gagal, cuma console.log) -- fungsi ini KHUSUS DIAGNOSTIK, pakai
+// nilai yang SEDANG DIKETIK di form (belum tentu sudah "Simpan"), dan
+// SELALU melaporkan hasilnya jelas ke UI (berhasil/gagal + alasan) --
+// supaya kalau notifikasi CCTV/BARDI "tidak masuk", bisa dipastikan
+// dulu: masalahnya di jalur KE bot Monitor (ketauan di sini), atau di
+// tempat lain (deteksi CCTV-nya sendiri, jadwal, dst).
+async function testBardiAlertToMonitorBot(){
+  const statusEl = document.getElementById("bardiAlertTestStatus");
+  const url = document.getElementById("bardiAlertUrl").value.trim().replace(/\/+$/,"");
+  const secret = document.getElementById("bardiAlertSecret").value.trim();
+  if(!url || !secret){ statusEl.textContent = "❌ Isi URL Worker Monitor & Token Monitor Utama dulu."; statusEl.style.color = "var(--danger, #d9534f)"; return; }
+  statusEl.textContent = "Mengirim pesan tes…"; statusEl.style.color = "";
+  try{
+    const res = await fetch(`${url}/api/bardi-alert`, {
+      method: "POST",
+      headers: { "X-Alert-Secret": secret, "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "🧪 Ini pesan TES dari app Pengingat Sholat. Kalau kamu menerima ini di Telegram, jalur notifikasi ke bot Monitor sudah benar." })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(res.ok && data && data.ok){
+      statusEl.textContent = "✅ Terkirim! Cek Telegram bot Monitor kamu sekarang (harusnya masuk dalam beberapa detik).";
+      statusEl.style.color = "var(--ok, #2e9e5b)";
+    }else{
+      statusEl.textContent = `❌ Ditolak Worker (HTTP ${res.status}): ${(data && data.error) || JSON.stringify(data)}. Kalau "Unauthorized" -- Token Monitor Utama di sini beda dgn env BARDI_ALERT_SECRET di Worker Monitor.`;
+      statusEl.style.color = "var(--danger, #d9534f)";
+    }
+  }catch(e){
+    statusEl.textContent = `❌ Gagal terkirim sama sekali: ${e.message}. Cek URL Worker Monitor-nya benar & Worker sudah di-deploy versi terbaru (ada endpoint /api/bardi-alert).`;
+    statusEl.style.color = "var(--danger, #d9534f)";
+  }
+}
 // BARU -- cek status "diam" gerakan CCTV ke bot Monitor (lihat endpoint
 // GET /api/bardi-alert-status di Worker_Monitor_Utama.js) -- admin
 // mengaktifkan ini dgn BALAS notifikasi gerakan sebelumnya di Telegram
@@ -4043,6 +4080,7 @@ function setupElevenLabsTab(){
   document.getElementById("elevenApiKey").value = localStorage.getItem(ELEVEN_KEY_STORAGE) || "";
   document.getElementById("bardiAlertUrl").value = localStorage.getItem(BARDI_ALERT_URL_STORAGE) || "";
   document.getElementById("bardiAlertSecret").value = localStorage.getItem(BARDI_ALERT_SECRET_STORAGE) || "";
+  document.getElementById("bardiAlertTestStatus").textContent = "";
   document.getElementById("cctvIp").value = localStorage.getItem(CCTV_IP_STORAGE) || "";
   document.getElementById("cctvUser").value = localStorage.getItem(CCTV_USER_STORAGE) || "";
   document.getElementById("cctvPass").value = localStorage.getItem(CCTV_PASS_STORAGE) || "";
@@ -4090,6 +4128,7 @@ document.getElementById("bardiAlertUrl").addEventListener("change", (e)=>{
 document.getElementById("bardiAlertSecret").addEventListener("change", (e)=>{
   localStorage.setItem(BARDI_ALERT_SECRET_STORAGE, e.target.value.trim());
 });
+document.getElementById("bardiAlertTestBtn").addEventListener("click", testBardiAlertToMonitorBot);
 document.getElementById("cctvIp").addEventListener("change", (e)=>{
   localStorage.setItem(CCTV_IP_STORAGE, e.target.value.trim());
 });
