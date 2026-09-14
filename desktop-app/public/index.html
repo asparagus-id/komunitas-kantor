@@ -1167,7 +1167,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.41.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.40.0: BARU -- tab pengaturan "CCTV" TERPISAH SENDIRI (SEBELUMNYA numpang tab Audio, sekarang punya tab & ikon sendiri di sidebar) -- berisi semua pengaturan deteksi gerakan (dipindah dari Audio, ID elemen sama persis, tidak ada perubahan JS) PLUS penjelasan baru fitur "diamkan lewat Telegram" (balas notifikasi dgn abaikan/itu saya/tamu/karyawan, "atur jeda cctv <menit>") LANGSUNG di dalam app -- sebelumnya cuma dijelaskan di chat, sekarang tidak perlu diingat-ingat manual.
+const APP_VERSION = "1.42.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.41.0: PERBAIKAN parseCctvEventCount() -- ternyata device ini punya 2 bentuk respons: "channels[0]=N" (ada N event) DAN "Error: No Events" (kosong) -- kode sebelumnya cuma kenal bentuk pertama, "No Events" dianggap "format tidak dikenali" (gagal parse). Sekarang "No Events" dipetakan ke count=0 -- model bandingkan-angka yang sudah ada TETAP BENAR utk dua-duanya tanpa perlu logika tambahan (0 -> N = naik = alert; N -> N = tidak naik = tidak alert).
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -3540,15 +3540,17 @@ function cctvMotionUrl(){
 }
 // BARU -- respons Dahua "channels[0]=3" itu PENGHITUNG (sudah berapa
 // kali event tercatat sejak device nyala), BUKAN status nyala/mati
-// saat ini -- kata "Error:No Events" yang saya cari sebelumnya
-// TERNYATA TIDAK PERNAH muncul di device Dahua model ini (device lain
-// mungkin beda), jadi kode lama SELALU membaca "ADA gerakan" terus-
-// menerus apa pun kondisinya. Cara bacanya yang BENAR: bandingkan
-// angkanya dgn hasil polling SEBELUMNYA -- kalau BERTAMBAH, berarti
-// ADA gerakan baru sejak polling terakhir. Kalau ada beberapa channel
-// dlm 1 respons (query tanpa filter channel), dijumlah semua -- naik
-// di channel MANA PUN dianggap "ada gerakan".
+// saat ini -- TERNYATA ada 2 bentuk respons device ini: "channels[0]=N"
+// (ada N event tercatat) DAN "Error: No Events" (tidak ada event sama
+// sekali) -- kode sebelumnya cuma kenal bentuk pertama. Diperbaiki
+// dengan anggap "No Events" = 0 -- model "bandingkan angka dgn polling
+// sebelumnya" TETAP BENAR utk dua-duanya sekaligus: dari "No Events"
+// (0) ke "channels[0]=3" (3) = naik = ADA gerakan baru; dari
+// "channels[0]=3" ke "channels[0]=3" lagi (angka sama, apa pun
+// bentuknya) = tidak naik = TIDAK ada gerakan BARU sejak polling
+// terakhir (meski historinya tetap ada 3 event).
 function parseCctvEventCount(text){
+  if(/error\s*:\s*no\s*events/i.test(text)) return 0;
   const matches = [...text.matchAll(/channels?\[(\d+)\]\s*=\s*(\d+)/gi)];
   if(!matches.length) return null;
   return matches.reduce((sum,m)=> sum + (parseInt(m[2],10)||0), 0);
