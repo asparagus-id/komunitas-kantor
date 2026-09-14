@@ -758,7 +758,12 @@
     "2026-09-14": {
       "pollId": "6140792653245055917",
       "threadId": 9028,
-      "answers": {},
+      "answers": {
+        "121822437": {
+          "name": "KH TOYYIB MUBAROQ LC. MA",
+          "choice": 1
+        }
+      },
       "options": [
         "Ikut",
         "Tidak ikut"
