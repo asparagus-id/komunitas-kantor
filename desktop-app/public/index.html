@@ -1146,7 +1146,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.36.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.35.0: BARU -- Deteksi Gerakan CCTV sekarang bisa dijadwal ("Aktifkan cuma di jam tertentu": Mulai jam/Sampai jam, otomatis handle lewat tengah malam mis. 16:00->08:00 besok) -- default MATI (24 jam nonstop, spt semula). Fungsi baru: isCctvScheduleActiveNow(), dipanggil di awal tickCctvMotion() -- di luar jendela jadwal, diam total (tidak polling ke CCTV sama sekali, bukan cuma tidak kirim notif).
+const APP_VERSION = "1.37.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.36.0: PERBAIKAN PENTING -- deteksi CCTV SEBELUMNYA pakai fetch() browser biasa, yang di production build SELALU diblokir "Mixed Content" (halaman https://tauri.localhost tidak boleh fetch http:// biasa) -- ini penyebab "Failed to fetch" yang dilaporkan, BUKAN soal allowlist. Diganti total ke window.__TAURI__.http.fetch (jalan lewat Rust, lolos dari mixed content) + Basic Auth (bukan Digest lagi -- Tauri v1 http API melempar exception utk status 401, jadi tidak bisa baca nonce dari situ spt fetch() browser). Fungsi baru: cctvTauriFetch() gantikan dahuaDigestFetch(). MD5 dipertahankan (tidak dipakai skr) jaga2 kalau Basic ternyata ditolak device & perlu balik ke Digest.
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -1264,7 +1264,7 @@ const DEFAULTS = {
     enabled: true
   },
   // Deteksi Gerakan CCTV (Dahua XVR) -- lihat catatan lengkap dekat
-  // dahuaDigestFetch(). IP/username/password SENGAJA TIDAK di sini
+  // cctvTauriFetch(). IP/username/password SENGAJA TIDAK di sini
   // (bukan di settings biasa) -- itu kredensial, disimpan terpisah di
   // localStorage (pola SAMA dgn Token Akses/Token Monitor), lihat
   // CCTV_IP_STORAGE dkk.
@@ -3384,11 +3384,12 @@ const CCTV_IP_STORAGE = "cctvDahuaIp";
 const CCTV_USER_STORAGE = "cctvDahuaUser";
 const CCTV_PASS_STORAGE = "cctvDahuaPass";
 const CCTV_POLL_INTERVAL_MS = 3000;
-// ---- MD5 (RFC 1321) -- WAJIB ada sendiri krn Web Crypto API TIDAK
-// menyediakan MD5 (cuma SHA-*), padahal skema Digest Auth Dahua pakai
-// MD5. Implementasi standar, murni fungsi matematika/algoritma publik
-// (bukan konten kreatif siapa pun) -- dipakai HANYA utk hitung
-// response Digest Auth, TIDAK dipakai utk keamanan lain apa pun. */
+// ---- MD5 (RFC 1321) -- SAAT INI TIDAK DIPAKAI (CCTV pindah ke Basic
+// Auth, lihat cctvTauriFetch) -- dipertahankan krn Digest Auth (yang
+// butuh MD5 ini) kemungkinan perlu diaktifkan lagi kalau ternyata
+// device MENOLAK Basic Auth. Implementasi standar, murni fungsi
+// matematika/algoritma publik (bukan konten kreatif siapa pun), sudah
+// divalidasi cocok dgn 3 test vector resmi RFC 1321.
 function md5(input){
   function rotl(x,c){ return (x<<c)|(x>>>(32-c)); }
   const s = [7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,
@@ -3432,39 +3433,42 @@ function md5(input){
   }
   return toHexLE(a0)+toHexLE(b0)+toHexLE(c0)+toHexLE(d0);
 }
-// ---- HTTP Digest Authentication manual (RFC 7616) -- fetch() TIDAK
-// otomatis menangani ini spt browser biasa (browser handle Digest via
-// dialog login bawaan; fetch API TIDAK). Alurnya: (1) request TANPA
-// Authorization dulu -> device balas 401 + header WWW-Authenticate
-// berisi "nonce", (2) hitung response pakai MD5, (3) request ULANG
-// dengan header Authorization: Digest ... yang benar.
-async function dahuaDigestFetch(url, username, password, method){
-  method = method || "GET";
-  const res1 = await fetch(url, { method });
-  if(res1.status !== 401) return res1; // device mungkin anonymous access aktif -- langsung pakai ini
-  const authHeader = res1.headers.get("WWW-Authenticate") || res1.headers.get("Www-Authenticate");
-  if(!authHeader || !/digest/i.test(authHeader)) throw new Error("CCTV minta autentikasi yang tidak didukung (bukan Digest) atau kredensial ditolak.");
-  const parts = {};
-  authHeader.replace(/(\w+)=("([^"]*)"|[^,]*)/g, (_m,key,val,quoted)=>{ parts[key] = quoted !== undefined ? quoted : val; });
-  const realm = parts.realm || "";
-  const nonce = parts.nonce || "";
-  const qop = parts.qop || "";
-  const opaque = parts.opaque;
-  const urlObj = new URL(url);
-  const uri = urlObj.pathname + urlObj.search;
-  const ha1 = md5(`${username}:${realm}:${password}`);
-  const ha2 = md5(`${method}:${uri}`);
-  const nc = "00000001";
-  const cnonce = Math.random().toString(16).slice(2,10);
-  let response, authValue;
-  if(qop){
-    response = md5(`${ha1}:${nonce}:${nc}:${cnonce}:${qop}:${ha2}`);
-    authValue = `Digest username="${username}", realm="${realm}", nonce="${nonce}", uri="${uri}", qop=${qop}, nc=${nc}, cnonce="${cnonce}", response="${response}"` + (opaque ? `, opaque="${opaque}"` : "");
-  }else{
-    response = md5(`${ha1}:${nonce}:${ha2}`);
-    authValue = `Digest username="${username}", realm="${realm}", nonce="${nonce}", uri="${uri}", response="${response}"` + (opaque ? `, opaque="${opaque}"` : "");
+// ---- Akses CCTV lewat Tauri HTTP client (BUKAN fetch() browser biasa)
+// -- WAJIB begini, bukan pilihan gaya penulisan: app production Tauri
+// dibuka dari "https://tauri.localhost", sedangkan CCTV cuma "http://"
+// biasa -- browser/WebView OTOMATIS BLOKIR itu ("Mixed Content"), gagal
+// instan TANPA request pernah beneran terkirim ("Failed to fetch").
+// window.__TAURI__.http jalan lewat Rust (bukan lewat WebView), jadi
+// TIDAK kena aturan itu sama sekali.
+// PAKAI BASIC AUTH (bukan Digest lagi spt sebelumnya) -- alasannya:
+// Tauri v1 http API MELEMPAR ERROR utk status selain 200 (termasuk 401),
+// bukan mengembalikan responsnya spt fetch() browser -- jadi kita TIDAK
+// BISA baca header WWW-Authenticate dari respons 401 buat hitung Digest
+// (butuh "nonce" dari situ). Basic Auth TIDAK PERLU proses 401 dulu --
+// langsung kirim kredensial di request PERTAMA. Banyak firmware Dahua
+// tetap menerima Basic walau defaultnya minta Digest -- kalau device
+// KAMU ternyata menolak Basic sama sekali, tombol "Tes Deteksi" akan
+// menunjukkan error-nya persis, & itu perlu saya tangani terpisah.
+async function cctvTauriFetch(url, username, password){
+  const t = window.__TAURI__;
+  if(!t || !t.http || !t.http.fetch) throw new Error("Tauri HTTP API tidak tersedia (window.__TAURI__.http). Pastikan app dibuild dgn fitur \"http-all\" (Cargo.toml) & withGlobalTauri:true (tauri.conf.json) -- keduanya SUDAH ada di project ini, jadi ini harusnya tidak terjadi kecuali app belum di-build ulang.");
+  const basicAuth = "Basic " + btoa(`${username}:${password}`);
+  const responseType = (t.http.ResponseType && t.http.ResponseType.Text) || 2; // 2 = Text (fallback kalau enum tidak ke-expose)
+  let res;
+  try{
+    res = await t.http.fetch(url, {
+      method: "GET",
+      headers: { "Authorization": basicAuth },
+      responseType,
+      timeout: 8,
+    });
+  }catch(e){
+    // Tauri v1 MELEMPAR exception utk status non-2xx (lihat catatan di
+    // atas) -- jadi 401/403 pun masuk ke sini, BUKAN ke `res` di bawah.
+    throw new Error(`Request ditolak (kemungkinan device menolak Basic Auth, minta Digest, atau kredensial salah): ${(e && e.message) || e}`);
   }
-  return fetch(url, { method, headers: { "Authorization": authValue } });
+  const text = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
+  return { status: res.status, ok: res.status >= 200 && res.status < 300, text };
 }
 function cctvMotionUrl(){
   const ip = localStorage.getItem(CCTV_IP_STORAGE);
@@ -3479,11 +3483,10 @@ async function fetchCctvMotionStatus(){
   const pass = localStorage.getItem(CCTV_PASS_STORAGE);
   const url = cctvMotionUrl();
   if(!url || !user || !pass) return null;
-  const res = await dahuaDigestFetch(url, user, pass, "GET");
-  const text = await res.text();
-  if(!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0,200)}`);
-  const noMotion = /error\s*:\s*no\s*events/i.test(text);
-  return { motion: !noMotion, raw: text };
+  const res = await cctvTauriFetch(url, user, pass);
+  if(!res.ok) throw new Error(`HTTP ${res.status}: ${res.text.slice(0,200)}`);
+  const noMotion = /error\s*:\s*no\s*events/i.test(res.text);
+  return { motion: !noMotion, raw: res.text };
 }
 let cctvMotionActive = false; // status TERAKHIR diketahui -- dipakai deteksi "baru mulai gerak" (rising edge)
 let cctvLastAlertAt = 0;
@@ -3552,13 +3555,12 @@ async function testCctvMotionConnection(){
   statusEl.textContent = "Menghubungi CCTV…";
   try{
     const url = `http://${ip}/cgi-bin/eventManager.cgi?action=getEventIndexes&code=VideoMotion` + (chan ? `&channel=${encodeURIComponent(chan)}` : "");
-    const res = await dahuaDigestFetch(url, user, pass, "GET");
-    const text = await res.text();
+    const res = await cctvTauriFetch(url, user, pass);
     if(!res.ok){
-      statusEl.textContent = `❌ HTTP ${res.status}: ${text.slice(0,200)}`;
+      statusEl.textContent = `❌ HTTP ${res.status}: ${res.text.slice(0,200)}`;
     }else{
-      const noMotion = /error\s*:\s*no\s*events/i.test(text);
-      statusEl.textContent = `✅ Berhasil konek. Respons mentah: "${text.trim().slice(0,200)}" → disimpulkan: ${noMotion ? "TIDAK ada gerakan" : "ADA gerakan"}. Coba lambaikan tangan di depan kamera lalu tes lagi utk pastikan hasilnya berubah.`;
+      const noMotion = /error\s*:\s*no\s*events/i.test(res.text);
+      statusEl.textContent = `✅ Berhasil konek. Respons mentah: "${res.text.trim().slice(0,200)}" → disimpulkan: ${noMotion ? "TIDAK ada gerakan" : "ADA gerakan"}. Coba lambaikan tangan di depan kamera lalu tes lagi utk pastikan hasilnya berubah.`;
     }
   }catch(e){
     statusEl.textContent = `❌ Gagal: ${e.message}`;
