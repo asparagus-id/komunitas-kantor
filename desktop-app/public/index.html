@@ -676,6 +676,7 @@
         <button class="tab-btn" data-tab="jadwal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Jadwal</button>
         <button class="tab-btn" data-tab="kerja"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>Jam Kerja</button>
         <button class="tab-btn" data-tab="audio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>Audio</button>
+        <button class="tab-btn" data-tab="cctv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>CCTV</button>
         <button class="tab-btn" data-tab="lainnya"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>Lainnya</button>
       </div>
     </div>
@@ -887,41 +888,6 @@
           <div class="field"><label>Token Monitor Utama</label><input type="password" id="bardiAlertSecret" placeholder="Token khusus (BARDI_ALERT_SECRET)"></div>
         </div>
 
-        <div class="section-title">📹 Deteksi Gerakan CCTV (Dahua)</div>
-        <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
-          Polling ke CCTV Dahua LANGSUNG lewat jaringan lokal kantor (bukan lewat internet/cloud) tiap 3 detik -- begitu ada gerakan BARU, dikirim ke bot Monitor (butuh "URL Worker Monitor" + "Token Monitor Utama" di atas sudah diisi). <b>Kredensial CCTV disimpan lokal di komputer ini saja</b>, tidak pernah dikirim ke server manapun selain langsung ke CCTV-nya sendiri.
-        </div>
-        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:10px;">
-          <span class="switch"><input type="checkbox" id="cctvMotionEnabled"><span class="switch-track"></span></span>
-          Aktifkan deteksi gerakan CCTV
-        </label>
-        <div class="field-row">
-          <div class="field"><label>IP CCTV/XVR</label><input type="text" id="cctvIp" placeholder="192.168.18.128"></div>
-          <div class="field"><label>Channel (opsional)</label><input type="text" id="cctvChannel" placeholder="kosongkan kalau tidak yakin"></div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label>Username</label><input type="text" id="cctvUser" placeholder="admin"></div>
-          <div class="field"><label>Password</label><input type="password" id="cctvPass" placeholder="Password CCTV"></div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label>Jeda minimal antar notifikasi (menit)</label><input type="number" id="cctvCooldownMinutes" min="0" max="120" style="width:100%;"></div>
-        </div>
-        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:10px;">
-          <span class="switch"><input type="checkbox" id="cctvScheduleEnabled"><span class="switch-track"></span></span>
-          Aktifkan cuma di jam tertentu
-        </label>
-        <div class="hint" style="margin-top:2px; margin-bottom:8px;">
-          Kalau tidak diaktifkan, deteksi jalan 24 jam. Kalau "Sampai jam" lebih kecil dari "Mulai jam" (mis. 16:00 → 08:00), otomatis dianggap sampai jam segitu KEESOKAN harinya (lewat tengah malam) -- cocok utk "di luar jam kerja".
-        </div>
-        <div class="field-row">
-          <div class="field"><label>Mulai jam</label><input type="time" id="cctvScheduleStart"></div>
-          <div class="field"><label>Sampai jam</label><input type="time" id="cctvScheduleEnd"></div>
-        </div>
-        <div class="audio-controls" style="margin-top:6px;">
-          <button class="btn" id="cctvTestBtn">🔎 Tes Deteksi (lihat respons mentah)</button>
-        </div>
-        <div class="hint" id="cctvTestStatus" style="margin-top:8px;"></div>
-
         <div class="section-title">🔊 Speaker Server (BARDI)</div>
         <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
           Perangkat BARDI (smart plug) yang menyalakan ampli/speaker sebelum notifikasi (pengingat/adzan sholat, pengingat/notifikasi jam kerja, peringatan closing bulanan), lalu <b>TETAP MENYALA TERUS</b> sampai sesudah notifikasinya tiba (tidak mati-nyala di antaranya) -- biar relay tidak sering diklik. PAKAI TOKEN AKSES YANG SAMA dengan Suara AI di atas.
@@ -1019,7 +985,62 @@
       </div>
 
 
-      <!-- ---- TAB: LAINNYA ---- -->
+      <!-- ---- TAB: CCTV ---- -->
+      <div class="tab-pane" data-pane="cctv">
+        <div class="section-title" style="margin-top:0;">📹 Deteksi Gerakan CCTV (Dahua)</div>
+        <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
+          Polling ke CCTV Dahua LANGSUNG lewat jaringan lokal kantor (bukan lewat internet/cloud) tiap 3 detik -- begitu ada gerakan BARU, dikirim ke bot Monitor (butuh "URL Worker Monitor" + "Token Monitor Utama" di tab Audio sudah diisi). <b>Kredensial CCTV disimpan lokal di komputer ini saja</b>, tidak pernah dikirim ke server manapun selain langsung ke CCTV-nya sendiri.
+        </div>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:10px;">
+          <span class="switch"><input type="checkbox" id="cctvMotionEnabled"><span class="switch-track"></span></span>
+          Aktifkan deteksi gerakan CCTV
+        </label>
+        <div class="field-row">
+          <div class="field"><label>IP CCTV/XVR</label><input type="text" id="cctvIp" placeholder="192.168.18.128"></div>
+          <div class="field"><label>Channel (opsional)</label><input type="text" id="cctvChannel" placeholder="kosongkan kalau tidak yakin"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Username</label><input type="text" id="cctvUser" placeholder="admin"></div>
+          <div class="field"><label>Password</label><input type="password" id="cctvPass" placeholder="Password CCTV"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Jeda minimal antar notifikasi (menit)</label><input type="number" id="cctvCooldownMinutes" min="0" max="120" style="width:100%;"></div>
+        </div>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:10px;">
+          <span class="switch"><input type="checkbox" id="cctvScheduleEnabled"><span class="switch-track"></span></span>
+          Aktifkan cuma di jam tertentu
+        </label>
+        <div class="hint" style="margin-top:2px; margin-bottom:8px;">
+          Kalau tidak diaktifkan, deteksi jalan 24 jam. Kalau "Sampai jam" lebih kecil dari "Mulai jam" (mis. 16:00 → 08:00), otomatis dianggap sampai jam segitu KEESOKAN harinya (lewat tengah malam) -- cocok utk "di luar jam kerja".
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Mulai jam</label><input type="time" id="cctvScheduleStart"></div>
+          <div class="field"><label>Sampai jam</label><input type="time" id="cctvScheduleEnd"></div>
+        </div>
+        <div class="audio-controls" style="margin-top:6px;">
+          <button class="btn" id="cctvTestBtn">🔎 Tes Deteksi (lihat respons mentah)</button>
+        </div>
+        <div class="hint" id="cctvTestStatus" style="margin-top:8px;"></div>
+
+        <div class="section-title">🔕 Diamkan notifikasi lewat Telegram</div>
+        <div class="hint" style="margin-top:-4px;">
+          Dapat notifikasi <code>"🎥 Gerakan terdeteksi di CCTV."</code> di Telegram, tapi itu cuma orang kantor sendiri (bukan hal mencurigakan)? Tidak perlu buka app ini -- cukup lewat Telegram:
+          <br><br>
+          <b>1.</b> <b>Balas (reply)</b> pesan notifikasi itu dengan salah satu kata: <code>abaikan</code>, <code>itu saya</code>, <code>tamu</code>, atau <code>karyawan</code>
+          <br>
+          <b>2.</b> Bot akan balas konfirmasi, notifikasi gerakan CCTV <b>diam otomatis 60 menit</b> (default)
+          <br><br>
+          <b>Mau ubah durasi "diam" itu (bukan 60 menit)?</b> Ketik di chat bot Monitor (bukan di app ini):
+          <br>
+          <code>atur jeda cctv 30</code>
+          <br>
+          → mulai saat itu, tiap kali kamu balas salah satu kata di atas, dipakai durasi itu (contoh: 30 menit) -- berlaku terus sampai diganti lagi kapan saja, tidak perlu diulang tiap hari.
+          <br><br>
+          Ini <b>beda</b> dari "Jeda minimal antar notifikasi" di atas (yang itu jeda OTOMATIS antar tiap notifikasi baru, defaultnya 5 menit) -- fitur ini khusus buat kamu "matikan sementara" secara manual saat memang tidak perlu diganggu.
+        </div>
+      </div>
+
+
       <div class="tab-pane" data-pane="lainnya">
         <div class="section-title" style="margin-top:0;">Mode offline</div>
         <div class="audio-block">
@@ -1146,7 +1167,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.39.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.38.0: BARU -- notifikasi gerakan CCTV sekarang bisa "diamkan" dari Telegram: balas notifikasinya dgn "abaikan"/"itu saya"/"tamu"/"karyawan" (ditangani Worker_Monitor_Utama.js v11) -> app ini cek status diam lewat GET /api/bardi-alert-status (endpoint BARU, auth SAMA dgn /api/bardi-alert) SEBELUM kirim notifikasi gerakan baru. Durasi diam bisa diatur admin sendiri lewat command "atur jeda cctv <menit>" di Telegram (default 60 menit) -- BUKAN diatur di app ini. Jeda antar notifikasi biasa (cooldownMinutes) tetap default 5 menit spt semula, tidak berubah.
+const APP_VERSION = "1.41.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.40.0: BARU -- tab pengaturan "CCTV" TERPISAH SENDIRI (SEBELUMNYA numpang tab Audio, sekarang punya tab & ikon sendiri di sidebar) -- berisi semua pengaturan deteksi gerakan (dipindah dari Audio, ID elemen sama persis, tidak ada perubahan JS) PLUS penjelasan baru fitur "diamkan lewat Telegram" (balas notifikasi dgn abaikan/itu saya/tamu/karyawan, "atur jeda cctv <menit>") LANGSUNG di dalam app -- sebelumnya cuma dijelaskan di chat, sekarang tidak perlu diingat-ingat manual.
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -3517,6 +3538,21 @@ function cctvMotionUrl(){
   const chan = (cfg.channel||"").trim();
   return `http://${ip}/cgi-bin/eventManager.cgi?action=getEventIndexes&code=VideoMotion` + (chan ? `&channel=${encodeURIComponent(chan)}` : "");
 }
+// BARU -- respons Dahua "channels[0]=3" itu PENGHITUNG (sudah berapa
+// kali event tercatat sejak device nyala), BUKAN status nyala/mati
+// saat ini -- kata "Error:No Events" yang saya cari sebelumnya
+// TERNYATA TIDAK PERNAH muncul di device Dahua model ini (device lain
+// mungkin beda), jadi kode lama SELALU membaca "ADA gerakan" terus-
+// menerus apa pun kondisinya. Cara bacanya yang BENAR: bandingkan
+// angkanya dgn hasil polling SEBELUMNYA -- kalau BERTAMBAH, berarti
+// ADA gerakan baru sejak polling terakhir. Kalau ada beberapa channel
+// dlm 1 respons (query tanpa filter channel), dijumlah semua -- naik
+// di channel MANA PUN dianggap "ada gerakan".
+function parseCctvEventCount(text){
+  const matches = [...text.matchAll(/channels?\[(\d+)\]\s*=\s*(\d+)/gi)];
+  if(!matches.length) return null;
+  return matches.reduce((sum,m)=> sum + (parseInt(m[2],10)||0), 0);
+}
 async function fetchCctvMotionStatus(){
   const ip = localStorage.getItem(CCTV_IP_STORAGE);
   const user = localStorage.getItem(CCTV_USER_STORAGE);
@@ -3525,10 +3561,11 @@ async function fetchCctvMotionStatus(){
   if(!url || !user || !pass) return null;
   const res = await cctvTauriFetch(url, user, pass);
   if(!res.ok) throw new Error(`HTTP ${res.status}: ${res.text.slice(0,200)}`);
-  const noMotion = /error\s*:\s*no\s*events/i.test(res.text);
-  return { motion: !noMotion, raw: res.text };
+  const count = parseCctvEventCount(res.text);
+  if(count === null) throw new Error(`Format respons tidak dikenali: "${res.text.slice(0,200)}"`);
+  return { count, raw: res.text };
 }
-let cctvMotionActive = false; // status TERAKHIR diketahui -- dipakai deteksi "baru mulai gerak" (rising edge)
+let cctvLastCount = null; // null = belum pernah polling (blm ada baseline buat dibandingkan)
 let cctvLastAlertAt = 0;
 let cctvConsecutiveFailures = 0;
 // Cek apakah SEKARANG masuk jendela jadwal aktif deteksi -- tangani
@@ -3561,12 +3598,15 @@ async function tickCctvMotion(){
     const status = await fetchCctvMotionStatus();
     cctvConsecutiveFailures = 0;
     if(!status) return;
-    const wasActive = cctvMotionActive;
-    cctvMotionActive = status.motion;
-    if(status.motion && !wasActive){
-      // Rising edge -- gerakan BARU mulai (bukan gerakan yg masih
-      // berlanjut dari sebelumnya) -- ini yang mencegah spam notifikasi
-      // tiap 3 detik selama ada orang bergerak terus di depan kamera.
+    const prevCount = cctvLastCount;
+    cctvLastCount = status.count;
+    // prevCount===null -- ini polling PERTAMA (baru dibuka/baru
+    // diaktifkan) -- cuma catat baseline, JANGAN alert (krn tidak tahu
+    // apakah angka itu "lama" atau "baru saja").
+    // status.count < prevCount -- device restart (counter reset ke 0)
+    // -- JUGA jangan alert, cuma re-baseline.
+    if(prevCount !== null && status.count > prevCount){
+      // Angka BERTAMBAH -- ADA gerakan baru sejak polling terakhir.
       const cooldownMs = Math.max(0, cfg.cooldownMinutes!=null ? cfg.cooldownMinutes : 5) * 60000;
       const now = Date.now();
       if(now - cctvLastAlertAt >= cooldownMs){
@@ -3607,8 +3647,12 @@ async function testCctvMotionConnection(){
     if(!res.ok){
       statusEl.textContent = `❌ HTTP ${res.status}: ${res.text.slice(0,200)}`;
     }else{
-      const noMotion = /error\s*:\s*no\s*events/i.test(res.text);
-      statusEl.textContent = `✅ Berhasil konek. Respons mentah: "${res.text.trim().slice(0,200)}" → disimpulkan: ${noMotion ? "TIDAK ada gerakan" : "ADA gerakan"}. Coba lambaikan tangan di depan kamera lalu tes lagi utk pastikan hasilnya berubah.`;
+      const count = parseCctvEventCount(res.text);
+      if(count === null){
+        statusEl.textContent = `⚠️ Berhasil konek, tapi format responsnya tidak saya kenali: "${res.text.trim().slice(0,200)}"`;
+      }else{
+        statusEl.textContent = `✅ Berhasil konek. Respons mentah: "${res.text.trim().slice(0,200)}" → angka event SAAT INI: ${count}. Ini PENGHITUNG (bukan nyala/mati) -- lambaikan tangan di depan kamera, TUNGGU 3-5 detik, lalu klik tombol ini LAGI. Kalau angkanya BERTAMBAH dari ${count}, berarti terbaca dgn benar. Kalau tetap sama persis walau sudah bergerak, kemungkinan sensitivitas motion detection di menu CCTV terlalu rendah, atau salah channel.`;
+      }
     }
   }catch(e){
     statusEl.textContent = `❌ Gagal: ${e.message}`;
