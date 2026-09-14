@@ -1026,6 +1026,27 @@
         </div>
         <div class="hint" id="cctvTestStatus" style="margin-top:8px;"></div>
 
+        <div class="section-title">🏷️ Nama Ruangan per Channel</div>
+        <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
+          Opsional -- biar tidak perlu hafal nomor channel, kasih nama ruangan sesuai lokasi kameranya (mis. "Gudang", "Ruang Kerja"). Channel yang dibiarkan kosong tetap tampil sbg "Channel N" di notifikasi. Cek dulu channel mana yang mana lewat "Tes Deteksi" di atas (lambaikan tangan di ruangan yang mau dikasih nama, lihat channel mana yang angkanya naik).
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Channel 1</label><input type="text" id="cctvChannelName0" placeholder="mis. Halaman Depan"></div>
+          <div class="field"><label>Channel 2</label><input type="text" id="cctvChannelName1" placeholder="mis. Trotoar/Jalan"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Channel 3</label><input type="text" id="cctvChannelName2" placeholder="mis. Gudang"></div>
+          <div class="field"><label>Channel 4</label><input type="text" id="cctvChannelName3" placeholder="mis. Ruang Kerja"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Channel 5</label><input type="text" id="cctvChannelName4" placeholder="(kosongkan kalau tidak dipakai)"></div>
+          <div class="field"><label>Channel 6</label><input type="text" id="cctvChannelName5" placeholder="(kosongkan kalau tidak dipakai)"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Channel 7</label><input type="text" id="cctvChannelName6" placeholder="(kosongkan kalau tidak dipakai)"></div>
+          <div class="field"><label>Channel 8</label><input type="text" id="cctvChannelName7" placeholder="(kosongkan kalau tidak dipakai)"></div>
+        </div>
+
         <div class="section-title">🔕 Diamkan notifikasi lewat Telegram</div>
         <div class="hint" style="margin-top:-4px;">
           Dapat notifikasi <code>"🎥 Gerakan terdeteksi di CCTV."</code> di Telegram, tapi itu cuma orang kantor sendiri (bukan hal mencurigakan)? Tidak perlu buka app ini -- cukup lewat Telegram:
@@ -1171,7 +1192,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.43.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.42.0: BARU -- tombol "📨 Tes Kirim ke Bot Monitor" di tab Audio (dekat URL Worker Monitor/Token Monitor Utama) -- diagnostik KHUSUS utk isolasi masalah "notifikasi tidak masuk": pakai nilai form saat ini (blm perlu Simpan), SELALU laporkan hasil jelas (berhasil/HTTP error/gagal network) -- beda dari sendBardiAlertToMonitorBot() asli yang diam kalau gagal (cukup console.log, krn dipakai fitur background, bukan utk ditunggu user).
+const APP_VERSION = "1.47.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.46.0: BARU -- notifikasi gerakan CCTV SEKARANG JUGA diteruskan ke bot Gus Asisten (endpoint POST /cctv-alert, Worker_Gus_Asisten.js v2.29.0) -- TAMBAHAN, bukan pengganti jalur ke bot Monitor. Fungsi baru: sendCctvAlertToGusAsisten() -- numpang Token Akses yang SUDAH ADA (ELEVEN_KEY_STORAGE), TIDAK ada token baru yang perlu diisi di app ini. Siapa yang menerima (mis. satpam) diatur admin lewat env var "SATPAM_CCTV_IDS" di Worker Gus Asisten SENDIRI (di luar kendali app ini, sengaja begitu).
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -1299,7 +1320,12 @@ const DEFAULTS = {
     cooldownMinutes: 5,    // jeda MINIMAL antar notifikasi gerakan BARU (bukan antar polling -- lihat rising-edge di tickCctvMotion)
     scheduleEnabled: false, // false = deteksi aktif 24 jam (selama enabled=true) -- default spt semula
     scheduleStart: "16:00", // jam mulai deteksi aktif (dipakai CUMA kalau scheduleEnabled=true)
-    scheduleEnd: "08:00"     // jam berhenti -- kalau LEBIH KECIL dari scheduleStart, otomatis dianggap lewat tengah malam (mis. 16:00->08:00 besok)
+    scheduleEnd: "08:00",    // jam berhenti -- kalau LEBIH KECIL dari scheduleStart, otomatis dianggap lewat tengah malam (mis. 16:00->08:00 besok)
+    // Nama ruangan per channel (opsional) -- key = index channel Dahua
+    // (0-based, SESUAI mentahan respons CGI), value = nama bebas (mis.
+    // "Gudang"). Channel yang TIDAK diisi tetap tampil sbg "Channel N"
+    // (N = index+1) di notifikasi -- lihat tickCctvMotion.
+    channelNames: {}
   }
 };
 
@@ -3390,6 +3416,28 @@ async function sendBardiAlertToMonitorBot(pesan){
     console.log("Gagal kirim alert BARDI ke bot Monitor:", e);
   }
 }
+// BARU -- teruskan notifikasi gerakan CCTV JUGA ke bot Gus Asisten
+// (endpoint POST /cctv-alert, lihat Worker_Gus_Asisten.js) -- INI
+// TAMBAHAN, bukan pengganti sendBardiAlertToMonitorBot() di atas --
+// keduanya dipanggil bersamaan dari tickCctvMotion(). Siapa yang
+// menerima (mis. satpam) diatur admin Worker SENDIRI lewat env var
+// "SATPAM_CCTV_IDS" -- app ini TIDAK bisa & TIDAK perlu tahu daftar
+// ID-nya, cukup numpang Token Akses (ELEVEN_KEY_STORAGE) yang SUDAH
+// ADA (dipakai jg utk /bardi-toggle dkk) -- TIDAK ada token baru yang
+// perlu diisi.
+async function sendCctvAlertToGusAsisten(pesan){
+  const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
+  if(!token) return; // Token Akses blm diisi -- diam saja, jangan blokir jalur notifikasi lain
+  try{
+    await fetch(`${ELEVEN_WORKER_URL}/cctv-alert`, {
+      method: "POST",
+      headers: { "Authorization": "Bearer "+token, "Content-Type": "application/json" },
+      body: JSON.stringify({ message: pesan })
+    });
+  }catch(e){
+    console.log("Gagal kirim alert CCTV ke Gus Asisten:", e);
+  }
+}
 // BARU -- tombol "Tes Kirim ke Bot Monitor" -- BEDA dari
 // sendBardiAlertToMonitorBot() di atas (yang dipakai fitur asli & diam
 // kalau gagal, cuma console.log) -- fungsi ini KHUSUS DIAGNOSTIK, pakai
@@ -3576,21 +3624,25 @@ function cctvMotionUrl(){
   return `http://${ip}/cgi-bin/eventManager.cgi?action=getEventIndexes&code=VideoMotion` + (chan ? `&channel=${encodeURIComponent(chan)}` : "");
 }
 // BARU -- respons Dahua "channels[0]=3" itu PENGHITUNG (sudah berapa
-// kali event tercatat sejak device nyala), BUKAN status nyala/mati
-// saat ini -- TERNYATA ada 2 bentuk respons device ini: "channels[0]=N"
-// (ada N event tercatat) DAN "Error: No Events" (tidak ada event sama
-// sekali) -- kode sebelumnya cuma kenal bentuk pertama. Diperbaiki
-// dengan anggap "No Events" = 0 -- model "bandingkan angka dgn polling
-// sebelumnya" TETAP BENAR utk dua-duanya sekaligus: dari "No Events"
-// (0) ke "channels[0]=3" (3) = naik = ADA gerakan baru; dari
-// "channels[0]=3" ke "channels[0]=3" lagi (angka sama, apa pun
-// bentuknya) = tidak naik = TIDAK ada gerakan BARU sejak polling
-// terakhir (meski historinya tetap ada 3 event).
-function parseCctvEventCount(text){
-  if(/error\s*:\s*no\s*events/i.test(text)) return 0;
+// kali event tercatat sejak device nyala) PER CHANNEL, BUKAN status
+// nyala/mati saat ini -- TERNYATA ada 2 bentuk respons device ini:
+// "channels[0]=N" (ada N event tercatat di channel itu) DAN "Error: No
+// Events" (tidak ada event sama sekali). Diubah jadi BALIKIN OBJEK
+// {channelIndex: jumlah} (BUKAN 1 angka gabungan lagi) -- supaya bisa
+// tahu channel MANA yang gerakannya bertambah, buat disebut di
+// notifikasi. "No Events" dipetakan ke objek kosong {} (semua channel
+// dianggap 0).
+function parseCctvEventCounts(text){
+  if(/error\s*:\s*no\s*events/i.test(text)) return {};
   const matches = [...text.matchAll(/channels?\[(\d+)\]\s*=\s*(\d+)/gi)];
-  if(!matches.length) return null;
-  return matches.reduce((sum,m)=> sum + (parseInt(m[2],10)||0), 0);
+  if(!matches.length) return null; // format tidak dikenali sama sekali
+  const out = {};
+  for(const m of matches){
+    const ch = parseInt(m[1],10);
+    const val = parseInt(m[2],10) || 0;
+    out[ch] = (out[ch]||0) + val;
+  }
+  return out;
 }
 async function fetchCctvMotionStatus(){
   const ip = localStorage.getItem(CCTV_IP_STORAGE);
@@ -3600,13 +3652,25 @@ async function fetchCctvMotionStatus(){
   if(!url || !user || !pass) return null;
   const res = await cctvTauriFetch(url, user, pass);
   if(!res.ok) throw new Error(`HTTP ${res.status}: ${res.text.slice(0,200)}`);
-  const count = parseCctvEventCount(res.text);
-  if(count === null) throw new Error(`Format respons tidak dikenali: "${res.text.slice(0,200)}"`);
-  return { count, raw: res.text };
+  const counts = parseCctvEventCounts(res.text);
+  if(counts === null) throw new Error(`Format respons tidak dikenali: "${res.text.slice(0,200)}"`);
+  return { counts, raw: res.text };
 }
-let cctvLastCount = null; // null = belum pernah polling (blm ada baseline buat dibandingkan)
-let cctvLastAlertAt = 0;
-let cctvConsecutiveFailures = 0;
+// BARU -- state "terakhir diketahui" SEKARANG di localStorage (BUKAN
+// variabel JS biasa lagi) -- app ini punya 3 JENDELA (utama, widget,
+// popup pengingat) yang SEMUANYA menjalankan index.html yang SAMA
+// PERSIS, artinya SEMUANYA menjalankan tickCctvMotion() sendiri-sendiri
+// tiap 3 detik. Kalau statusnya cuma variabel JS biasa (per-jendela),
+// TIAP jendela punya baseline/cooldown SENDIRI -> semua mikir "ini
+// gerakan baru" di saat yang sama -> kirim notifikasi 3x beruntun
+// (persis bug yang dilaporkan). localStorage DIBAGI oleh SEMUA jendela
+// (pola SAMA PERSIS dgn triggeredLog yg dipakai pengingat adzan) --
+// tulis KE SINI sesegera mungkin setelah memutuskan mau alert, supaya
+// jendela lain yang tick sesaat kemudian sudah lihat perubahan itu.
+const CCTV_LAST_COUNTS_STORAGE = "cctvLastCounts";
+const CCTV_LAST_ALERT_AT_STORAGE = "cctvLastAlertAt";
+const CCTV_FIRST_FAILURE_AT_STORAGE = "cctvFirstFailureAt"; // kapan mulai gagal beruntun (direset begitu berhasil lagi)
+const CCTV_LAST_FAILURE_ALERT_AT_STORAGE = "cctvLastFailureAlertAt"; // kapan terakhir kali kabar "CCTV tidak bisa diakses" dikirim -- cegah spam berulang
 // Cek apakah SEKARANG masuk jendela jadwal aktif deteksi -- tangani
 // kasus jadwal yang MELEWATI TENGAH MALAM (mis. 16:00 -> 08:00 besok)
 // dgn bandingkan startMin > endMin.
@@ -3635,40 +3699,75 @@ async function tickCctvMotion(){
   if(!cctvMotionUrl() || !user || !pass) return;
   try{
     const status = await fetchCctvMotionStatus();
-    cctvConsecutiveFailures = 0;
+    localStorage.removeItem(CCTV_FIRST_FAILURE_AT_STORAGE); // berhasil -- reset penghitung gagal beruntun
     if(!status) return;
-    const prevCount = cctvLastCount;
-    cctvLastCount = status.count;
-    // prevCount===null -- ini polling PERTAMA (baru dibuka/baru
+    let prevCounts = null;
+    try{
+      const raw = localStorage.getItem(CCTV_LAST_COUNTS_STORAGE);
+      prevCounts = raw ? JSON.parse(raw) : null;
+    }catch(e){ prevCounts = null; }
+    localStorage.setItem(CCTV_LAST_COUNTS_STORAGE, JSON.stringify(status.counts));
+    // prevCounts===null -- ini polling PERTAMA (baru dibuka/baru
     // diaktifkan) -- cuma catat baseline, JANGAN alert (krn tidak tahu
     // apakah angka itu "lama" atau "baru saja").
-    // status.count < prevCount -- device restart (counter reset ke 0)
-    // -- JUGA jangan alert, cuma re-baseline.
-    if(prevCount !== null && status.count > prevCount){
-      // Angka BERTAMBAH -- ADA gerakan baru sejak polling terakhir.
-      const cooldownMs = Math.max(0, cfg.cooldownMinutes!=null ? cfg.cooldownMinutes : 5) * 60000;
-      const now = Date.now();
-      if(now - cctvLastAlertAt >= cooldownMs){
-        // BARU -- cek status "diam" (admin balas "abaikan"/"itu
-        // saya"/"tamu"/"karyawan" di Telegram) SEBELUM benar2 kirim.
-        // cctvLastAlertAt SENGAJA TIDAK di-update kalau lagi diam --
-        // supaya begitu masa diam habis, jeda notifikasi normal tetap
-        // dihitung dari notifikasi TERAKHIR YANG BENERAN TERKIRIM.
-        const snoozed = await isCctvMotionSnoozed();
-        if(!snoozed){
-          cctvLastAlertAt = now;
-          sendBardiAlertToMonitorBot(`🎥 Gerakan terdeteksi di CCTV.`);
+    if(prevCounts !== null){
+      // Channel MANA PUN yang angkanya naik dari polling sebelumnya --
+      // channel yang turun (device restart, counter reset) diabaikan,
+      // BUKAN dianggap gerakan.
+      const channelsNaik = Object.keys(status.counts)
+        .map(Number)
+        .filter((ch) => status.counts[ch] > (prevCounts[ch] || 0));
+      if(channelsNaik.length){
+        const cooldownMs = Math.max(0, cfg.cooldownMinutes!=null ? cfg.cooldownMinutes : 5) * 60000;
+        const now = Date.now();
+        const lastAlertAt = parseInt(localStorage.getItem(CCTV_LAST_ALERT_AT_STORAGE)||"0", 10) || 0;
+        if(now - lastAlertAt >= cooldownMs){
+          // "Klaim" SEKARANG JUGA (sblm await apa pun, termasuk cek
+          // snooze di bawah) -- mempersempit celah race antar jendela
+          // jadi cuma selebar baca+tulis localStorage yg SINKRON (sub-
+          // milidetik), BUKAN selebar 1 round-trip network ke Worker
+          // Monitor. Konsekuensi kecil: kalau TERNYATA snoozed, jeda
+          // notifikasi berikutnya dihitung dari SINI (bukan dari
+          // notifikasi terakhir yg beneran terkirim) -- geser dikit,
+          // jauh lebih aman drpd risiko 3x kirim lagi.
+          localStorage.setItem(CCTV_LAST_ALERT_AT_STORAGE, String(now));
+          const snoozed = await isCctvMotionSnoozed();
+          if(!snoozed){
+            // BARU -- pakai nama ruangan kalau sudah diisi (tab CCTV >
+            // "Nama Ruangan per Channel") -- kalau kosong, fallback ke
+            // "Channel N" spt sebelumnya (+1 krn channel Dahua di
+            // respons CGI mulai dari 0, sedangkan penomoran yg biasa
+            // kelihatan di app DMSS/monitor mulai dari 1).
+            const namesCfg = cfg.channelNames || {};
+            const labelChannel = channelsNaik
+              .map((ch) => namesCfg[ch] || namesCfg[String(ch)] || `Channel ${ch+1}`)
+              .join(", ");
+            const pesanGerakan = `🎥 Gerakan terdeteksi di CCTV.\n${labelChannel}`;
+            sendBardiAlertToMonitorBot(pesanGerakan);
+            sendCctvAlertToGusAsisten(pesanGerakan); // TAMBAHAN -- ke satpam via Gus Asisten, lihat catatan di fungsinya
+          }
         }
       }
     }
   }catch(e){
-    cctvConsecutiveFailures++;
     console.log("Gagal cek status gerakan CCTV:", e);
-    // Gagal BERULANG KALI (bukan sekali gagal langsung dikabari -- jaringan
-    // lokal bisa sesekali hiccup, jangan spam alert cuma krn itu) -- ~1
-    // menit gagal terus (20 x 3 detik) baru dianggap layak dikabari.
-    if(cctvConsecutiveFailures === 20){
-      sendBardiAlertToMonitorBot(`⚠️ CCTV tidak bisa diakses selama ~1 menit. Cek koneksi/kredensialnya.`);
+    // SEKARANG berbasis WAKTU (via localStorage, dibagi antar jendela --
+    // pola SAMA dgn dedup notifikasi gerakan di atas), BUKAN "hitung 20x
+    // gagal" per-jendela lagi (itu tidak pernah sinkron antar 3 jendela
+    // app ini & bisa ikut kirim 3x juga). Gagal TERUS-MENERUS >= 1 menit
+    // (bukan cuma sekali hiccup jaringan) DAN belum pernah dikabari dlm
+    // 1 jam terakhir (jangan spam berulang kalau gangguannya lama) --
+    // baru kirim, klaim duluan sblm kirim (pola sama spt di atas).
+    const nowFail = Date.now();
+    let firstFailAt = parseInt(localStorage.getItem(CCTV_FIRST_FAILURE_AT_STORAGE)||"0", 10) || 0;
+    if(!firstFailAt){
+      firstFailAt = nowFail;
+      localStorage.setItem(CCTV_FIRST_FAILURE_AT_STORAGE, String(firstFailAt));
+    }
+    const lastFailAlertAt = parseInt(localStorage.getItem(CCTV_LAST_FAILURE_ALERT_AT_STORAGE)||"0", 10) || 0;
+    if(nowFail - firstFailAt >= 60000 && nowFail - lastFailAlertAt >= 3600000){
+      localStorage.setItem(CCTV_LAST_FAILURE_ALERT_AT_STORAGE, String(nowFail));
+      sendBardiAlertToMonitorBot(`⚠️ CCTV tidak bisa diakses selama lebih dari 1 menit. Cek koneksi/kredensialnya.`);
     }
   }
 }
@@ -3686,11 +3785,19 @@ async function testCctvMotionConnection(){
     if(!res.ok){
       statusEl.textContent = `❌ HTTP ${res.status}: ${res.text.slice(0,200)}`;
     }else{
-      const count = parseCctvEventCount(res.text);
-      if(count === null){
+      const counts = parseCctvEventCounts(res.text);
+      if(counts === null){
         statusEl.textContent = `⚠️ Berhasil konek, tapi format responsnya tidak saya kenali: "${res.text.trim().slice(0,200)}"`;
       }else{
-        statusEl.textContent = `✅ Berhasil konek. Respons mentah: "${res.text.trim().slice(0,200)}" → angka event SAAT INI: ${count}. Ini PENGHITUNG (bukan nyala/mati) -- lambaikan tangan di depan kamera, TUNGGU 3-5 detik, lalu klik tombol ini LAGI. Kalau angkanya BERTAMBAH dari ${count}, berarti terbaca dgn benar. Kalau tetap sama persis walau sudah bergerak, kemungkinan sensitivitas motion detection di menu CCTV terlalu rendah, atau salah channel.`;
+        const namesCfg = (settings && settings.cctvMotion && settings.cctvMotion.channelNames) || {};
+        const rincian = Object.keys(counts).length
+          ? Object.keys(counts).map((ch)=>{
+              const nama = namesCfg[ch] || namesCfg[Number(ch)];
+              const label = nama ? `${nama} (Channel ${Number(ch)+1})` : `Channel ${Number(ch)+1}`;
+              return `${label}: ${counts[ch]}`;
+            }).join(", ")
+          : "(tidak ada channel dgn event, semua 0)";
+        statusEl.textContent = `✅ Berhasil konek. Respons mentah: "${res.text.trim().slice(0,200)}" → ${rincian}. Ini PENGHITUNG (bukan nyala/mati) -- lambaikan tangan di depan kamera, TUNGGU 3-5 detik, lalu klik tombol ini LAGI. Kalau salah satu channel angkanya BERTAMBAH, berarti terbaca dgn benar (& itu channel yang akan disebut di notifikasi). Kalau tetap sama persis walau sudah bergerak, kemungkinan sensitivitas motion detection di menu CCTV terlalu rendah, atau salah channel.`;
       }
     }
   }catch(e){
@@ -4092,6 +4199,13 @@ function setupElevenLabsTab(){
     document.getElementById("cctvScheduleEnabled").checked = !!cctvCfg.scheduleEnabled;
     document.getElementById("cctvScheduleStart").value = cctvCfg.scheduleStart || "16:00";
     document.getElementById("cctvScheduleEnd").value = cctvCfg.scheduleEnd || "08:00";
+    {
+      const namesCfg = cctvCfg.channelNames || {};
+      for(let i=0;i<8;i++){
+        const el = document.getElementById("cctvChannelName"+i);
+        if(el) el.value = namesCfg[i] || namesCfg[String(i)] || "";
+      }
+    }
   }
   document.getElementById("cctvTestStatus").textContent = "";
   const liburCfg = (settings && settings.liburOtomatis) || DEFAULTS.liburOtomatis;
@@ -4871,6 +4985,15 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
     settings.cctvMotion.scheduleEnabled = document.getElementById("cctvScheduleEnabled").checked;
     settings.cctvMotion.scheduleStart = document.getElementById("cctvScheduleStart").value || "16:00";
     settings.cctvMotion.scheduleEnd = document.getElementById("cctvScheduleEnd").value || "08:00";
+    {
+      const namesOut = {};
+      for(let i=0;i<8;i++){
+        const el = document.getElementById("cctvChannelName"+i);
+        const v = el ? el.value.trim() : "";
+        if(v) namesOut[i] = v;
+      }
+      settings.cctvMotion.channelNames = namesOut;
+    }
     saveSettings();
     closeSettings();
     showToast("Pengaturan berhasil disimpan.", "ok");
