@@ -887,6 +887,41 @@
           <div class="field"><label>Token Monitor Utama</label><input type="password" id="bardiAlertSecret" placeholder="Token khusus (BARDI_ALERT_SECRET)"></div>
         </div>
 
+        <div class="section-title">📹 Deteksi Gerakan CCTV (Dahua)</div>
+        <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
+          Polling ke CCTV Dahua LANGSUNG lewat jaringan lokal kantor (bukan lewat internet/cloud) tiap 3 detik -- begitu ada gerakan BARU, dikirim ke bot Monitor (butuh "URL Worker Monitor" + "Token Monitor Utama" di atas sudah diisi). <b>Kredensial CCTV disimpan lokal di komputer ini saja</b>, tidak pernah dikirim ke server manapun selain langsung ke CCTV-nya sendiri.
+        </div>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:10px;">
+          <span class="switch"><input type="checkbox" id="cctvMotionEnabled"><span class="switch-track"></span></span>
+          Aktifkan deteksi gerakan CCTV
+        </label>
+        <div class="field-row">
+          <div class="field"><label>IP CCTV/XVR</label><input type="text" id="cctvIp" placeholder="192.168.18.128"></div>
+          <div class="field"><label>Channel (opsional)</label><input type="text" id="cctvChannel" placeholder="kosongkan kalau tidak yakin"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Username</label><input type="text" id="cctvUser" placeholder="admin"></div>
+          <div class="field"><label>Password</label><input type="password" id="cctvPass" placeholder="Password CCTV"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Jeda minimal antar notifikasi (menit)</label><input type="number" id="cctvCooldownMinutes" min="0" max="120" style="width:100%;"></div>
+        </div>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:10px;">
+          <span class="switch"><input type="checkbox" id="cctvScheduleEnabled"><span class="switch-track"></span></span>
+          Aktifkan cuma di jam tertentu
+        </label>
+        <div class="hint" style="margin-top:2px; margin-bottom:8px;">
+          Kalau tidak diaktifkan, deteksi jalan 24 jam. Kalau "Sampai jam" lebih kecil dari "Mulai jam" (mis. 16:00 → 08:00), otomatis dianggap sampai jam segitu KEESOKAN harinya (lewat tengah malam) -- cocok utk "di luar jam kerja".
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Mulai jam</label><input type="time" id="cctvScheduleStart"></div>
+          <div class="field"><label>Sampai jam</label><input type="time" id="cctvScheduleEnd"></div>
+        </div>
+        <div class="audio-controls" style="margin-top:6px;">
+          <button class="btn" id="cctvTestBtn">🔎 Tes Deteksi (lihat respons mentah)</button>
+        </div>
+        <div class="hint" id="cctvTestStatus" style="margin-top:8px;"></div>
+
         <div class="section-title">🔊 Speaker Server (BARDI)</div>
         <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
           Perangkat BARDI (smart plug) yang menyalakan ampli/speaker sebelum notifikasi (pengingat/adzan sholat, pengingat/notifikasi jam kerja, peringatan closing bulanan), lalu <b>TETAP MENYALA TERUS</b> sampai sesudah notifikasinya tiba (tidak mati-nyala di antaranya) -- biar relay tidak sering diklik. PAKAI TOKEN AKSES YANG SAMA dengan Suara AI di atas.
@@ -1111,7 +1146,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.34.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.33.0: Mode Libur Otomatis sekarang ada saklar ON/OFF PERSISTEN di tab Audio ("Aktifkan Mode Libur Otomatis", settings.liburOtomatis.enabled, default AKTIF) -- kalau dimatikan, hari libur diabaikan total & otomasi BARDI selalu jalan spt hari kerja biasa (cocok kalau selalu ada piket). Juga tampil status "hari ini libur/tidak" langsung di tab itu. Tetap dicek dari /libur-status gus-asisten (TIDAK ada perubahan sumber data).
+const APP_VERSION = "1.36.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.35.0: BARU -- Deteksi Gerakan CCTV sekarang bisa dijadwal ("Aktifkan cuma di jam tertentu": Mulai jam/Sampai jam, otomatis handle lewat tengah malam mis. 16:00->08:00 besok) -- default MATI (24 jam nonstop, spt semula). Fungsi baru: isCctvScheduleActiveNow(), dipanggil di awal tickCctvMotion() -- di luar jendela jadwal, diam total (tidak polling ke CCTV sama sekali, bukan cuma tidak kirim notif).
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -1227,6 +1262,19 @@ const DEFAULTS = {
   // Speaker Server & Lampu Halaman selalu jalan spt hari kerja biasa.
   liburOtomatis: {
     enabled: true
+  },
+  // Deteksi Gerakan CCTV (Dahua XVR) -- lihat catatan lengkap dekat
+  // dahuaDigestFetch(). IP/username/password SENGAJA TIDAK di sini
+  // (bukan di settings biasa) -- itu kredensial, disimpan terpisah di
+  // localStorage (pola SAMA dgn Token Akses/Token Monitor), lihat
+  // CCTV_IP_STORAGE dkk.
+  cctvMotion: {
+    enabled: false,
+    channel: "",          // opsional -- kosong = tanpa filter channel (tes dulu pakai tombol "Tes Deteksi")
+    cooldownMinutes: 5,    // jeda MINIMAL antar notifikasi gerakan BARU (bukan antar polling -- lihat rising-edge di tickCctvMotion)
+    scheduleEnabled: false, // false = deteksi aktif 24 jam (selama enabled=true) -- default spt semula
+    scheduleStart: "16:00", // jam mulai deteksi aktif (dipakai CUMA kalau scheduleEnabled=true)
+    scheduleEnd: "08:00"     // jam berhenti -- kalau LEBIH KECIL dari scheduleStart, otomatis dianggap lewat tengah malam (mis. 16:00->08:00 besok)
   }
 };
 
@@ -3317,6 +3365,205 @@ async function sendBardiAlertToMonitorBot(pesan){
     console.log("Gagal kirim alert BARDI ke bot Monitor:", e);
   }
 }
+
+/* ============================================================
+   Deteksi Gerakan CCTV Dahua -- MURNI LOKAL (LAN kantor), TIDAK
+   lewat cloud Tuya/Dahua apa pun. App ini poll endpoint bawaan Dahua
+   tiap CCTV_POLL_INTERVAL_MS, begitu ada gerakan BARU (rising edge --
+   BUKAN tiap kali masih "aktif") dikirim ke bot Monitor numpang
+   sendBardiAlertToMonitorBot() di atas.
+   CATATAN PENTING soal endpoint & respons: dari riset (bukan
+   dokumentasi resmi lengkap), endpoint eventManager.cgi diharapkan
+   balas teks yang MENGANDUNG "Error:No Events" kalau TIDAK ada
+   gerakan -- SELAIN itu (teks lain/kosong) dianggap ADA gerakan.
+   Ini BELUM 100% pasti cocok utk semua firmware/model -- makanya ada
+   tombol "Tes Deteksi" di pengaturan yang nampilin RESPONS MENTAH,
+   supaya bisa dicek manual dulu sebelum diandalkan diam-diam.
+   ============================================================ */
+const CCTV_IP_STORAGE = "cctvDahuaIp";
+const CCTV_USER_STORAGE = "cctvDahuaUser";
+const CCTV_PASS_STORAGE = "cctvDahuaPass";
+const CCTV_POLL_INTERVAL_MS = 3000;
+// ---- MD5 (RFC 1321) -- WAJIB ada sendiri krn Web Crypto API TIDAK
+// menyediakan MD5 (cuma SHA-*), padahal skema Digest Auth Dahua pakai
+// MD5. Implementasi standar, murni fungsi matematika/algoritma publik
+// (bukan konten kreatif siapa pun) -- dipakai HANYA utk hitung
+// response Digest Auth, TIDAK dipakai utk keamanan lain apa pun. */
+function md5(input){
+  function rotl(x,c){ return (x<<c)|(x>>>(32-c)); }
+  const s = [7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,
+             5,9,14,20,5,9,14,20,5,9,14,20,5,9,14,20,
+             4,11,16,23,4,11,16,23,4,11,16,23,4,11,16,23,
+             6,10,15,21,6,10,15,21,6,10,15,21,6,10,15,21];
+  const K = new Int32Array(64);
+  for(let i=0;i<64;i++) K[i] = (Math.floor(Math.abs(Math.sin(i+1))*4294967296)) | 0;
+  let a0=0x67452301, b0=0xefcdab89, c0=0x98badcfe, d0=0x10325476;
+  const msg = new TextEncoder().encode(input);
+  const origLenBits = msg.length*8;
+  let totalLen = msg.length+1;
+  while(totalLen % 64 !== 56) totalLen++;
+  const padded = new Uint8Array(totalLen+8);
+  padded.set(msg);
+  padded[msg.length] = 0x80;
+  const dv = new DataView(padded.buffer);
+  const lenLow = origLenBits >>> 0;
+  const lenHigh = Math.floor(origLenBits / 4294967296) >>> 0;
+  dv.setUint32(totalLen, lenLow, true);
+  dv.setUint32(totalLen+4, lenHigh, true);
+  for(let chunkStart=0; chunkStart<padded.length; chunkStart+=64){
+    const M = new Int32Array(16);
+    for(let i=0;i<16;i++) M[i] = dv.getInt32(chunkStart+i*4, true);
+    let A=a0,B=b0,C=c0,D=d0;
+    for(let i=0;i<64;i++){
+      let F,g;
+      if(i<16){ F=(B&C)|(~B&D); g=i; }
+      else if(i<32){ F=(D&B)|(~D&C); g=(5*i+1)%16; }
+      else if(i<48){ F=B^C^D; g=(3*i+5)%16; }
+      else { F=C^(B|~D); g=(7*i)%16; }
+      F = (F + A + K[i] + M[g]) | 0;
+      A=D; D=C; C=B;
+      B = (B + rotl(F, s[i])) | 0;
+    }
+    a0=(a0+A)|0; b0=(b0+B)|0; c0=(c0+C)|0; d0=(d0+D)|0;
+  }
+  function toHexLE(n){
+    n = n>>>0;
+    return [n&0xff,(n>>>8)&0xff,(n>>>16)&0xff,(n>>>24)&0xff].map(b=>b.toString(16).padStart(2,"0")).join("");
+  }
+  return toHexLE(a0)+toHexLE(b0)+toHexLE(c0)+toHexLE(d0);
+}
+// ---- HTTP Digest Authentication manual (RFC 7616) -- fetch() TIDAK
+// otomatis menangani ini spt browser biasa (browser handle Digest via
+// dialog login bawaan; fetch API TIDAK). Alurnya: (1) request TANPA
+// Authorization dulu -> device balas 401 + header WWW-Authenticate
+// berisi "nonce", (2) hitung response pakai MD5, (3) request ULANG
+// dengan header Authorization: Digest ... yang benar.
+async function dahuaDigestFetch(url, username, password, method){
+  method = method || "GET";
+  const res1 = await fetch(url, { method });
+  if(res1.status !== 401) return res1; // device mungkin anonymous access aktif -- langsung pakai ini
+  const authHeader = res1.headers.get("WWW-Authenticate") || res1.headers.get("Www-Authenticate");
+  if(!authHeader || !/digest/i.test(authHeader)) throw new Error("CCTV minta autentikasi yang tidak didukung (bukan Digest) atau kredensial ditolak.");
+  const parts = {};
+  authHeader.replace(/(\w+)=("([^"]*)"|[^,]*)/g, (_m,key,val,quoted)=>{ parts[key] = quoted !== undefined ? quoted : val; });
+  const realm = parts.realm || "";
+  const nonce = parts.nonce || "";
+  const qop = parts.qop || "";
+  const opaque = parts.opaque;
+  const urlObj = new URL(url);
+  const uri = urlObj.pathname + urlObj.search;
+  const ha1 = md5(`${username}:${realm}:${password}`);
+  const ha2 = md5(`${method}:${uri}`);
+  const nc = "00000001";
+  const cnonce = Math.random().toString(16).slice(2,10);
+  let response, authValue;
+  if(qop){
+    response = md5(`${ha1}:${nonce}:${nc}:${cnonce}:${qop}:${ha2}`);
+    authValue = `Digest username="${username}", realm="${realm}", nonce="${nonce}", uri="${uri}", qop=${qop}, nc=${nc}, cnonce="${cnonce}", response="${response}"` + (opaque ? `, opaque="${opaque}"` : "");
+  }else{
+    response = md5(`${ha1}:${nonce}:${ha2}`);
+    authValue = `Digest username="${username}", realm="${realm}", nonce="${nonce}", uri="${uri}", response="${response}"` + (opaque ? `, opaque="${opaque}"` : "");
+  }
+  return fetch(url, { method, headers: { "Authorization": authValue } });
+}
+function cctvMotionUrl(){
+  const ip = localStorage.getItem(CCTV_IP_STORAGE);
+  if(!ip) return null;
+  const cfg = (settings && settings.cctvMotion) || DEFAULTS.cctvMotion;
+  const chan = (cfg.channel||"").trim();
+  return `http://${ip}/cgi-bin/eventManager.cgi?action=getEventIndexes&code=VideoMotion` + (chan ? `&channel=${encodeURIComponent(chan)}` : "");
+}
+async function fetchCctvMotionStatus(){
+  const ip = localStorage.getItem(CCTV_IP_STORAGE);
+  const user = localStorage.getItem(CCTV_USER_STORAGE);
+  const pass = localStorage.getItem(CCTV_PASS_STORAGE);
+  const url = cctvMotionUrl();
+  if(!url || !user || !pass) return null;
+  const res = await dahuaDigestFetch(url, user, pass, "GET");
+  const text = await res.text();
+  if(!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0,200)}`);
+  const noMotion = /error\s*:\s*no\s*events/i.test(text);
+  return { motion: !noMotion, raw: text };
+}
+let cctvMotionActive = false; // status TERAKHIR diketahui -- dipakai deteksi "baru mulai gerak" (rising edge)
+let cctvLastAlertAt = 0;
+let cctvConsecutiveFailures = 0;
+// Cek apakah SEKARANG masuk jendela jadwal aktif deteksi -- tangani
+// kasus jadwal yang MELEWATI TENGAH MALAM (mis. 16:00 -> 08:00 besok)
+// dgn bandingkan startMin > endMin.
+function isCctvScheduleActiveNow(now, cfg){
+  if(!cfg.scheduleEnabled) return true; // jadwal tidak dipakai -- selalu aktif (selama toggle utama nyala)
+  const start = cfg.scheduleStart || "00:00";
+  const end = cfg.scheduleEnd || "00:00";
+  const [sh,sm] = start.split(":").map(Number);
+  const [eh,em] = end.split(":").map(Number);
+  const nowMin = now.getHours()*60 + now.getMinutes();
+  const startMin = sh*60+sm;
+  const endMin = eh*60+em;
+  if(startMin === endMin) return true; // start==end -- anggap 24 jam nonstop, drpd 0 jam sama sekali
+  if(startMin < endMin){
+    return nowMin >= startMin && nowMin < endMin; // jendela dlm hari yg sama (mis. 08:00 -> 17:00)
+  }else{
+    return nowMin >= startMin || nowMin < endMin; // lewat tengah malam (mis. 16:00 -> 08:00 besok)
+  }
+}
+async function tickCctvMotion(){
+  const cfg = (settings && settings.cctvMotion) || DEFAULTS.cctvMotion;
+  if(!cfg.enabled) return;
+  if(!isCctvScheduleActiveNow(new Date(), cfg)) return; // di luar jendela jadwal -- diam total, tidak polling ke CCTV sama sekali
+  const user = localStorage.getItem(CCTV_USER_STORAGE);
+  const pass = localStorage.getItem(CCTV_PASS_STORAGE);
+  if(!cctvMotionUrl() || !user || !pass) return;
+  try{
+    const status = await fetchCctvMotionStatus();
+    cctvConsecutiveFailures = 0;
+    if(!status) return;
+    const wasActive = cctvMotionActive;
+    cctvMotionActive = status.motion;
+    if(status.motion && !wasActive){
+      // Rising edge -- gerakan BARU mulai (bukan gerakan yg masih
+      // berlanjut dari sebelumnya) -- ini yang mencegah spam notifikasi
+      // tiap 3 detik selama ada orang bergerak terus di depan kamera.
+      const cooldownMs = Math.max(0, cfg.cooldownMinutes!=null ? cfg.cooldownMinutes : 5) * 60000;
+      const now = Date.now();
+      if(now - cctvLastAlertAt >= cooldownMs){
+        cctvLastAlertAt = now;
+        sendBardiAlertToMonitorBot(`🎥 Gerakan terdeteksi di CCTV.`);
+      }
+    }
+  }catch(e){
+    cctvConsecutiveFailures++;
+    console.log("Gagal cek status gerakan CCTV:", e);
+    // Gagal BERULANG KALI (bukan sekali gagal langsung dikabari -- jaringan
+    // lokal bisa sesekali hiccup, jangan spam alert cuma krn itu) -- ~1
+    // menit gagal terus (20 x 3 detik) baru dianggap layak dikabari.
+    if(cctvConsecutiveFailures === 20){
+      sendBardiAlertToMonitorBot(`⚠️ CCTV tidak bisa diakses selama ~1 menit. Cek koneksi/kredensialnya.`);
+    }
+  }
+}
+async function testCctvMotionConnection(){
+  const statusEl = document.getElementById("cctvTestStatus");
+  const ip = document.getElementById("cctvIp").value.trim();
+  const user = document.getElementById("cctvUser").value.trim();
+  const pass = document.getElementById("cctvPass").value;
+  const chan = document.getElementById("cctvChannel").value.trim();
+  if(!ip || !user || !pass){ statusEl.textContent = "❌ Isi IP, username, & password dulu."; return; }
+  statusEl.textContent = "Menghubungi CCTV…";
+  try{
+    const url = `http://${ip}/cgi-bin/eventManager.cgi?action=getEventIndexes&code=VideoMotion` + (chan ? `&channel=${encodeURIComponent(chan)}` : "");
+    const res = await dahuaDigestFetch(url, user, pass, "GET");
+    const text = await res.text();
+    if(!res.ok){
+      statusEl.textContent = `❌ HTTP ${res.status}: ${text.slice(0,200)}`;
+    }else{
+      const noMotion = /error\s*:\s*no\s*events/i.test(text);
+      statusEl.textContent = `✅ Berhasil konek. Respons mentah: "${text.trim().slice(0,200)}" → disimpulkan: ${noMotion ? "TIDAK ada gerakan" : "ADA gerakan"}. Coba lambaikan tangan di depan kamera lalu tes lagi utk pastikan hasilnya berubah.`;
+    }
+  }catch(e){
+    statusEl.textContent = `❌ Gagal: ${e.message}`;
+  }
+}
 async function setSpeakerServerPower(on){
   if(speakerServerCurrentOn === on) return; // sudah di kondisi itu, tidak perlu kirim command lagi
   const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
@@ -3700,6 +3947,19 @@ function setupElevenLabsTab(){
   document.getElementById("elevenApiKey").value = localStorage.getItem(ELEVEN_KEY_STORAGE) || "";
   document.getElementById("bardiAlertUrl").value = localStorage.getItem(BARDI_ALERT_URL_STORAGE) || "";
   document.getElementById("bardiAlertSecret").value = localStorage.getItem(BARDI_ALERT_SECRET_STORAGE) || "";
+  document.getElementById("cctvIp").value = localStorage.getItem(CCTV_IP_STORAGE) || "";
+  document.getElementById("cctvUser").value = localStorage.getItem(CCTV_USER_STORAGE) || "";
+  document.getElementById("cctvPass").value = localStorage.getItem(CCTV_PASS_STORAGE) || "";
+  {
+    const cctvCfg = (settings && settings.cctvMotion) || DEFAULTS.cctvMotion;
+    document.getElementById("cctvMotionEnabled").checked = !!cctvCfg.enabled;
+    document.getElementById("cctvChannel").value = cctvCfg.channel || "";
+    document.getElementById("cctvCooldownMinutes").value = cctvCfg.cooldownMinutes != null ? cctvCfg.cooldownMinutes : 5;
+    document.getElementById("cctvScheduleEnabled").checked = !!cctvCfg.scheduleEnabled;
+    document.getElementById("cctvScheduleStart").value = cctvCfg.scheduleStart || "16:00";
+    document.getElementById("cctvScheduleEnd").value = cctvCfg.scheduleEnd || "08:00";
+  }
+  document.getElementById("cctvTestStatus").textContent = "";
   const liburCfg = (settings && settings.liburOtomatis) || DEFAULTS.liburOtomatis;
   document.getElementById("liburOtomatisEnabled").checked = !!liburCfg.enabled;
   {
@@ -3734,6 +3994,16 @@ document.getElementById("bardiAlertUrl").addEventListener("change", (e)=>{
 document.getElementById("bardiAlertSecret").addEventListener("change", (e)=>{
   localStorage.setItem(BARDI_ALERT_SECRET_STORAGE, e.target.value.trim());
 });
+document.getElementById("cctvIp").addEventListener("change", (e)=>{
+  localStorage.setItem(CCTV_IP_STORAGE, e.target.value.trim());
+});
+document.getElementById("cctvUser").addEventListener("change", (e)=>{
+  localStorage.setItem(CCTV_USER_STORAGE, e.target.value.trim());
+});
+document.getElementById("cctvPass").addEventListener("change", (e)=>{
+  localStorage.setItem(CCTV_PASS_STORAGE, e.target.value);
+});
+document.getElementById("cctvTestBtn").addEventListener("click", testCctvMotionConnection);
 // Baca pesan error dari Worker (format {"error":"..."}); null kalau body bukan JSON.
 async function elevenWorkerErrorMessage(res){
   try{
@@ -4459,6 +4729,13 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
     settings.lampuHalaman.offHoursAfterSubuh = Math.max(0, parseFloat(document.getElementById("lampuHalamanOffHours").value) || 0);
     settings.liburOtomatis = settings.liburOtomatis || structuredClone(DEFAULTS.liburOtomatis);
     settings.liburOtomatis.enabled = document.getElementById("liburOtomatisEnabled").checked;
+    settings.cctvMotion = settings.cctvMotion || structuredClone(DEFAULTS.cctvMotion);
+    settings.cctvMotion.enabled = document.getElementById("cctvMotionEnabled").checked;
+    settings.cctvMotion.channel = document.getElementById("cctvChannel").value.trim();
+    settings.cctvMotion.cooldownMinutes = Math.max(0, parseInt(document.getElementById("cctvCooldownMinutes").value,10) || 0);
+    settings.cctvMotion.scheduleEnabled = document.getElementById("cctvScheduleEnabled").checked;
+    settings.cctvMotion.scheduleStart = document.getElementById("cctvScheduleStart").value || "16:00";
+    settings.cctvMotion.scheduleEnd = document.getElementById("cctvScheduleEnd").value || "08:00";
     saveSettings();
     closeSettings();
     showToast("Pengaturan berhasil disimpan.", "ok");
@@ -4532,6 +4809,7 @@ function registerServiceWorker(){
   // pulang/closing bisa muncul kapan saja di hari yang sama & perlu
   // segera kelihatan di layar kantor.
   setInterval(fetchWorkerScheduleData, 5*60000);
+  setInterval(tickCctvMotion, CCTV_POLL_INTERVAL_MS); // deteksi gerakan CCTV lokal -- diam total kalau belum dikonfigurasi/diaktifkan
   setInterval(()=> ensureCalendarBuffer(true), 6*3600000);
   setInterval(maybeAutoSync, 15*60000);
   maybeAutoSync();
