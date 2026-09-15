@@ -177,20 +177,18 @@ function setStatus(text, cls){
   el.textContent = text;
   el.className = cls || "";
 }
-// Sama persis isCctvScheduleActiveNow() app utama, versi jadwal
-// "Semua Channel" saja (agen TIDAK dukung override per-channel/satpam
-// -- itu murni lokal di app utama, sengaja tidak disinkron ke server).
-const CCTV_DAY_KEYS = ["sun","mon","tue","wed","thu","fri","sat"];
-function isDayActiveToday(now, daysObj){
-  if(!daysObj) return true; // tidak diatur -- anggap semua hari aktif
-  const key = CCTV_DAY_KEYS[now.getDay()];
-  return daysObj[key] !== false;
-}
-function isScheduleActiveNow(now, cfg){
-  if(!cfg || !cfg.scheduleEnabled) return true;
-  if(!isDayActiveToday(now, cfg.scheduleDays)) return false;
-  const [sh,sm] = (cfg.scheduleStart||"00:00").split(":").map(Number);
-  const [eh,em] = (cfg.scheduleEnd||"00:00").split(":").map(Number);
+// BARU -- jadwal MINGGUAN, SAMA PERSIS pola app utama isWeeklyScheduleActiveNow()
+// -- Monitor & Satpam dari cfg TERPISAH TOTAL (bisa beda hari/jam),
+// TIDAK memengaruhi channel mana yang Monitor/Satpam di tabel channel.
+function isWeeklyScheduleActiveNow(now, scheduleEnabled, weeklySchedule){
+  if(!scheduleEnabled) return true;
+  const day = now.getDay();
+  const dc = weeklySchedule && weeklySchedule[day];
+  if(!dc || !dc.enabled) return false;
+  const start = dc.start || "00:00";
+  const end = dc.end || "00:00";
+  const [sh,sm] = start.split(":").map(Number);
+  const [eh,em] = end.split(":").map(Number);
   const nowMin = now.getHours()*60+now.getMinutes();
   const startMin = sh*60+sm, endMin = eh*60+em;
   if(startMin === endMin) return true;
@@ -255,10 +253,10 @@ async function tick(){
     const prev = lastCounts;
     lastCounts = counts;
     if(prev !== null){
-      const nowDate = new Date();
+      // TIDAK ada filter jadwal di sini lagi -- deteksi & cooldown
+      // SAMA SEKALI TIDAK terpengaruh jadwal (sama pola dgn app utama).
       const naik = Object.keys(counts).map(Number)
-        .filter((ch) => counts[ch] > (prev[ch]||0))
-        .filter((ch) => isScheduleActiveNow(nowDate, connConfig));
+        .filter((ch) => counts[ch] > (prev[ch]||0));
       if(naik.length){
         const cooldownMinutes = connConfig.cooldownMinutes!=null?connConfig.cooldownMinutes:5;
         const cooldownMs = Math.max(0, cooldownMinutes)*60000;
@@ -284,7 +282,10 @@ async function tick(){
               const c = channelsConfig && (channelsConfig[ch]||channelsConfig[String(ch)]);
               return (c && c.name) || `Channel ${ch+1}`;
             };
-            const isAktif = (ch) => {
+            // BARU -- "Aktif" berubah makna jadi "Monitor" -- SEJAJAR &
+            // INDEPENDEN dari "Satpam" (BUKAN lagi subset), sama persis
+            // pola app utama.
+            const isMonitor = (ch) => {
               const c = channelsConfig && (channelsConfig[ch]||channelsConfig[String(ch)]);
               return !c || c.enabled !== false;
             };
@@ -292,25 +293,31 @@ async function tick(){
               const c = channelsConfig && (channelsConfig[ch]||channelsConfig[String(ch)]);
               return !!(c && c.satpam);
             };
-            const aktif = claimed.filter(isAktif);
-            if(aktif.length){
-              const label = aktif.map(getNama).join(", ");
+            const nowDate = new Date();
+            let label = "";
+            // Peran MONITOR -- disaring LANGSUNG dari `claimed`, independen dari Satpam.
+            const monitorCh = claimed.filter(isMonitor);
+            if(monitorCh.length && isWeeklyScheduleActiveNow(nowDate, connConfig.monitorScheduleEnabled, connConfig.monitorSchedule)){
+              label = monitorCh.map(getNama).join(", ");
               const pesan = `🚨 Gerakan terdeteksi di CCTV.\n\n${label}`;
               await apiPost("/api/bardi-alert", { message: pesan });
-              const satpamCh = aktif.filter(isSatpam);
-              if(satpamCh.length && connConfig.gusAsistenUrl && connConfig.gusAsistenToken){
-                const labelSatpam = satpamCh.map(getNama).join(", ");
-                try{
-                  await fetch(`${connConfig.gusAsistenUrl}/cctv-alert`, {
-                    method:"POST",
-                    headers:{ "Authorization":"Bearer "+connConfig.gusAsistenToken, "Content-Type":"application/json" },
-                    body: JSON.stringify({ message: `🚨 Gerakan terdeteksi di CCTV.\n\n${labelSatpam}` })
-                  });
-                }catch(e){ console.log("Gagal kirim ke Gus Asisten:", e); }
-              }
+            }
+            // Peran SATPAM -- JUGA disaring LANGSUNG dari `claimed` (independen dari Monitor di atas).
+            const satpamCh = claimed.filter(isSatpam);
+            if(satpamCh.length && isWeeklyScheduleActiveNow(nowDate, connConfig.satpamScheduleEnabled, connConfig.satpamSchedule) && connConfig.gusAsistenUrl && connConfig.gusAsistenToken){
+              const labelSatpam = satpamCh.map(getNama).join(", ");
+              try{
+                await fetch(`${connConfig.gusAsistenUrl}/cctv-alert`, {
+                  method:"POST",
+                  headers:{ "Authorization":"Bearer "+connConfig.gusAsistenToken, "Content-Type":"application/json" },
+                  body: JSON.stringify({ message: `🚨 Gerakan terdeteksi di CCTV.\n\n${labelSatpam}` })
+                });
+              }catch(e){ console.log("Gagal kirim ke Gus Asisten:", e); }
+            }
+            if(monitorCh.length || satpamCh.length){
               sentCount++;
               document.getElementById("stSentCount").textContent = String(sentCount);
-              document.getElementById("stLastMotion").textContent = new Date().toLocaleTimeString("id-ID") + " — " + label;
+              document.getElementById("stLastMotion").textContent = new Date().toLocaleTimeString("id-ID") + " — " + (label || getNama(claimed[0]));
             }
           }
         }

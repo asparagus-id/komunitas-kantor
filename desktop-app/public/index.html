@@ -1016,27 +1016,6 @@
         <div class="field-row">
           <div class="field"><label>Jeda minimal antar notifikasi (menit)</label><input type="number" id="cctvCooldownMinutes" min="0" max="120" style="width:100%;"></div>
         </div>
-        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:10px;">
-          <span class="switch"><input type="checkbox" id="cctvScheduleEnabled"><span class="switch-track"></span></span>
-          Aktifkan cuma di jam tertentu (jadwal "Semua Channel" / default)
-        </label>
-        <div class="hint" style="margin-top:2px; margin-bottom:8px;">
-          Ini jadwal DEFAULT yang dipakai SEMUA channel -- kecuali channel yang dicentang "Jadwal Khusus" di bawah (channel itu pakai jamnya sendiri, TIDAK ikut ini). Kalau tidak diaktifkan, default-nya 24 jam. Kalau "Sampai jam" lebih kecil dari "Mulai jam" (mis. 16:00 → 08:00), otomatis dianggap sampai jam segitu KEESOKAN harinya (lewat tengah malam) -- cocok utk "di luar jam kerja".
-        </div>
-        <div class="hint" style="margin-bottom:2px;">Hari aktif:</div>
-        <div class="day-picker" id="cctvScheduleDaysPicker">
-          <label class="day-chip"><input type="checkbox" id="cctvSchedDay-mon" checked><span>Sen</span></label>
-          <label class="day-chip"><input type="checkbox" id="cctvSchedDay-tue" checked><span>Sel</span></label>
-          <label class="day-chip"><input type="checkbox" id="cctvSchedDay-wed" checked><span>Rab</span></label>
-          <label class="day-chip"><input type="checkbox" id="cctvSchedDay-thu" checked><span>Kam</span></label>
-          <label class="day-chip"><input type="checkbox" id="cctvSchedDay-fri" checked><span>Jum</span></label>
-          <label class="day-chip"><input type="checkbox" id="cctvSchedDay-sat" checked><span>Sab</span></label>
-          <label class="day-chip"><input type="checkbox" id="cctvSchedDay-sun" checked><span>Min</span></label>
-        </div>
-        <div class="field-row">
-          <div class="field"><label>Mulai jam</label><input type="time" id="cctvScheduleStart"></div>
-          <div class="field"><label>Sampai jam</label><input type="time" id="cctvScheduleEnd"></div>
-        </div>
         <div class="audio-controls" style="margin-top:6px;">
           <button class="btn" id="cctvTestBtn">🔎 Tes Deteksi (lihat respons mentah)</button>
         </div>
@@ -1046,9 +1025,9 @@
         <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
           Tabel ini SUMBER KEBENARAN utama utk channel CCTV kamu, otomatis tersinkron ke bot Monitor (bisa juga diatur lewat Telegram di sana: "daftar channel", "nyalakan channel &lt;nama&gt;", "matikan channel &lt;nama&gt;"). Cek dulu channel mana yang mana lewat "Tes Deteksi" di atas.<br><br>
           <b>Nama</b>: opsional, biar tidak perlu hafal nomor channel.<br>
-          <b>Aktif</b>: notifikasi gerakan channel ini dikirim (ke Monitor) atau tidak sama sekali.<br>
-          <b>Satpam</b>: channel ini JUGA dikirim ke akun satpam (lewat bot Gus Asisten) -- centang cuma utk channel yang perlu dipantau satpam.<br>
-          <b>Jadwal Khusus</b>: kalau dicentang, channel ini pakai jam sendiri (kolom Mulai/Selesai), TIDAK ikut jadwal "Semua Channel" di atas. Kosongkan Mulai=Selesai (mis. 00:00=00:00) kalau mau channel ini selalu aktif 24 jam.
+          <b>Monitor</b>: notifikasi gerakan channel ini dikirim ke bot Monitor (admin) atau tidak.<br>
+          <b>Satpam</b>: notifikasi gerakan channel ini dikirim ke akun satpam (lewat bot Gus Asisten) atau tidak.<br>
+          Kedua kolom ini <b>independen</b> -- boleh centang salah satu saja, dua-duanya, atau tidak sama sekali, sesuka kamu per channel. Kapan tiap peran (Monitor/Satpam) BOLEH menerima notif diatur lewat "Jadwal Monitor" &amp; "Jadwal Satpam" di bawah tabel (per HARI, sama pola dgn tab Jam Kerja) -- TIDAK memengaruhi pilihan channel di tabel ini.
         </div>
         <div style="overflow-x:auto;">
         <table style="width:100%; border-collapse:collapse; font-size:12.5px; min-width:360px;">
@@ -1056,7 +1035,7 @@
             <tr style="text-align:left; border-bottom:2px solid #ccc;">
               <th style="padding:5px 4px;">Ch</th>
               <th style="padding:5px 4px;">Nama Ruangan</th>
-              <th style="padding:5px 4px; text-align:center;">Aktif</th>
+              <th style="padding:5px 4px; text-align:center;">Monitor</th>
               <th style="padding:5px 4px; text-align:center;">Satpam</th>
             </tr>
           </thead>
@@ -1112,354 +1091,33 @@
           </tbody>
         </table>
         </div>
-
-        <div class="hint" style="margin-top:10px; margin-bottom:2px;">
-          Jadwal lanjutan per channel (opsional) -- klik nama channel utk buka/tutup:
-        </div>
-          <details style="margin-top:8px; border:1px solid var(--muted-dim); border-radius:8px; padding:8px 12px;">
-            <summary style="cursor:pointer; font-weight:700; font-size:13px;">⚙️ Jadwal Channel 1</summary>
-            <div style="margin-top:10px;">
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:6px;">
-                <span class="switch"><input type="checkbox" id="cctvChannelSchedOverride0"><span class="switch-track"></span></span>
-                Pakai jadwal khusus (beda dari "Semua Channel")
-              </label>
-              <div class="hint" style="margin-bottom:2px;">Hari aktif (jadwal khusus channel ini):</div>
-              <div class="day-picker">
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-0-mon" checked><span>Sen</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-0-tue" checked><span>Sel</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-0-wed" checked><span>Rab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-0-thu" checked><span>Kam</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-0-fri" checked><span>Jum</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-0-sat" checked><span>Sab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-0-sun" checked><span>Min</span></label>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>Mulai</label><input type="time" id="cctvChannelSchedStart0"></div>
-                <div class="field"><label>Selesai</label><input type="time" id="cctvChannelSchedEnd0"></div>
-              </div>
-              <hr style="margin:12px 0; border:none; border-top:1px solid var(--muted-dim);">
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:6px;">
-                <span class="switch"><input type="checkbox" id="cctvChannelSatpamSchedOverride0"><span class="switch-track"></span></span>
-                Batasi jam kirim ke Satpam (tambahan, TIDAK memengaruhi notif ke Monitor)
-              </label>
-              <div class="hint" style="margin-bottom:2px;">Hari kirim ke satpam:</div>
-              <div class="day-picker">
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-0-mon" checked><span>Sen</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-0-tue" checked><span>Sel</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-0-wed" checked><span>Rab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-0-thu" checked><span>Kam</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-0-fri" checked><span>Jum</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-0-sat" checked><span>Sab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-0-sun" checked><span>Min</span></label>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>Mulai (Satpam)</label><input type="time" id="cctvChannelSatpamSchedStart0"></div>
-                <div class="field"><label>Selesai (Satpam)</label><input type="time" id="cctvChannelSatpamSchedEnd0"></div>
-              </div>
-            </div>
-          </details>
-          <details style="margin-top:8px; border:1px solid var(--muted-dim); border-radius:8px; padding:8px 12px;">
-            <summary style="cursor:pointer; font-weight:700; font-size:13px;">⚙️ Jadwal Channel 2</summary>
-            <div style="margin-top:10px;">
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:6px;">
-                <span class="switch"><input type="checkbox" id="cctvChannelSchedOverride1"><span class="switch-track"></span></span>
-                Pakai jadwal khusus (beda dari "Semua Channel")
-              </label>
-              <div class="hint" style="margin-bottom:2px;">Hari aktif (jadwal khusus channel ini):</div>
-              <div class="day-picker">
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-1-mon" checked><span>Sen</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-1-tue" checked><span>Sel</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-1-wed" checked><span>Rab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-1-thu" checked><span>Kam</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-1-fri" checked><span>Jum</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-1-sat" checked><span>Sab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-1-sun" checked><span>Min</span></label>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>Mulai</label><input type="time" id="cctvChannelSchedStart1"></div>
-                <div class="field"><label>Selesai</label><input type="time" id="cctvChannelSchedEnd1"></div>
-              </div>
-              <hr style="margin:12px 0; border:none; border-top:1px solid var(--muted-dim);">
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:6px;">
-                <span class="switch"><input type="checkbox" id="cctvChannelSatpamSchedOverride1"><span class="switch-track"></span></span>
-                Batasi jam kirim ke Satpam (tambahan, TIDAK memengaruhi notif ke Monitor)
-              </label>
-              <div class="hint" style="margin-bottom:2px;">Hari kirim ke satpam:</div>
-              <div class="day-picker">
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-1-mon" checked><span>Sen</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-1-tue" checked><span>Sel</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-1-wed" checked><span>Rab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-1-thu" checked><span>Kam</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-1-fri" checked><span>Jum</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-1-sat" checked><span>Sab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-1-sun" checked><span>Min</span></label>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>Mulai (Satpam)</label><input type="time" id="cctvChannelSatpamSchedStart1"></div>
-                <div class="field"><label>Selesai (Satpam)</label><input type="time" id="cctvChannelSatpamSchedEnd1"></div>
-              </div>
-            </div>
-          </details>
-          <details style="margin-top:8px; border:1px solid var(--muted-dim); border-radius:8px; padding:8px 12px;">
-            <summary style="cursor:pointer; font-weight:700; font-size:13px;">⚙️ Jadwal Channel 3</summary>
-            <div style="margin-top:10px;">
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:6px;">
-                <span class="switch"><input type="checkbox" id="cctvChannelSchedOverride2"><span class="switch-track"></span></span>
-                Pakai jadwal khusus (beda dari "Semua Channel")
-              </label>
-              <div class="hint" style="margin-bottom:2px;">Hari aktif (jadwal khusus channel ini):</div>
-              <div class="day-picker">
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-2-mon" checked><span>Sen</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-2-tue" checked><span>Sel</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-2-wed" checked><span>Rab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-2-thu" checked><span>Kam</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-2-fri" checked><span>Jum</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-2-sat" checked><span>Sab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-2-sun" checked><span>Min</span></label>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>Mulai</label><input type="time" id="cctvChannelSchedStart2"></div>
-                <div class="field"><label>Selesai</label><input type="time" id="cctvChannelSchedEnd2"></div>
-              </div>
-              <hr style="margin:12px 0; border:none; border-top:1px solid var(--muted-dim);">
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:6px;">
-                <span class="switch"><input type="checkbox" id="cctvChannelSatpamSchedOverride2"><span class="switch-track"></span></span>
-                Batasi jam kirim ke Satpam (tambahan, TIDAK memengaruhi notif ke Monitor)
-              </label>
-              <div class="hint" style="margin-bottom:2px;">Hari kirim ke satpam:</div>
-              <div class="day-picker">
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-2-mon" checked><span>Sen</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-2-tue" checked><span>Sel</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-2-wed" checked><span>Rab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-2-thu" checked><span>Kam</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-2-fri" checked><span>Jum</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-2-sat" checked><span>Sab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-2-sun" checked><span>Min</span></label>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>Mulai (Satpam)</label><input type="time" id="cctvChannelSatpamSchedStart2"></div>
-                <div class="field"><label>Selesai (Satpam)</label><input type="time" id="cctvChannelSatpamSchedEnd2"></div>
-              </div>
-            </div>
-          </details>
-          <details style="margin-top:8px; border:1px solid var(--muted-dim); border-radius:8px; padding:8px 12px;">
-            <summary style="cursor:pointer; font-weight:700; font-size:13px;">⚙️ Jadwal Channel 4</summary>
-            <div style="margin-top:10px;">
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:6px;">
-                <span class="switch"><input type="checkbox" id="cctvChannelSchedOverride3"><span class="switch-track"></span></span>
-                Pakai jadwal khusus (beda dari "Semua Channel")
-              </label>
-              <div class="hint" style="margin-bottom:2px;">Hari aktif (jadwal khusus channel ini):</div>
-              <div class="day-picker">
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-3-mon" checked><span>Sen</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-3-tue" checked><span>Sel</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-3-wed" checked><span>Rab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-3-thu" checked><span>Kam</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-3-fri" checked><span>Jum</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-3-sat" checked><span>Sab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-3-sun" checked><span>Min</span></label>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>Mulai</label><input type="time" id="cctvChannelSchedStart3"></div>
-                <div class="field"><label>Selesai</label><input type="time" id="cctvChannelSchedEnd3"></div>
-              </div>
-              <hr style="margin:12px 0; border:none; border-top:1px solid var(--muted-dim);">
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:6px;">
-                <span class="switch"><input type="checkbox" id="cctvChannelSatpamSchedOverride3"><span class="switch-track"></span></span>
-                Batasi jam kirim ke Satpam (tambahan, TIDAK memengaruhi notif ke Monitor)
-              </label>
-              <div class="hint" style="margin-bottom:2px;">Hari kirim ke satpam:</div>
-              <div class="day-picker">
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-3-mon" checked><span>Sen</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-3-tue" checked><span>Sel</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-3-wed" checked><span>Rab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-3-thu" checked><span>Kam</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-3-fri" checked><span>Jum</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-3-sat" checked><span>Sab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-3-sun" checked><span>Min</span></label>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>Mulai (Satpam)</label><input type="time" id="cctvChannelSatpamSchedStart3"></div>
-                <div class="field"><label>Selesai (Satpam)</label><input type="time" id="cctvChannelSatpamSchedEnd3"></div>
-              </div>
-            </div>
-          </details>
-          <details style="margin-top:8px; border:1px solid var(--muted-dim); border-radius:8px; padding:8px 12px;">
-            <summary style="cursor:pointer; font-weight:700; font-size:13px;">⚙️ Jadwal Channel 5</summary>
-            <div style="margin-top:10px;">
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:6px;">
-                <span class="switch"><input type="checkbox" id="cctvChannelSchedOverride4"><span class="switch-track"></span></span>
-                Pakai jadwal khusus (beda dari "Semua Channel")
-              </label>
-              <div class="hint" style="margin-bottom:2px;">Hari aktif (jadwal khusus channel ini):</div>
-              <div class="day-picker">
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-4-mon" checked><span>Sen</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-4-tue" checked><span>Sel</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-4-wed" checked><span>Rab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-4-thu" checked><span>Kam</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-4-fri" checked><span>Jum</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-4-sat" checked><span>Sab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-4-sun" checked><span>Min</span></label>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>Mulai</label><input type="time" id="cctvChannelSchedStart4"></div>
-                <div class="field"><label>Selesai</label><input type="time" id="cctvChannelSchedEnd4"></div>
-              </div>
-              <hr style="margin:12px 0; border:none; border-top:1px solid var(--muted-dim);">
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:6px;">
-                <span class="switch"><input type="checkbox" id="cctvChannelSatpamSchedOverride4"><span class="switch-track"></span></span>
-                Batasi jam kirim ke Satpam (tambahan, TIDAK memengaruhi notif ke Monitor)
-              </label>
-              <div class="hint" style="margin-bottom:2px;">Hari kirim ke satpam:</div>
-              <div class="day-picker">
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-4-mon" checked><span>Sen</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-4-tue" checked><span>Sel</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-4-wed" checked><span>Rab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-4-thu" checked><span>Kam</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-4-fri" checked><span>Jum</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-4-sat" checked><span>Sab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-4-sun" checked><span>Min</span></label>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>Mulai (Satpam)</label><input type="time" id="cctvChannelSatpamSchedStart4"></div>
-                <div class="field"><label>Selesai (Satpam)</label><input type="time" id="cctvChannelSatpamSchedEnd4"></div>
-              </div>
-            </div>
-          </details>
-          <details style="margin-top:8px; border:1px solid var(--muted-dim); border-radius:8px; padding:8px 12px;">
-            <summary style="cursor:pointer; font-weight:700; font-size:13px;">⚙️ Jadwal Channel 6</summary>
-            <div style="margin-top:10px;">
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:6px;">
-                <span class="switch"><input type="checkbox" id="cctvChannelSchedOverride5"><span class="switch-track"></span></span>
-                Pakai jadwal khusus (beda dari "Semua Channel")
-              </label>
-              <div class="hint" style="margin-bottom:2px;">Hari aktif (jadwal khusus channel ini):</div>
-              <div class="day-picker">
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-5-mon" checked><span>Sen</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-5-tue" checked><span>Sel</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-5-wed" checked><span>Rab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-5-thu" checked><span>Kam</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-5-fri" checked><span>Jum</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-5-sat" checked><span>Sab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-5-sun" checked><span>Min</span></label>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>Mulai</label><input type="time" id="cctvChannelSchedStart5"></div>
-                <div class="field"><label>Selesai</label><input type="time" id="cctvChannelSchedEnd5"></div>
-              </div>
-              <hr style="margin:12px 0; border:none; border-top:1px solid var(--muted-dim);">
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:6px;">
-                <span class="switch"><input type="checkbox" id="cctvChannelSatpamSchedOverride5"><span class="switch-track"></span></span>
-                Batasi jam kirim ke Satpam (tambahan, TIDAK memengaruhi notif ke Monitor)
-              </label>
-              <div class="hint" style="margin-bottom:2px;">Hari kirim ke satpam:</div>
-              <div class="day-picker">
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-5-mon" checked><span>Sen</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-5-tue" checked><span>Sel</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-5-wed" checked><span>Rab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-5-thu" checked><span>Kam</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-5-fri" checked><span>Jum</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-5-sat" checked><span>Sab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-5-sun" checked><span>Min</span></label>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>Mulai (Satpam)</label><input type="time" id="cctvChannelSatpamSchedStart5"></div>
-                <div class="field"><label>Selesai (Satpam)</label><input type="time" id="cctvChannelSatpamSchedEnd5"></div>
-              </div>
-            </div>
-          </details>
-          <details style="margin-top:8px; border:1px solid var(--muted-dim); border-radius:8px; padding:8px 12px;">
-            <summary style="cursor:pointer; font-weight:700; font-size:13px;">⚙️ Jadwal Channel 7</summary>
-            <div style="margin-top:10px;">
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:6px;">
-                <span class="switch"><input type="checkbox" id="cctvChannelSchedOverride6"><span class="switch-track"></span></span>
-                Pakai jadwal khusus (beda dari "Semua Channel")
-              </label>
-              <div class="hint" style="margin-bottom:2px;">Hari aktif (jadwal khusus channel ini):</div>
-              <div class="day-picker">
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-6-mon" checked><span>Sen</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-6-tue" checked><span>Sel</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-6-wed" checked><span>Rab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-6-thu" checked><span>Kam</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-6-fri" checked><span>Jum</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-6-sat" checked><span>Sab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-6-sun" checked><span>Min</span></label>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>Mulai</label><input type="time" id="cctvChannelSchedStart6"></div>
-                <div class="field"><label>Selesai</label><input type="time" id="cctvChannelSchedEnd6"></div>
-              </div>
-              <hr style="margin:12px 0; border:none; border-top:1px solid var(--muted-dim);">
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:6px;">
-                <span class="switch"><input type="checkbox" id="cctvChannelSatpamSchedOverride6"><span class="switch-track"></span></span>
-                Batasi jam kirim ke Satpam (tambahan, TIDAK memengaruhi notif ke Monitor)
-              </label>
-              <div class="hint" style="margin-bottom:2px;">Hari kirim ke satpam:</div>
-              <div class="day-picker">
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-6-mon" checked><span>Sen</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-6-tue" checked><span>Sel</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-6-wed" checked><span>Rab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-6-thu" checked><span>Kam</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-6-fri" checked><span>Jum</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-6-sat" checked><span>Sab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-6-sun" checked><span>Min</span></label>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>Mulai (Satpam)</label><input type="time" id="cctvChannelSatpamSchedStart6"></div>
-                <div class="field"><label>Selesai (Satpam)</label><input type="time" id="cctvChannelSatpamSchedEnd6"></div>
-              </div>
-            </div>
-          </details>
-          <details style="margin-top:8px; border:1px solid var(--muted-dim); border-radius:8px; padding:8px 12px;">
-            <summary style="cursor:pointer; font-weight:700; font-size:13px;">⚙️ Jadwal Channel 8</summary>
-            <div style="margin-top:10px;">
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:6px;">
-                <span class="switch"><input type="checkbox" id="cctvChannelSchedOverride7"><span class="switch-track"></span></span>
-                Pakai jadwal khusus (beda dari "Semua Channel")
-              </label>
-              <div class="hint" style="margin-bottom:2px;">Hari aktif (jadwal khusus channel ini):</div>
-              <div class="day-picker">
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-7-mon" checked><span>Sen</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-7-tue" checked><span>Sel</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-7-wed" checked><span>Rab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-7-thu" checked><span>Kam</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-7-fri" checked><span>Jum</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-7-sat" checked><span>Sab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSchedDay-7-sun" checked><span>Min</span></label>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>Mulai</label><input type="time" id="cctvChannelSchedStart7"></div>
-                <div class="field"><label>Selesai</label><input type="time" id="cctvChannelSchedEnd7"></div>
-              </div>
-              <hr style="margin:12px 0; border:none; border-top:1px solid var(--muted-dim);">
-              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:6px;">
-                <span class="switch"><input type="checkbox" id="cctvChannelSatpamSchedOverride7"><span class="switch-track"></span></span>
-                Batasi jam kirim ke Satpam (tambahan, TIDAK memengaruhi notif ke Monitor)
-              </label>
-              <div class="hint" style="margin-bottom:2px;">Hari kirim ke satpam:</div>
-              <div class="day-picker">
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-7-mon" checked><span>Sen</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-7-tue" checked><span>Sel</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-7-wed" checked><span>Rab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-7-thu" checked><span>Kam</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-7-fri" checked><span>Jum</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-7-sat" checked><span>Sab</span></label>
-            <label class="day-chip"><input type="checkbox" id="cctvChSatpamSchedDay-7-sun" checked><span>Min</span></label>
-              </div>
-              <div class="field-row">
-                <div class="field"><label>Mulai (Satpam)</label><input type="time" id="cctvChannelSatpamSchedStart7"></div>
-                <div class="field"><label>Selesai (Satpam)</label><input type="time" id="cctvChannelSatpamSchedEnd7"></div>
-              </div>
-            </div>
-          </details>
-
-        </div>
         <div class="audio-controls" style="margin-top:8px;">
           <button class="btn" id="cctvChannelsSyncBtn">🔄 Sinkronkan dari Bot Monitor</button>
           <button class="btn" id="satpamTestBtn">🧪 Tes Kirim ke Satpam</button>
         </div>
         <div class="hint" id="cctvChannelsSyncStatus" style="margin-top:6px;"></div>
         <div class="hint" id="satpamTestStatus" style="margin-top:6px;"></div>
+
+
+        <div class="section-title">🕐 Jadwal Monitor</div>
+        <div class="hint" style="margin-top:-4px; margin-bottom:8px;">
+          Menentukan KAPAN (hari &amp; jam) bot Monitor boleh dapat notifikasi -- TIDAK memengaruhi channel mana yang dipilih di tabel di atas. Klik salah satu hari utk atur jamnya (pola sama dgn tab Jam Kerja).
+        </div>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:8px;">
+          <span class="switch"><input type="checkbox" id="cctvMonitorScheduleEnabled"><span class="switch-track"></span></span>
+          Aktifkan jadwal (kalau dimatikan, Monitor dapat notif 24 jam nonstop)
+        </label>
+        <div id="cctvMonitorScheduleRows"></div>
+
+        <div class="section-title">🕑 Jadwal Satpam</div>
+        <div class="hint" style="margin-top:-4px; margin-bottom:8px;">
+          TERPISAH TOTAL dari Jadwal Monitor di atas (boleh beda hari/jam sepenuhnya) -- TIDAK memengaruhi channel mana yang ditandai Satpam di tabel.
+        </div>
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:8px;">
+          <span class="switch"><input type="checkbox" id="cctvSatpamScheduleEnabled"><span class="switch-track"></span></span>
+          Aktifkan jadwal (kalau dimatikan, Satpam dapat notif 24 jam nonstop)
+        </label>
+        <div id="cctvSatpamScheduleRows"></div>
 
         <div class="section-title">🔕 Diamkan notifikasi lewat Telegram</div>
         <div class="hint" style="margin-top:-4px;">
@@ -1606,7 +1264,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.54.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.53.0: BARU BESAR -- jadwal per-HARI (Senin-Minggu), 3 tingkat: (1) "Semua Channel" (default, tambah pemilih hari), (2) per-channel "Jadwal Khusus" (tambah pemilih hari, sekarang di panel <details> terpisah -- tabel channel disederhanakan jadi Ch/Nama/Aktif/Satpam saja), (3) BARU -- "Jadwal Satpam" per channel (channelSatpamSchedules, TERPISAH dari Jadwal Khusus -- MEMBATASI TAMBAHAN kapan channel diteruskan ke satpam, TIDAK memengaruhi notif ke Monitor sama sekali). Fungsi baru: isDayActiveToday(), isSatpamScheduleActiveNow(), fillDayPickerUI()/readDayPickerUI() (helper dipakai di 3 tempat). CSS baru: .day-picker/.day-chip. cctv-backup-agent/index.html ikut disamakan (dukung hari utk jadwal Semua Channel, TIDAK dukung per-channel/satpam schedule -- itu tetap murni lokal app utama).
+const APP_VERSION = "1.55.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.54.0: REDESIGN BESAR jadwal CCTV (mengganti versi 1.54.0 -- ternyata polanya salah, per user: "jadwal jam setiap harinya, bukan hari setiap jamnya, sama seperti Jam Kerja"). SEKARANG: 2 tabel MINGGUAN TERPISAH (bukan per-channel lagi) -- "Jadwal Monitor" & "Jadwal Satpam", tiap HARI py jam Mulai/Selesai SENDIRI, UI pakai pola visual SAMA PERSIS Jam Kerja (week-table/chip/detail-row, reuse CSS). PLUS: kolom "Aktif" di tabel channel berubah makna jadi "Monitor" -- SEJAJAR & INDEPENDEN dari "Satpam" (BUKAN lagi Satpam=subset Aktif) -- 1 channel bebas: ke Monitor saja/Satpam saja/dua2nya/tidak sama sekali. Fungsi baru: isWeeklyScheduleActiveNow(), renderCctvWeekTable()/readCctvWeekTable() (dipakai 2x). DIHAPUS total: field/fungsi per-channel schedule (channelSchedules, channelSatpamSchedules) & day-picker (isDayActiveToday, fillDayPickerUI/readDayPickerUI) dari v1.54.0. cctv-backup-agent/index.html disamakan penuh (dukung 2 jadwal mingguan + Monitor/Satpam independen).
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -1732,31 +1390,39 @@ const DEFAULTS = {
     enabled: false,
     channel: "",          // opsional -- kosong = tanpa filter channel (tes dulu pakai tombol "Tes Deteksi")
     cooldownMinutes: 5,    // jeda MINIMAL antar notifikasi gerakan BARU (bukan antar polling -- lihat rising-edge di tickCctvMotion)
-    scheduleEnabled: false, // false = deteksi aktif 24 jam (selama enabled=true) -- default spt semula
-    scheduleStart: "16:00", // jam mulai deteksi aktif (dipakai CUMA kalau scheduleEnabled=true) -- ini jadwal "Semua Channel" (default), channel yg centang "Jadwal Khusus" di tabel TIDAK pakai ini
-    scheduleEnd: "08:00",    // jam berhenti -- kalau LEBIH KECIL dari scheduleStart, otomatis dianggap lewat tengah malam (mis. 16:00->08:00 besok)
-    // BARU -- hari aktif utk jadwal "Semua Channel" di atas (default
-    // SEMUA true = tiap hari, spt perilaku semula/tanpa fitur ini).
-    scheduleDays: { mon:true, tue:true, wed:true, thu:true, fri:true, sat:true, sun:true },
-    // BARU -- semua ini per-channel (key = index channel Dahua, 0-based,
-    // SESUAI mentahan respons CGI). SUMBER KEBENARAN UTAMA-nya sebenarnya
-    // di server (D1/KV Worker Monitor, key "cctv-channels") -- field2 di
-    // sini cuma CACHE LOKAL/fallback (dipakai kalau server tdk terjangkau,
-    // & buat isi form pas Pengaturan dibuka sblm sempat fetch server).
+    // BARU -- 2 jadwal MINGGUAN TERPISAH (pola SAMA PERSIS dgn tabel Jam
+    // Kerja: per HARI py jam sendiri, bukan "pilih beberapa hari pakai 1
+    // jam yang sama"). SAMA SEKALI TIDAK mengubah channel mana yang
+    // Aktif/Satpam (itu tetap murni dari channelEnabled/channelSatpam di
+    // bawah, TIDAK berubah) -- jadwal ini CUMA menyaring KAPAN notifikasi
+    // yang sudah diputuskan itu boleh benar2 terkirim.
+    // 1) monitorSchedule -- kapan Monitor boleh dapat notif gerakan.
+    // 2) satpamSchedule -- KAPAN SATPAM boleh dapat notif -- TERPISAH
+    //    TOTAL dari punya Monitor (bisa beda2 jamnya).
+    // Kalau *ScheduleEnabled=false (default), diabaikan total -- notif
+    // jalan 24 jam nonstop spt perilaku SEBELUM fitur jadwal ini ada.
+    monitorScheduleEnabled: false,
+    monitorSchedule: {
+      1:{enabled:true,start:"00:00",end:"00:00"}, 2:{enabled:true,start:"00:00",end:"00:00"},
+      3:{enabled:true,start:"00:00",end:"00:00"}, 4:{enabled:true,start:"00:00",end:"00:00"},
+      5:{enabled:true,start:"00:00",end:"00:00"}, 6:{enabled:true,start:"00:00",end:"00:00"},
+      0:{enabled:true,start:"00:00",end:"00:00"}
+    },
+    satpamScheduleEnabled: false,
+    satpamSchedule: {
+      1:{enabled:true,start:"00:00",end:"00:00"}, 2:{enabled:true,start:"00:00",end:"00:00"},
+      3:{enabled:true,start:"00:00",end:"00:00"}, 4:{enabled:true,start:"00:00",end:"00:00"},
+      5:{enabled:true,start:"00:00",end:"00:00"}, 6:{enabled:true,start:"00:00",end:"00:00"},
+      0:{enabled:true,start:"00:00",end:"00:00"}
+    },
+    // SUMBER KEBENARAN UTAMA-nya sebenarnya di server (D1/KV Worker
+    // Monitor, key "cctv-channels") -- field2 di sini cuma CACHE LOKAL/
+    // fallback (dipakai kalau server tdk terjangkau, & buat isi form
+    // pas Pengaturan dibuka sblm sempat fetch server). TIDAK BERUBAH
+    // sama sekali dari sebelumnya.
     channelNames: {},      // {index: "Gudang"} -- kosong = fallback "Channel N" (N=index+1)
-    channelEnabled: {},    // {index: true/false} -- default true kalau key tidak ada (lihat resolveChannelEnabled)
-    channelSatpam: {},     // {index: true/false} -- default false (TIDAK ke satpam) kalau key tidak ada
-    // {index: {enabled, start, end, days:{mon..sun}}} -- kalau enabled=true,
-    // channel ini PAKAI jadwal (hari+jam) SENDIRI, bukan "Semua Channel" di atas.
-    channelSchedules: {},
-    // BARU -- jadwal KHUSUS SATPAM per channel, TERPISAH dari
-    // channelSchedules di atas -- ini MEMBATASI TAMBAHAN kapan channel
-    // (yang sudah ditandai Satpam) BOLEH diteruskan ke satpam, DI ATAS
-    // jadwal monitoring biasa (Monitor TETAP dapat notif seperti biasa
-    // kapan pun channel aktif -- ini CUMA menyaring jalur ke satpam).
-    // Kalau enabled=false/tidak diatur, satpam ikut jadwal monitoring
-    // channel itu apa adanya (perilaku sblm fitur ini ada).
-    channelSatpamSchedules: {}
+    channelEnabled: {},    // {index: true/false} -- default true kalau key tidak ada
+    channelSatpam: {}      // {index: true/false} -- default false (TIDAK ke satpam) kalau key tidak ada
   }
 };
 
@@ -4172,73 +3838,134 @@ const CCTV_LAST_FAILURE_ALERT_AT_STORAGE = "cctvLastFailureAlertAt"; // kapan te
 // Cek apakah SEKARANG masuk jendela jadwal aktif deteksi -- tangani
 // kasus jadwal yang MELEWATI TENGAH MALAM (mis. 16:00 -> 08:00 besok)
 // dgn bandingkan startMin > endMin.
-// Urutan hari SESUAI Date.getDay() JS (0=Minggu...6=Sabtu) -- dipakai
-// buat cocokkan checkbox hari di UI dgn hari sebenarnya hari ini.
-const CCTV_DAY_KEYS = ["sun","mon","tue","wed","thu","fri","sat"];
-const CCTV_DAY_LABELS = { mon:"Sen", tue:"Sel", wed:"Rab", thu:"Kam", fri:"Jum", sat:"Sab", sun:"Min" };
-// BARU -- helper baca/isi pemilih hari (dipakai jadwal Semua Channel,
-// jadwal per-channel, & jadwal satpam per-channel -- SEMUA pakai bentuk
-// {mon,tue,wed,thu,fri,sat,sun}, ID checkbox-nya SELALU "<prefix>-<hari>").
-function fillDayPickerUI(prefix, daysObj){
-  const days = daysObj || { mon:true, tue:true, wed:true, thu:true, fri:true, sat:true, sun:true };
-  Object.keys(CCTV_DAY_LABELS).forEach((d) => {
-    const el = document.getElementById(`${prefix}-${d}`);
-    if(el) el.checked = days[d] !== false;
-  });
-}
-function readDayPickerUI(prefix){
-  const out = {};
-  Object.keys(CCTV_DAY_LABELS).forEach((d) => {
-    const el = document.getElementById(`${prefix}-${d}`);
-    out[d] = el ? !!el.checked : true;
-  });
-  return out;
-}
-function isDayActiveToday(now, daysObj){
-  if(!daysObj) return true; // tidak diatur -- anggap SEMUA hari aktif (backward compatible, spt sblm fitur ini ada)
-  const key = CCTV_DAY_KEYS[now.getDay()];
-  return daysObj[key] !== false; // default true kalau field hari itu tidak ada
-}
-function isCctvScheduleActiveNow(now, cfg){
-  if(!cfg.scheduleEnabled) return true; // jadwal tidak dipakai -- selalu aktif (selama toggle utama nyala)
-  if(!isDayActiveToday(now, cfg.scheduleDays)) return false; // BARU -- hari ini bukan salah satu hari aktif
-  const start = cfg.scheduleStart || "00:00";
-  const end = cfg.scheduleEnd || "00:00";
+// BARU -- jadwal MINGGUAN (pola SAMA PERSIS Jam Kerja: tiap HARI py
+// jam Mulai/Selesai SENDIRI, bukan "pilih beberapa hari pakai 1 jam
+// yang sama"). weeklySchedule = {0:{enabled,start,end}, 1:{...}, ...,
+// 6:{...}} -- key SESUAI Date.getDay() (0=Minggu...6=Sabtu).
+function isWeeklyScheduleActiveNow(now, scheduleEnabled, weeklySchedule){
+  if(!scheduleEnabled) return true; // jadwal tidak dipakai -- selalu aktif (24 jam nonstop, spt sblm fitur ini ada)
+  const day = now.getDay();
+  const dc = weeklySchedule && weeklySchedule[day];
+  if(!dc || !dc.enabled) return false; // hari ini TIDAK diaktifkan di jadwal -- tidak aktif
+  const start = dc.start || "00:00";
+  const end = dc.end || "00:00";
   const [sh,sm] = start.split(":").map(Number);
   const [eh,em] = end.split(":").map(Number);
   const nowMin = now.getHours()*60 + now.getMinutes();
   const startMin = sh*60+sm;
   const endMin = eh*60+em;
-  if(startMin === endMin) return true; // start==end -- anggap 24 jam nonstop, drpd 0 jam sama sekali
+  if(startMin === endMin) return true; // start==end -- anggap 24 jam nonstop utk hari itu, drpd 0 jam sama sekali
   if(startMin < endMin){
     return nowMin >= startMin && nowMin < endMin; // jendela dlm hari yg sama (mis. 08:00 -> 17:00)
   }else{
     return nowMin >= startMin || nowMin < endMin; // lewat tengah malam (mis. 16:00 -> 08:00 besok)
   }
 }
-// BARU -- versi PER-CHANNEL: kalau channel ini centang "Jadwal Khusus"
-// (cfg.channelSchedules[ch].enabled), pakai HARI+JAM SENDIRI -- kalau
-// tidak, ikut jadwal "Semua Channel" (termasuk hari aktifnya) spt biasa.
-// Jadwal SENGAJA murni LOKAL (app), TIDAK disinkron ke server -- beda
-// dari nama/aktif/satpam yang disinkron (lihat fetchCctvChannelConfig).
-function isChannelScheduleActiveNow(now, cfg, ch){
-  const override = (cfg.channelSchedules && (cfg.channelSchedules[ch] || cfg.channelSchedules[String(ch)])) || null;
-  if(override && override.enabled){
-    return isCctvScheduleActiveNow(now, { scheduleEnabled:true, scheduleStart: override.start||"00:00", scheduleEnd: override.end||"00:00", scheduleDays: override.days });
-  }
-  return isCctvScheduleActiveNow(now, cfg);
+// ---- UI tabel mingguan CCTV (Jadwal Monitor & Jadwal Satpam) -- POLA
+// VISUAL SAMA PERSIS dgn tabel Jam Kerja yg sudah ada (week-table/chip/
+// detail-row, reuse CSS yg sama) -- SATU fungsi generik dipakai 2x
+// (containerId beda), krn strukturnya identik (cuma "Jam Aktif" per
+// hari, bukan 3 kolom Masuk/Istirahat/Pulang spt Jam Kerja).
+const CCTV_WEEK_DAYS = [1,2,3,4,5,6,0]; // Senin..Sabtu,Minggu (Date.getDay() convention)
+const CCTV_WEEK_DAY_LABEL = {0:"Minggu",1:"Senin",2:"Selasa",3:"Rabu",4:"Kamis",5:"Jumat",6:"Sabtu"};
+function cctvWeekChipHtml(day, dc){
+  const timeLabel = dc.enabled ? `${dc.start||"00:00"}–${dc.end||"00:00"}` : "libur";
+  return `<button type="button" class="chip${dc.enabled?"":" off"}" data-cctv-chip-day="${day}">
+    <span class="dot"></span><span class="t">${timeLabel}</span>
+  </button>`;
 }
-// BARU -- jadwal KHUSUS SATPAM per channel -- MEMBATASI TAMBAHAN kapan
-// channel ini (yg sudah lolos jadwal monitoring & ditandai Satpam)
-// BOLEH diteruskan ke satpam. TIDAK memengaruhi notifikasi ke Monitor
-// sama sekali -- Monitor tetap dapat notif normal kapan pun channel
-// aktif, ini CUMA menyaring jalur ke satpam. Kalau tidak diatur/tidak
-// aktif, satpam ikut apa adanya (perilaku sblm fitur ini ada).
-function isSatpamScheduleActiveNow(now, cfg, ch){
-  const s = (cfg.channelSatpamSchedules && (cfg.channelSatpamSchedules[ch] || cfg.channelSatpamSchedules[String(ch)])) || null;
-  if(!s || !s.enabled) return true; // tidak diatur -- tidak ada pembatasan tambahan
-  return isCctvScheduleActiveNow(now, { scheduleEnabled:true, scheduleStart: s.start||"00:00", scheduleEnd: s.end||"00:00", scheduleDays: s.days });
+function cctvWeekDetailHtml(day, dc){
+  return `
+    <div class="detail-item" data-cctv-detail-day="${day}">
+      <div class="di-row" style="margin-top:0;">
+        <label class="pv-switch-label"><span class="switch"><input type="checkbox" class="cctvWeekDayEnable" data-day="${day}" ${dc.enabled?"checked":""}><span class="switch-track"></span></span>Aktif hari ini</label>
+      </div>
+      <div class="di-row">
+        <input type="time" class="cctvWeekStart" data-day="${day}" value="${dc.start||'00:00'}" style="flex:1;">
+        <span>–</span>
+        <input type="time" class="cctvWeekEnd" data-day="${day}" value="${dc.end||'00:00'}" style="flex:1;">
+      </div>
+    </div>`;
 }
+function renderCctvWeekTable(containerId, schedule){
+  const box = document.getElementById(containerId);
+  if(!box) return;
+  box.innerHTML = `
+    <div class="week-table-wrap">
+      <table class="week-table">
+        <thead><tr><th>Hari</th><th class="col-item">Jam Aktif</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="hint" style="margin-top:8px;">Klik salah satu jam di atas utk atur jamnya.</div>`;
+  const tbody = box.querySelector("tbody");
+  CCTV_WEEK_DAYS.forEach((day)=>{
+    const dc = (schedule && schedule[day]) || {enabled:true, start:"00:00", end:"00:00"};
+    const tr = document.createElement("tr");
+    tr.className = "prayer-row" + (dc.enabled ? "" : " off");
+    tr.dataset.day = day;
+    tr.innerHTML = `<td class="day-cell">${CCTV_WEEK_DAY_LABEL[day]}</td><td class="col-item">${cctvWeekChipHtml(day, dc)}</td>`;
+    tbody.appendChild(tr);
+    const detailTr = document.createElement("tr");
+    detailTr.className = "work-detail-row";
+    detailTr.dataset.day = day;
+    detailTr.hidden = true;
+    detailTr.innerHTML = `<td colspan="2"><div class="detail-grid" style="grid-template-columns:1fr;">${cctvWeekDetailHtml(day, dc)}</div></td>`;
+    tbody.appendChild(detailTr);
+  });
+}
+function readCctvWeekTable(containerId){
+  const box = document.getElementById(containerId);
+  const out = {};
+  if(!box) return out;
+  box.querySelectorAll("tr.work-detail-row").forEach((detailRow)=>{
+    const day = detailRow.dataset.day;
+    const enEl = detailRow.querySelector(".cctvWeekDayEnable");
+    const startEl = detailRow.querySelector(".cctvWeekStart");
+    const endEl = detailRow.querySelector(".cctvWeekEnd");
+    out[day] = { enabled: enEl ? enEl.checked : true, start: startEl ? startEl.value : "00:00", end: endEl ? endEl.value : "00:00" };
+  });
+  return out;
+}
+// Delegasi event dipasang SEKALI per container (elemen ini dibuat ulang
+// tiap renderCctvWeekTable, jadi listener dipasang di elemen INDUK yang
+// tidak ikut diganti -- pola SAMA dgn setupWorkTableEvents Jam Kerja).
+function setupCctvWeekTableEvents(containerId){
+  const parent = document.getElementById(containerId);
+  if(!parent || parent.dataset.eventsBound) return;
+  parent.dataset.eventsBound = "1";
+  parent.addEventListener("click", (e)=>{
+    const chipBtn = e.target.closest(".chip");
+    if(!chipBtn) return;
+    const day = chipBtn.dataset.cctvChipDay;
+    const detailRow = parent.querySelector(`tr.work-detail-row[data-day="${day}"]`);
+    const mainRow = parent.querySelector(`tr.prayer-row[data-day="${day}"]`);
+    if(!detailRow) return;
+    const wasOpen = !detailRow.hidden;
+    parent.querySelectorAll("tr.work-detail-row").forEach((r)=>{ r.hidden = true; });
+    parent.querySelectorAll("tr.prayer-row").forEach((r)=> r.classList.remove("row-expanded"));
+    if(wasOpen) return; // klik lagi di hari yg sama -> tutup (toggle)
+    detailRow.hidden = false;
+    if(mainRow) mainRow.classList.add("row-expanded");
+  });
+  parent.addEventListener("change", (e)=>{
+    const detailRow = e.target.closest("tr.work-detail-row");
+    if(!detailRow) return;
+    const day = detailRow.dataset.day;
+    const mainRow = parent.querySelector(`tr.prayer-row[data-day="${day}"]`);
+    const chipBtn = mainRow && mainRow.querySelector(".chip");
+    const enEl = detailRow.querySelector(".cctvWeekDayEnable");
+    const startEl = detailRow.querySelector(".cctvWeekStart");
+    const endEl = detailRow.querySelector(".cctvWeekEnd");
+    if(!chipBtn || !enEl) return;
+    chipBtn.classList.toggle("off", !enEl.checked);
+    if(mainRow) mainRow.classList.toggle("off", !enEl.checked);
+    const tSpan = chipBtn.querySelector(".t");
+    if(tSpan) tSpan.textContent = enEl.checked ? `${startEl.value||"00:00"}–${endEl.value||"00:00"}` : "libur";
+  });
+}
+setupCctvWeekTableEvents("cctvMonitorScheduleRows");
+setupCctvWeekTableEvents("cctvSatpamScheduleRows");
 // BARU -- ambil status TERKINI channel (nama/aktif/kirim-ke-satpam) dari
 // server (Worker Monitor, key D1/KV "cctv-channels") -- dipanggil CUMA
 // pas mau kirim alert (bukan tiap tick polling 3 detik) supaya HEMAT,
@@ -4299,10 +4026,10 @@ async function pushCctvConnectionConfig(){
     pass: localStorage.getItem(CCTV_PASS_STORAGE) || "",
     channel: cfg.channel || "",
     cooldownMinutes: cfg.cooldownMinutes != null ? cfg.cooldownMinutes : 5,
-    scheduleEnabled: !!cfg.scheduleEnabled,
-    scheduleStart: cfg.scheduleStart || "16:00",
-    scheduleEnd: cfg.scheduleEnd || "08:00",
-    scheduleDays: cfg.scheduleDays || { mon:true, tue:true, wed:true, thu:true, fri:true, sat:true, sun:true },
+    monitorScheduleEnabled: !!cfg.monitorScheduleEnabled,
+    monitorSchedule: cfg.monitorSchedule || DEFAULTS.cctvMotion.monitorSchedule,
+    satpamScheduleEnabled: !!cfg.satpamScheduleEnabled,
+    satpamSchedule: cfg.satpamSchedule || DEFAULTS.cctvMotion.satpamSchedule,
     gusAsistenUrl: ELEVEN_WORKER_URL,
     gusAsistenToken: localStorage.getItem(ELEVEN_KEY_STORAGE) || "",
   };
@@ -4353,33 +4080,14 @@ function fillCctvChannelTableFromLocal(cctvCfg){
   const namesCfg = cctvCfg.channelNames || {};
   const enabledCfg = cctvCfg.channelEnabled || {};
   const satpamCfg = cctvCfg.channelSatpam || {};
-  const schedCfg = cctvCfg.channelSchedules || {};
-  const satpamSchedCfg = cctvCfg.channelSatpamSchedules || {};
   for(let i=0;i<8;i++){
     const elName = document.getElementById("cctvChannelName"+i);
     if(elName) elName.value = namesCfg[i] || namesCfg[String(i)] || "";
     const elEnabled = document.getElementById("cctvChannelEnabled"+i);
     const enabledVal = (i in enabledCfg) ? enabledCfg[i] : enabledCfg[String(i)];
-    if(elEnabled) elEnabled.checked = enabledVal !== false; // default true (aktif) kalau blm pernah diatur
+    if(elEnabled) elEnabled.checked = enabledVal !== false; // default true (Monitor) kalau blm pernah diatur
     const elSatpam = document.getElementById("cctvChannelSatpam"+i);
     if(elSatpam) elSatpam.checked = !!(satpamCfg[i] || satpamCfg[String(i)]);
-    const sched = schedCfg[i] || schedCfg[String(i)] || {};
-    const elSchedOv = document.getElementById("cctvChannelSchedOverride"+i);
-    if(elSchedOv) elSchedOv.checked = !!sched.enabled;
-    const elSchedStart = document.getElementById("cctvChannelSchedStart"+i);
-    if(elSchedStart) elSchedStart.value = sched.start || "00:00";
-    const elSchedEnd = document.getElementById("cctvChannelSchedEnd"+i);
-    if(elSchedEnd) elSchedEnd.value = sched.end || "00:00";
-    fillDayPickerUI("cctvChSchedDay-"+i, sched.days);
-    // BARU -- jadwal khusus satpam per channel
-    const satpamSched = satpamSchedCfg[i] || satpamSchedCfg[String(i)] || {};
-    const elSatSchedOv = document.getElementById("cctvChannelSatpamSchedOverride"+i);
-    if(elSatSchedOv) elSatSchedOv.checked = !!satpamSched.enabled;
-    const elSatSchedStart = document.getElementById("cctvChannelSatpamSchedStart"+i);
-    if(elSatSchedStart) elSatSchedStart.value = satpamSched.start || "00:00";
-    const elSatSchedEnd = document.getElementById("cctvChannelSatpamSchedEnd"+i);
-    if(elSatSchedEnd) elSatSchedEnd.value = satpamSched.end || "00:00";
-    fillDayPickerUI("cctvChSatpamSchedDay-"+i, satpamSched.days);
   }
 }
 // Tarik versi TERKINI dari server (Worker Monitor) & TIMPA isian tabel
@@ -4410,11 +4118,13 @@ async function syncCctvChannelTableFromServer(){
 async function tickCctvMotion(){
   const cfg = (settings && settings.cctvMotion) || DEFAULTS.cctvMotion;
   if(!cfg.enabled) return;
-  // CATATAN: TIDAK ada gate jadwal GLOBAL di sini lagi (beda dari
-  // sebelumnya) -- jadwal sekarang per-channel (isChannelScheduleActiveNow
-  // di bawah), jadi polling TETAP jalan trus (murah, LAN lokal) supaya
-  // baseline SEMUA channel selalu segar; yang di-gate jadwal itu
-  // KEPUTUSAN KIRIM ALERT per channel, bukan proses polling itu sendiri.
+  // CATATAN: TIDAK ada gate jadwal di sini -- deteksi gerakan & cooldown
+  // SAMA SEKALI TIDAK terpengaruh jadwal (itu proses "apakah ini gerakan
+  // baru yg layak diproses", independen dari SIAPA yang nanti dikabari).
+  // Jadwal (Monitor & Satpam, masing2 TERPISAH) baru dicek BELAKANGAN,
+  // sbg gerbang terpisah SAAT MEMUTUSKAN KIRIM ke tiap tujuan -- lihat
+  // di bawah. Polling TETAP jalan trus (murah, LAN lokal) supaya
+  // baseline semua channel selalu segar.
   const user = localStorage.getItem(CCTV_USER_STORAGE);
   const pass = localStorage.getItem(CCTV_PASS_STORAGE);
   if(!cctvMotionUrl() || !user || !pass) return;
@@ -4432,16 +4142,13 @@ async function tickCctvMotion(){
     // diaktifkan) -- cuma catat baseline, JANGAN alert (krn tidak tahu
     // apakah angka itu "lama" atau "baru saja").
     if(prevCounts !== null){
-      const nowDate = new Date();
       // Channel MANA PUN yang angkanya naik dari polling sebelumnya --
       // channel yang turun (device restart, counter reset) diabaikan,
-      // BUKAN dianggap gerakan. LALU disaring lagi: channel yang lagi
-      // DI LUAR jadwal aktifnya SENDIRI dianggap tidak relevan sama
-      // sekali (bukan cuma "tidak dikirim").
+      // BUKAN dianggap gerakan. TIDAK ADA filter jadwal di sini (lihat
+      // catatan di atas fungsi).
       const channelsNaik = Object.keys(status.counts)
         .map(Number)
-        .filter((ch) => status.counts[ch] > (prevCounts[ch] || 0))
-        .filter((ch) => isChannelScheduleActiveNow(nowDate, cfg, ch));
+        .filter((ch) => status.counts[ch] > (prevCounts[ch] || 0));
       if(channelsNaik.length){
         const cooldownMinutes = cfg.cooldownMinutes!=null ? cfg.cooldownMinutes : 5;
         const cooldownMs = Math.max(0, cooldownMinutes) * 60000;
@@ -4484,29 +4191,45 @@ async function tickCctvMotion(){
                 const rc = remoteChannels && (remoteChannels[ch]||remoteChannels[String(ch)]);
                 return (rc && rc.name) || namesCfg[ch] || namesCfg[String(ch)] || `Channel ${ch+1}`;
               };
-              const isAktif = (ch) => {
+              // BARU -- "Aktif" berubah makna jadi "Monitor" (peran
+              // pertama) -- SEJAJAR & INDEPENDEN dari "Satpam" (peran
+              // kedua), BUKAN lagi "Satpam = subset dari Aktif" spt
+              // sebelumnya. Permintaan: "bisa aktifkan per channel per
+              // peran" -- 1 channel bisa: ke Monitor saja, ke Satpam
+              // saja, ke DUA-duanya, atau TIDAK ke mana pun -- 4
+              // kombinasi bebas, TIDAK ada lagi yang jadi prasyarat yg lain.
+              const isMonitor = (ch) => {
                 if(!remoteChannels) return true; // fail-open, TAPI SUDAH lolos 2x percobaan gagal, bukan 1x lagi
                 const c = remoteChannels[ch] || remoteChannels[String(ch)];
-                return !c || c.enabled !== false; // default aktif kalau blm ada datanya di server
+                return !c || c.enabled !== false; // default ke Monitor kalau blm ada datanya di server
               };
               const isSatpam = (ch) => {
                 if(!remoteChannels) return false;
                 const c = remoteChannels[ch] || remoteChannels[String(ch)];
                 return !!(c && c.satpam);
               };
-              const channelsAktif = claimedChannels.filter(isAktif);
-              if(channelsAktif.length){
-                const labelChannel = channelsAktif.map(getNama).join(", ");
+              const nowDate = new Date();
+              // Peran MONITOR -- disaring LANGSUNG dari claimedChannels
+              // (BUKAN lagi lewat channelsAktif dulu) -- independen total
+              // dari status Satpam channel itu.
+              const channelsMonitor = claimedChannels.filter(isMonitor);
+              if(channelsMonitor.length){
+                const labelChannel = channelsMonitor.map(getNama).join(", ");
                 const pesanGerakan = `🚨 Gerakan terdeteksi di CCTV.\n\n${labelChannel}`;
-                sendBardiAlertToMonitorBot(pesanGerakan);
-                // BARU -- disaring lagi dgn jadwal KHUSUS satpam per
-                // channel (kalau diatur) -- Monitor SUDAH dapat notif
-                // duluan di baris atas, ini CUMA menyaring jalur satpam.
-                const channelsSatpam = channelsAktif.filter(isSatpam).filter((ch) => isSatpamScheduleActiveNow(new Date(), cfg, ch));
-                if(channelsSatpam.length){
-                  const labelSatpam = channelsSatpam.map(getNama).join(", ");
-                  sendCctvAlertToGusAsisten(`🚨 Gerakan terdeteksi di CCTV.\n\n${labelSatpam}`);
+                // Jadwal MONITOR, gerbang TERPISAH sendiri -- TIDAK
+                // memengaruhi channel mana yg dipilih utk peran Monitor,
+                // CUMA menentukan APAKAH notif ini benar2 dikirim SEKARANG.
+                if(isWeeklyScheduleActiveNow(nowDate, cfg.monitorScheduleEnabled, cfg.monitorSchedule)){
+                  sendBardiAlertToMonitorBot(pesanGerakan);
                 }
+              }
+              // Peran SATPAM -- JUGA disaring LANGSUNG dari claimedChannels
+              // (independen dari hasil Monitor di atas) -- channel bisa
+              // masuk sini walau TIDAK termasuk channelsMonitor.
+              const channelsSatpam = claimedChannels.filter(isSatpam);
+              if(channelsSatpam.length && isWeeklyScheduleActiveNow(nowDate, cfg.satpamScheduleEnabled, cfg.satpamSchedule)){
+                const labelSatpam = channelsSatpam.map(getNama).join(", ");
+                sendCctvAlertToGusAsisten(`🚨 Gerakan terdeteksi di CCTV.\n\n${labelSatpam}`);
               }
             }
           }
@@ -4960,10 +4683,10 @@ function setupElevenLabsTab(){
     document.getElementById("cctvMotionEnabled").checked = !!cctvCfg.enabled;
     document.getElementById("cctvChannel").value = cctvCfg.channel || "";
     document.getElementById("cctvCooldownMinutes").value = cctvCfg.cooldownMinutes != null ? cctvCfg.cooldownMinutes : 5;
-    document.getElementById("cctvScheduleEnabled").checked = !!cctvCfg.scheduleEnabled;
-    document.getElementById("cctvScheduleStart").value = cctvCfg.scheduleStart || "16:00";
-    document.getElementById("cctvScheduleEnd").value = cctvCfg.scheduleEnd || "08:00";
-    fillDayPickerUI("cctvSchedDay", cctvCfg.scheduleDays);
+    document.getElementById("cctvMonitorScheduleEnabled").checked = !!cctvCfg.monitorScheduleEnabled;
+    renderCctvWeekTable("cctvMonitorScheduleRows", cctvCfg.monitorSchedule || DEFAULTS.cctvMotion.monitorSchedule);
+    document.getElementById("cctvSatpamScheduleEnabled").checked = !!cctvCfg.satpamScheduleEnabled;
+    renderCctvWeekTable("cctvSatpamScheduleRows", cctvCfg.satpamSchedule || DEFAULTS.cctvMotion.satpamSchedule);
     fillCctvChannelTableFromLocal(cctvCfg); // isi tabel dari cache lokal dulu (instan) -- lihat fungsinya, nanti ditimpa hasil sync server kalau berhasil
     document.getElementById("cctvChannelsSyncStatus").textContent = "";
     document.getElementById("satpamTestStatus").textContent = "";
@@ -5746,47 +5469,35 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
     settings.cctvMotion.enabled = document.getElementById("cctvMotionEnabled").checked;
     settings.cctvMotion.channel = document.getElementById("cctvChannel").value.trim();
     settings.cctvMotion.cooldownMinutes = Math.max(0, parseInt(document.getElementById("cctvCooldownMinutes").value,10) || 0);
-    settings.cctvMotion.scheduleEnabled = document.getElementById("cctvScheduleEnabled").checked;
-    settings.cctvMotion.scheduleStart = document.getElementById("cctvScheduleStart").value || "16:00";
-    settings.cctvMotion.scheduleEnd = document.getElementById("cctvScheduleEnd").value || "08:00";
-    settings.cctvMotion.scheduleDays = readDayPickerUI("cctvSchedDay");
+    settings.cctvMotion.monitorScheduleEnabled = document.getElementById("cctvMonitorScheduleEnabled").checked;
+    settings.cctvMotion.monitorSchedule = readCctvWeekTable("cctvMonitorScheduleRows");
+    settings.cctvMotion.satpamScheduleEnabled = document.getElementById("cctvSatpamScheduleEnabled").checked;
+    settings.cctvMotion.satpamSchedule = readCctvWeekTable("cctvSatpamScheduleRows");
     {
-      // BARU -- kumpulkan tabel 8-channel lengkap (nama/aktif/satpam/
-      // jadwal/jadwal-satpam) -- nama/aktif/satpam disimpan lokal DAN
-      // didorong ke server (Worker Monitor); jadwal & jadwal-satpam
-      // CUMA lokal (lihat catatan di isChannelScheduleActiveNow &
-      // isSatpamScheduleActiveNow).
-      const namesOut = {}, enabledOut = {}, satpamOut = {}, schedOut = {}, satpamSchedOut = {};
+      // BARU -- kumpulkan tabel 8-channel (nama/Monitor/Satpam) --
+      // disimpan lokal DAN didorong ke server (Worker Monitor). Jadwal
+      // (Monitor & Satpam) SEKARANG cuma 2 tabel MINGGUAN GLOBAL di
+      // atas (bukan lagi per-channel) -- lihat monitorSchedule/
+      // satpamSchedule.
+      const namesOut = {}, enabledOut = {}, satpamOut = {};
       const channelsForServer = {};
       for(let i=0;i<8;i++){
         const nama = (document.getElementById("cctvChannelName"+i)||{}).value?.trim() || "";
-        const aktif = !!(document.getElementById("cctvChannelEnabled"+i)||{}).checked;
+        const monitor = !!(document.getElementById("cctvChannelEnabled"+i)||{}).checked;
         const satpam = !!(document.getElementById("cctvChannelSatpam"+i)||{}).checked;
-        const schedOv = !!(document.getElementById("cctvChannelSchedOverride"+i)||{}).checked;
-        const schedStart = (document.getElementById("cctvChannelSchedStart"+i)||{}).value || "00:00";
-        const schedEnd = (document.getElementById("cctvChannelSchedEnd"+i)||{}).value || "00:00";
-        const schedDays = readDayPickerUI("cctvChSchedDay-"+i);
-        const satSchedOv = !!(document.getElementById("cctvChannelSatpamSchedOverride"+i)||{}).checked;
-        const satSchedStart = (document.getElementById("cctvChannelSatpamSchedStart"+i)||{}).value || "00:00";
-        const satSchedEnd = (document.getElementById("cctvChannelSatpamSchedEnd"+i)||{}).value || "00:00";
-        const satSchedDays = readDayPickerUI("cctvChSatpamSchedDay-"+i);
         if(nama) namesOut[i] = nama;
-        enabledOut[i] = aktif;
+        enabledOut[i] = monitor;
         if(satpam) satpamOut[i] = true;
-        if(schedOv) schedOut[i] = { enabled: true, start: schedStart, end: schedEnd, days: schedDays };
-        if(satSchedOv) satpamSchedOut[i] = { enabled: true, start: satSchedStart, end: satSchedEnd, days: satSchedDays };
-        // Server CUMA perlu nama/aktif/satpam (bukan jadwal, itu lokal) --
-        // tetap kirim SEMUA 8 channel (bukan cuma yg keisi) supaya command
-        // "daftar channel" di Telegram konsisten nunjukin 8 slot.
-        channelsForServer[i] = { name: nama || `Channel ${i+1}`, enabled: aktif, satpam };
+        // Server CUMA perlu nama/Monitor/Satpam -- tetap kirim SEMUA 8
+        // channel (bukan cuma yg keisi) supaya command "daftar channel"
+        // di Telegram konsisten nunjukin 8 slot.
+        channelsForServer[i] = { name: nama || `Channel ${i+1}`, enabled: monitor, satpam };
       }
       settings.cctvMotion.channelNames = namesOut;
       settings.cctvMotion.channelEnabled = enabledOut;
       settings.cctvMotion.channelSatpam = satpamOut;
-      settings.cctvMotion.channelSchedules = schedOut;
-      settings.cctvMotion.channelSatpamSchedules = satpamSchedOut;
       pushCctvChannelConfig(channelsForServer); // fire-and-forget -- TIDAK menunda "Simpan & tutup", diam kalau gagal (spt fungsi kirim lain di app ini)
-      pushCctvConnectionConfig(); // BARU -- dorong IP/user/pass/cooldown/jadwal Semua Channel ke server juga, supaya komputer cadangan bisa ambil
+      pushCctvConnectionConfig(); // BARU -- dorong IP/user/pass/cooldown/jadwal Monitor+Satpam ke server juga, supaya komputer cadangan bisa ambil
     }
     saveSettings();
     closeSettings();
