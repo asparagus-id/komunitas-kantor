@@ -195,6 +195,18 @@ function isWeeklyScheduleActiveNow(now, scheduleEnabled, weeklySchedule){
   if(startMin < endMin) return nowMin >= startMin && nowMin < endMin;
   return nowMin >= startMin || nowMin < endMin;
 }
+// BARU -- resolve jadwal Monitor/Satpam per-channel (kalau ada override
+// dari server), sama persis pola app utama.
+function resolveMonitorScheduleFor(cfg, ch){
+  const ov = cfg.channelMonitorSchedule && (cfg.channelMonitorSchedule[ch] || cfg.channelMonitorSchedule[String(ch)]);
+  if(ov && ov.enabled) return { enabled: true, schedule: ov.schedule };
+  return { enabled: cfg.monitorScheduleEnabled, schedule: cfg.monitorSchedule };
+}
+function resolveSatpamScheduleFor(cfg, ch){
+  const ov = cfg.channelSatpamSchedule && (cfg.channelSatpamSchedule[ch] || cfg.channelSatpamSchedule[String(ch)]);
+  if(ov && ov.enabled) return { enabled: true, schedule: ov.schedule };
+  return { enabled: cfg.satpamScheduleEnabled, schedule: cfg.satpamSchedule };
+}
 async function apiGet(path){
   const res = await fetch(`${monitorUrl}${path}`, { headers: { "X-Alert-Secret": monitorSecret } });
   if(!res.ok) throw new Error("HTTP "+res.status);
@@ -295,16 +307,24 @@ async function tick(){
             };
             const nowDate = new Date();
             let label = "";
-            // Peran MONITOR -- disaring LANGSUNG dari `claimed`, independen dari Satpam.
-            const monitorCh = claimed.filter(isMonitor);
-            if(monitorCh.length && isWeeklyScheduleActiveNow(nowDate, connConfig.monitorScheduleEnabled, connConfig.monitorSchedule)){
+            // Peran MONITOR -- disaring LANGSUNG dari `claimed`, LALU
+            // disaring lagi pakai jadwal masing2 channel (bisa beda).
+            const monitorCh = claimed.filter(isMonitor).filter((ch) => {
+              const r = resolveMonitorScheduleFor(connConfig, ch);
+              return isWeeklyScheduleActiveNow(nowDate, r.enabled, r.schedule);
+            });
+            if(monitorCh.length){
               label = monitorCh.map(getNama).join(", ");
               const pesan = `🚨 Gerakan terdeteksi di CCTV.\n\n${label}`;
               await apiPost("/api/bardi-alert", { message: pesan });
             }
-            // Peran SATPAM -- JUGA disaring LANGSUNG dari `claimed` (independen dari Monitor di atas).
-            const satpamCh = claimed.filter(isSatpam);
-            if(satpamCh.length && isWeeklyScheduleActiveNow(nowDate, connConfig.satpamScheduleEnabled, connConfig.satpamSchedule) && connConfig.gusAsistenUrl && connConfig.gusAsistenToken){
+            // Peran SATPAM -- JUGA disaring LANGSUNG dari `claimed`
+            // (independen dari Monitor), pakai jadwal satpam per channel.
+            const satpamCh = claimed.filter(isSatpam).filter((ch) => {
+              const r = resolveSatpamScheduleFor(connConfig, ch);
+              return isWeeklyScheduleActiveNow(nowDate, r.enabled, r.schedule);
+            });
+            if(satpamCh.length && connConfig.gusAsistenUrl && connConfig.gusAsistenToken){
               const labelSatpam = satpamCh.map(getNama).join(", ");
               try{
                 await fetch(`${connConfig.gusAsistenUrl}/cctv-alert`, {
