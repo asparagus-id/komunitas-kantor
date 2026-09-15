@@ -166,7 +166,7 @@ let monitorUrl = "", monitorSecret = "";
 let connConfig = null; // {ip,user,pass,channel,cooldownMinutes,scheduleEnabled,scheduleStart,scheduleEnd,gusAsistenUrl,gusAsistenToken}
 let channelsConfig = null; // {index:{name,enabled,satpam}}
 let lastCounts = null;
-let lastAlertAt = 0;
+let lastAlertAtByChannel = {}; // BARU -- objek {channelIndex: timestamp}, BUKAN 1 angka global lagi (itu bug)
 let sentCount = 0;
 let lastConfigFetchAt = 0;
 const CONFIG_REFRESH_MS = 5*60000; // refresh config dari server tiap 5 menit -- HEMAT KUOTA, BUKAN tiap tick polling 3 detik
@@ -253,18 +253,26 @@ async function tick(){
         .filter((ch) => counts[ch] > (prev[ch]||0))
         .filter((ch) => isScheduleActiveNow(nowDate, connConfig));
       if(naik.length){
-        const cooldownMs = Math.max(0, connConfig.cooldownMinutes!=null?connConfig.cooldownMinutes:5)*60000;
+        const cooldownMinutes = connConfig.cooldownMinutes!=null?connConfig.cooldownMinutes:5;
+        const cooldownMs = Math.max(0, cooldownMinutes)*60000;
         const now = Date.now();
-        if(now - lastAlertAt >= cooldownMs){
-          lastAlertAt = now;
-          // Klaim ATOMIK di server -- inilah yg mencegah DOBEL notifikasi
-          // kalau komputer LAIN (app utama atau agen lain) JUGA
+        // PERBAIKAN -- SEKARANG cooldown per channel (dulu 1 timestamp
+        // GLOBAL utk semua channel gabungan -- bug: gerakan channel A
+        // membungkam notifikasi channel B yang beda ruangan).
+        const kandidat = naik.filter((ch) => (now - (lastAlertAtByChannel[ch]||0)) >= cooldownMs);
+        if(kandidat.length){
+          kandidat.forEach((ch) => { lastAlertAtByChannel[ch] = now; });
+          // Klaim ATOMIK di server, PER CHANNEL -- inilah yg mencegah DOBEL
+          // notifikasi kalau komputer LAIN (app utama atau agen lain) JUGA
           // mendeteksi gerakan yg sama nyaris bersamaan. Dipanggil CUMA
           // di sini (pas benar2 mau kirim, sudah lolos cooldown lokal
           // dulu) -- hemat kuota, bukan tiap tick.
-          let claimResp = null;
-          try{ claimResp = await apiPost("/api/cctv-claim-alert", { cooldownMinutes: connConfig.cooldownMinutes }); }catch(e){ claimResp = { claimed: true }; } // fail-open
-          if(claimResp && claimResp.claimed){
+          const claimResults = await Promise.all(kandidat.map(async (ch) => {
+            try{ const r = await apiPost("/api/cctv-claim-alert", { channel: ch, cooldownMinutes }); return !!(r && r.claimed); }
+            catch(e){ return true; } // fail-open
+          }));
+          const claimed = kandidat.filter((ch, i) => claimResults[i]);
+          if(claimed.length){
             const getNama = (ch) => {
               const c = channelsConfig && (channelsConfig[ch]||channelsConfig[String(ch)]);
               return (c && c.name) || `Channel ${ch+1}`;
@@ -277,7 +285,7 @@ async function tick(){
               const c = channelsConfig && (channelsConfig[ch]||channelsConfig[String(ch)]);
               return !!(c && c.satpam);
             };
-            const aktif = naik.filter(isAktif);
+            const aktif = claimed.filter(isAktif);
             if(aktif.length){
               const label = aktif.map(getNama).join(", ");
               const pesan = `🎥 Gerakan terdeteksi di CCTV.\n${label}`;

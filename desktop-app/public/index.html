@@ -1125,8 +1125,10 @@
         </div>
         <div class="audio-controls" style="margin-top:8px;">
           <button class="btn" id="cctvChannelsSyncBtn">🔄 Sinkronkan dari Bot Monitor</button>
+          <button class="btn" id="satpamTestBtn">🧪 Tes Kirim ke Satpam</button>
         </div>
         <div class="hint" id="cctvChannelsSyncStatus" style="margin-top:6px;"></div>
+        <div class="hint" id="satpamTestStatus" style="margin-top:6px;"></div>
 
         <div class="section-title">🔕 Diamkan notifikasi lewat Telegram</div>
         <div class="hint" style="margin-top:-4px;">
@@ -1273,7 +1275,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.50.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.49.0: BARU BESAR -- dukungan komputer CADANGAN (agen terpisah, tanpa UI pengaturan, lihat proyek cctv-agent/). App ini SEKARANG dorong SELURUH konfigurasi CCTV (IP/user/pass/channel/cooldown/jadwal + kredensial Gus Asisten) ke server (pushCctvConnectionConfig(), endpoint /api/cctv-config) supaya agen bisa ambil dari situ, tidak perlu diketik manual. SEBELUM kirim notifikasi, SEKARANG WAJIB klaim dulu di server (claimCctvAlertOnServer(), /api/cctv-claim-alert) -- anti-dobel ANTAR KOMPUTER (beda dari klaim localStorage yg sudah ada, itu cuma anti-dobel antar 3 jendela DI KOMPUTER YANG SAMA).
+const APP_VERSION = "1.52.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.51.0: PERBAIKAN BUG PENTING -- jeda/klaim anti-dobel SEBELUMNYA 1 timestamp GLOBAL utk SEMUA channel gabungan -- gerakan channel A bisa "membungkam" notifikasi channel B yang beda ruangan kalau kejadiannya dlm jendela cooldown yg sama (dilaporkan: "gerak di channel 3/4/5 tapi tidak ada notif"). Diganti PER CHANNEL (localStorage cctvLastAlertAtByChannel = objek, server cctv_alert_claim = per channel). Filter "Aktif" (isAktif) SEKARANG dicoba fetch 2x sebelum fail-open (mengurangi risiko "channel nonaktif ikut ternotifikasi" gara2 1x gangguan jaringan sesaat -- kemungkinan penyebab masalah #2 yg dilaporkan). Worker_Monitor_Utama.js v17 (migrasi otomatis skema tabel klaim lama->baru) & cctv-backup-agent/index.html WAJIB di-update bersamaan.
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -3523,6 +3525,45 @@ async function sendCctvAlertToGusAsisten(pesan){
     console.log("Gagal kirim alert CCTV ke Gus Asisten:", e);
   }
 }
+// BARU -- tombol "Tes Kirim ke Satpam" -- DIAGNOSTIK KHUSUS, beda dari
+// sendCctvAlertToGusAsisten() di atas (yang dipakai fitur asli, diam
+// kalau gagal). Fungsi ini SELALU melaporkan hasilnya jelas -- PENTING:
+// endpoint /cctv-alert balikin jumlah "terkirim" vs "total" ID di
+// SATPAM_CCTV_IDS, jadi bisa langsung ketahuan persis di mana putusnya
+// (ID belum kebaca sama sekali, ATAU ID kebaca tapi Telegram menolak
+// kirim ke semuanya).
+async function testCctvAlertToSatpam(){
+  const statusEl = document.getElementById("satpamTestStatus");
+  const token = localStorage.getItem(ELEVEN_KEY_STORAGE);
+  if(!token){ statusEl.textContent = "❌ Isi dulu \"Token Akses\" di tab Audio (field paling atas)."; statusEl.style.color = "var(--danger, #d9534f)"; return; }
+  statusEl.textContent = "Mengirim pesan tes ke jalur satpam…"; statusEl.style.color = "";
+  try{
+    const res = await fetch(`${ELEVEN_WORKER_URL}/cctv-alert`, {
+      method: "POST",
+      headers: { "Authorization": "Bearer "+token, "Content-Type": "application/json" },
+      body: JSON.stringify({ message: "🧪 Ini pesan TES dari app Pengingat Sholat -- jalur notifikasi ke satpam." })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(res.ok && data && data.ok){
+      if(data.total === 0){
+        statusEl.textContent = `⚠️ SATPAM_CCTV_IDS terbaca KOSONG oleh Worker Gus Asisten yang sedang aktif. Cek lagi env var-nya benar-benar ter-deploy (mungkin isi sudah benar di dashboard tapi belum di-Deploy ulang Worker-nya).`;
+        statusEl.style.color = "var(--warn, #b8860b)";
+      }else if(data.terkirim > 0){
+        statusEl.textContent = `✅ Terkirim ke ${data.terkirim} dari ${data.total} ID di SATPAM_CCTV_IDS. Cek Telegram satpam SEKARANG.`;
+        statusEl.style.color = "var(--ok, #2e9e5b)";
+      }else{
+        statusEl.textContent = `⚠️ ID terbaca (${data.total} ID), TAPI gagal terkirim ke semuanya (0/${data.total}). Kemungkinan: ID Telegram-nya salah ketik, atau satpam belum pernah "Start" chat bot Gus Asisten sendiri (Telegram tidak izinkan bot DM duluan).`;
+        statusEl.style.color = "var(--warn, #b8860b)";
+      }
+    }else{
+      statusEl.textContent = `❌ Ditolak Worker (HTTP ${res.status}): ${(data&&data.error)||JSON.stringify(data)}. Kalau "Unauthorized" -- Token Akses di tab Audio salah/tidak cocok dgn APP_TOKEN Worker Gus Asisten.`;
+      statusEl.style.color = "var(--danger, #d9534f)";
+    }
+  }catch(e){
+    statusEl.textContent = `❌ Gagal terkirim sama sekali: ${e.message}. Cek Worker Gus Asisten sudah di-deploy versi yang punya endpoint /cctv-alert (v2.29.0+).`;
+    statusEl.style.color = "var(--danger, #d9534f)";
+  }
+}
 // BARU -- tombol "Tes Kirim ke Bot Monitor" -- BEDA dari
 // sendBardiAlertToMonitorBot() di atas (yang dipakai fitur asli & diam
 // kalau gagal, cuma console.log) -- fungsi ini KHUSUS DIAGNOSTIK, pakai
@@ -3781,7 +3822,7 @@ async function fetchCctvMotionStatus(){
 // tulis KE SINI sesegera mungkin setelah memutuskan mau alert, supaya
 // jendela lain yang tick sesaat kemudian sudah lihat perubahan itu.
 const CCTV_LAST_COUNTS_STORAGE = "cctvLastCounts";
-const CCTV_LAST_ALERT_AT_STORAGE = "cctvLastAlertAt";
+const CCTV_LAST_ALERT_AT_STORAGE = "cctvLastAlertAtByChannel"; // BARU -- SEKARANG objek JSON {channelIndex: timestamp}, BUKAN 1 angka global lagi (itu bug -- gerakan channel A membungkam notif channel B)
 const CCTV_FIRST_FAILURE_AT_STORAGE = "cctvFirstFailureAt"; // kapan mulai gagal beruntun (direset begitu berhasil lagi)
 const CCTV_LAST_FAILURE_ALERT_AT_STORAGE = "cctvLastFailureAlertAt"; // kapan terakhir kali kabar "CCTV tidak bisa diakses" dikirim -- cegah spam berulang
 // Cek apakah SEKARANG masuk jendela jadwal aktif deteksi -- tangani
@@ -3892,13 +3933,17 @@ async function pushCctvConnectionConfig(){
   }
 }
 // BARU -- klaim ATOMIK di server SEBELUM benar2 kirim notifikasi gerakan
-// -- ANTI-DOBEL ANTAR KOMPUTER (beda dari CCTV_LAST_ALERT_AT_STORAGE yg
-// di atas, itu cuma anti-dobel antar 3 JENDELA di 1 KOMPUTER YANG SAMA).
+// -- ANTI-DOBEL ANTAR KOMPUTER (beda dari cctvLastAlertAtByChannel di
+// atas, itu cuma anti-dobel antar 3 JENDELA di 1 KOMPUTER YANG SAMA).
+// PERBAIKAN -- SEKARANG PER CHANNEL (parameter `channel` wajib) --
+// SEBELUMNYA global utk semua channel gabungan, itu bug (gerakan
+// channel A membungkam notifikasi channel B yang beda ruangan).
 // Kalau komputer LAIN (agen cadangan atau app utama satunya) SUDAH
-// klaim baru-baru ini, endpoint balikin claimed:false -- diam, jangan
-// kirim. Fail-open (anggap menang klaim) kalau gagal terhubung --
-// drpd notifikasi macet total gara2 masalah jaringan sesaat.
-async function claimCctvAlertOnServer(cooldownMinutes){
+// klaim channel ini baru-baru ini, endpoint balikin claimed:false --
+// diam, jangan kirim utk channel itu. Fail-open (anggap menang klaim)
+// kalau gagal terhubung -- drpd notifikasi macet total gara2 masalah
+// jaringan sesaat.
+async function claimCctvAlertOnServer(channel, cooldownMinutes){
   const url = localStorage.getItem(BARDI_ALERT_URL_STORAGE);
   const secret = localStorage.getItem(BARDI_ALERT_SECRET_STORAGE);
   if(!url || !secret) return true; // belum dikonfigurasi -- fail-open, jgn blokir notifikasi krn ini
@@ -3906,7 +3951,7 @@ async function claimCctvAlertOnServer(cooldownMinutes){
     const res = await fetch(`${url}/api/cctv-claim-alert`, {
       method: "POST",
       headers: { "X-Alert-Secret": secret, "Content-Type": "application/json" },
-      body: JSON.stringify({ cooldownMinutes })
+      body: JSON.stringify({ channel, cooldownMinutes })
     });
     if(!res.ok) return true; // gagal cek -- fail-open
     const data = await res.json();
@@ -4003,59 +4048,67 @@ async function tickCctvMotion(){
         .filter((ch) => status.counts[ch] > (prevCounts[ch] || 0))
         .filter((ch) => isChannelScheduleActiveNow(nowDate, cfg, ch));
       if(channelsNaik.length){
-        const cooldownMs = Math.max(0, cfg.cooldownMinutes!=null ? cfg.cooldownMinutes : 5) * 60000;
+        const cooldownMinutes = cfg.cooldownMinutes!=null ? cfg.cooldownMinutes : 5;
+        const cooldownMs = Math.max(0, cooldownMinutes) * 60000;
         const now = Date.now();
-        const lastAlertAt = parseInt(localStorage.getItem(CCTV_LAST_ALERT_AT_STORAGE)||"0", 10) || 0;
-        if(now - lastAlertAt >= cooldownMs){
-          // "Klaim" SEKARANG JUGA (sblm await apa pun, termasuk cek
-          // snooze di bawah) -- mempersempit celah race antar jendela
-          // jadi cuma selebar baca+tulis localStorage yg SINKRON (sub-
-          // milidetik), BUKAN selebar 1 round-trip network ke Worker
-          // Monitor. Konsekuensi kecil: kalau TERNYATA snoozed, jeda
-          // notifikasi berikutnya dihitung dari SINI (bukan dari
-          // notifikasi terakhir yg beneran terkirim) -- geser dikit,
-          // jauh lebih aman drpd risiko 3x kirim lagi.
-          localStorage.setItem(CCTV_LAST_ALERT_AT_STORAGE, String(now));
+        let lastAlertMap = {};
+        try{
+          const raw = localStorage.getItem(CCTV_LAST_ALERT_AT_STORAGE);
+          lastAlertMap = raw ? JSON.parse(raw) : {};
+        }catch(e){ lastAlertMap = {}; }
+        // PERBAIKAN -- SEKARANG cooldown dicek PER CHANNEL (dulu 1
+        // timestamp GLOBAL utk semua channel gabungan -- itu bug:
+        // gerakan channel A "membungkam" notifikasi channel B yang
+        // beda ruangan kalau kejadiannya dlm jendela cooldown yg sama).
+        const candidateChannels = channelsNaik.filter((ch) => (now - (lastAlertMap[ch]||0)) >= cooldownMs);
+        if(candidateChannels.length){
+          // Klaim SEKARANG JUGA per channel (sblm await apa pun, termasuk
+          // cek snooze di bawah) -- mempersempit celah race antar jendela
+          // jadi cuma selebar baca+tulis localStorage yg SINKRON.
+          candidateChannels.forEach((ch) => { lastAlertMap[ch] = now; });
+          localStorage.setItem(CCTV_LAST_ALERT_AT_STORAGE, JSON.stringify(lastAlertMap));
           const snoozed = await isCctvMotionSnoozed();
           if(!snoozed){
-            // BARU -- klaim ATOMIK di server SEBELUM benar2 kirim --
-            // anti-dobel ANTAR KOMPUTER (beda dari klaim localStorage di
-            // atas, itu cuma anti-dobel antar 3 jendela di komputer YANG
-            // SAMA). Kalau ada komputer lain (agen cadangan/app utama
-            // satunya) yang SUDAH lebih dulu klaim barusan, diam total.
-            const claimed = await claimCctvAlertOnServer(cfg.cooldownMinutes!=null ? cfg.cooldownMinutes : 5);
-            if(!claimed) return;
-            // BARU -- ambil status TERKINI channel (nama/aktif/satpam)
-            // dari server SEKALI (dipanggil di sini, dibatasi cooldown --
-            // hemat kuota). FAIL-OPEN kalau server tidak terjangkau:
-            // anggap SEMUA channel yg naik itu tetap AKTIF (spt perilaku
-            // sblm fitur ini ada), TIDAK ADA yg ke satpam (krn tidak tahu
-            // preferensinya).
-            const remoteChannels = await fetchCctvChannelConfig();
-            const namesCfg = cfg.channelNames || {};
-            const getNama = (ch) => {
-              const rc = remoteChannels && (remoteChannels[ch]||remoteChannels[String(ch)]);
-              return (rc && rc.name) || namesCfg[ch] || namesCfg[String(ch)] || `Channel ${ch+1}`;
-            };
-            const isAktif = (ch) => {
-              if(!remoteChannels) return true; // fail-open
-              const c = remoteChannels[ch] || remoteChannels[String(ch)];
-              return !c || c.enabled !== false; // default aktif kalau blm ada datanya di server
-            };
-            const isSatpam = (ch) => {
-              if(!remoteChannels) return false;
-              const c = remoteChannels[ch] || remoteChannels[String(ch)];
-              return !!(c && c.satpam);
-            };
-            const channelsAktif = channelsNaik.filter(isAktif);
-            if(channelsAktif.length){
-              const labelChannel = channelsAktif.map(getNama).join(", ");
-              const pesanGerakan = `🎥 Gerakan terdeteksi di CCTV.\n${labelChannel}`;
-              sendBardiAlertToMonitorBot(pesanGerakan);
-              const channelsSatpam = channelsAktif.filter(isSatpam);
-              if(channelsSatpam.length){
-                const labelSatpam = channelsSatpam.map(getNama).join(", ");
-                sendCctvAlertToGusAsisten(`🎥 Gerakan terdeteksi di CCTV.\n${labelSatpam}`);
+            // BARU -- klaim ATOMIK di server, PER CHANNEL SENDIRI-SENDIRI
+            // -- anti-dobel ANTAR KOMPUTER (beda dari klaim localStorage
+            // di atas, itu cuma anti-dobel antar 3 jendela di komputer
+            // YANG SAMA). Channel yang "kalah" klaim (komputer lain sudah
+            // lebih dulu, mis. agen cadangan) disaring keluar di sini.
+            const claimResults = await Promise.all(candidateChannels.map((ch) => claimCctvAlertOnServer(ch, cooldownMinutes)));
+            const claimedChannels = candidateChannels.filter((ch, i) => claimResults[i]);
+            if(claimedChannels.length){
+              // BARU -- ambil status TERKINI channel (nama/aktif/satpam)
+              // dari server (dicoba 2x kalau gagal pertama -- mengurangi
+              // risiko fail-open "channel nonaktif ikut ternotifikasi"
+              // gara2 1x gangguan jaringan sesaat). FAIL-OPEN (anggap
+              // aktif) CUMA kalau BENAR-BENAR 2x gagal berturut-turut.
+              let remoteChannels = await fetchCctvChannelConfig();
+              if(!remoteChannels) remoteChannels = await fetchCctvChannelConfig(); // 1x percobaan ulang
+              const namesCfg = cfg.channelNames || {};
+              const getNama = (ch) => {
+                const rc = remoteChannels && (remoteChannels[ch]||remoteChannels[String(ch)]);
+                return (rc && rc.name) || namesCfg[ch] || namesCfg[String(ch)] || `Channel ${ch+1}`;
+              };
+              const isAktif = (ch) => {
+                if(!remoteChannels) return true; // fail-open, TAPI SUDAH lolos 2x percobaan gagal, bukan 1x lagi
+                const c = remoteChannels[ch] || remoteChannels[String(ch)];
+                return !c || c.enabled !== false; // default aktif kalau blm ada datanya di server
+              };
+              const isSatpam = (ch) => {
+                if(!remoteChannels) return false;
+                const c = remoteChannels[ch] || remoteChannels[String(ch)];
+                return !!(c && c.satpam);
+              };
+              const channelsAktif = claimedChannels.filter(isAktif);
+              if(channelsAktif.length){
+                const labelChannel = channelsAktif.map(getNama).join(", ");
+                const pesanGerakan = `🎥 Gerakan terdeteksi di CCTV.\n${labelChannel}`;
+                sendBardiAlertToMonitorBot(pesanGerakan);
+                const channelsSatpam = channelsAktif.filter(isSatpam);
+                if(channelsSatpam.length){
+                  const labelSatpam = channelsSatpam.map(getNama).join(", ");
+                  sendCctvAlertToGusAsisten(`🎥 Gerakan terdeteksi di CCTV.\n${labelSatpam}`);
+                }
               }
             }
           }
@@ -4514,6 +4567,7 @@ function setupElevenLabsTab(){
     document.getElementById("cctvScheduleEnd").value = cctvCfg.scheduleEnd || "08:00";
     fillCctvChannelTableFromLocal(cctvCfg); // isi tabel dari cache lokal dulu (instan) -- lihat fungsinya, nanti ditimpa hasil sync server kalau berhasil
     document.getElementById("cctvChannelsSyncStatus").textContent = "";
+    document.getElementById("satpamTestStatus").textContent = "";
     syncCctvChannelTableFromServer(); // fire-and-forget -- kalau berhasil, TIMPA isian tabel dgn versi server (lebih terkini, mis. ada yg diubah lewat Telegram)
   }
   document.getElementById("cctvTestStatus").textContent = "";
@@ -4563,6 +4617,7 @@ document.getElementById("cctvPass").addEventListener("change", (e)=>{
 });
 document.getElementById("cctvTestBtn").addEventListener("click", testCctvMotionConnection);
 document.getElementById("cctvChannelsSyncBtn").addEventListener("click", syncCctvChannelTableFromServer);
+document.getElementById("satpamTestBtn").addEventListener("click", testCctvAlertToSatpam);
 // Baca pesan error dari Worker (format {"error":"..."}); null kalau body bukan JSON.
 async function elevenWorkerErrorMessage(res){
   try{
