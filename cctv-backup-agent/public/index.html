@@ -178,10 +178,17 @@ function setStatus(text, cls){
   el.className = cls || "";
 }
 // Sama persis isCctvScheduleActiveNow() app utama, versi jadwal
-// "Semua Channel" saja (agen TIDAK dukung override per-channel --
-// itu murni lokal di app utama, sengaja tidak disinkron ke server).
+// "Semua Channel" saja (agen TIDAK dukung override per-channel/satpam
+// -- itu murni lokal di app utama, sengaja tidak disinkron ke server).
+const CCTV_DAY_KEYS = ["sun","mon","tue","wed","thu","fri","sat"];
+function isDayActiveToday(now, daysObj){
+  if(!daysObj) return true; // tidak diatur -- anggap semua hari aktif
+  const key = CCTV_DAY_KEYS[now.getDay()];
+  return daysObj[key] !== false;
+}
 function isScheduleActiveNow(now, cfg){
   if(!cfg || !cfg.scheduleEnabled) return true;
+  if(!isDayActiveToday(now, cfg.scheduleDays)) return false;
   const [sh,sm] = (cfg.scheduleStart||"00:00").split(":").map(Number);
   const [eh,em] = (cfg.scheduleEnd||"00:00").split(":").map(Number);
   const nowMin = now.getHours()*60+now.getMinutes();
