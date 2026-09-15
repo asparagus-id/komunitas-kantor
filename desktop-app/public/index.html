@@ -1132,7 +1132,7 @@
 
         <div class="section-title">🔕 Diamkan notifikasi lewat Telegram</div>
         <div class="hint" style="margin-top:-4px;">
-          Dapat notifikasi <code>"🎥 Gerakan terdeteksi di CCTV."</code> di Telegram, tapi itu cuma orang kantor sendiri (bukan hal mencurigakan)? Tidak perlu buka app ini -- cukup lewat Telegram:
+          Dapat notifikasi <code>"🚨 Gerakan terdeteksi di CCTV."</code> di Telegram, tapi itu cuma orang kantor sendiri (bukan hal mencurigakan)? Tidak perlu buka app ini -- cukup lewat Telegram:
           <br><br>
           <b>1.</b> <b>Balas (reply)</b> pesan notifikasi itu dengan salah satu kata: <code>abaikan</code>, <code>itu saya</code>, <code>tamu</code>, atau <code>karyawan</code>
           <br>
@@ -1275,7 +1275,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.52.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.51.0: PERBAIKAN BUG PENTING -- jeda/klaim anti-dobel SEBELUMNYA 1 timestamp GLOBAL utk SEMUA channel gabungan -- gerakan channel A bisa "membungkam" notifikasi channel B yang beda ruangan kalau kejadiannya dlm jendela cooldown yg sama (dilaporkan: "gerak di channel 3/4/5 tapi tidak ada notif"). Diganti PER CHANNEL (localStorage cctvLastAlertAtByChannel = objek, server cctv_alert_claim = per channel). Filter "Aktif" (isAktif) SEKARANG dicoba fetch 2x sebelum fail-open (mengurangi risiko "channel nonaktif ikut ternotifikasi" gara2 1x gangguan jaringan sesaat -- kemungkinan penyebab masalah #2 yg dilaporkan). Worker_Monitor_Utama.js v17 (migrasi otomatis skema tabel klaim lama->baru) & cctv-backup-agent/index.html WAJIB di-update bersamaan.
+const APP_VERSION = "1.53.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.52.0: Notifikasi gerakan CCTV: (1) emoji diganti 🎥 -> 🚨, (2) tambah baris kosong antara "Gerakan terdeteksi di CCTV." dan nama channel (\n\n, bukan \n) biar lebih enak dibaca di Telegram. Worker_Monitor_Utama.js pengecekan isCctvMotion JUGA diperbaiki (skr cocokkan TEKS "gerakan terdeteksi di cctv" saja, BUKAN emoji spesifik di depan -- SEBELUMNYA hardcode 🎥, kalau tidak diperbaiki notifikasi akan balik pakai header "BARDI (Pengingat Sholat)" & berhenti tercatat di log cctv begitu emoji diganti). cctv-backup-agent/index.html ikut disamakan.
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -4102,12 +4102,12 @@ async function tickCctvMotion(){
               const channelsAktif = claimedChannels.filter(isAktif);
               if(channelsAktif.length){
                 const labelChannel = channelsAktif.map(getNama).join(", ");
-                const pesanGerakan = `🎥 Gerakan terdeteksi di CCTV.\n${labelChannel}`;
+                const pesanGerakan = `🚨 Gerakan terdeteksi di CCTV.\n\n${labelChannel}`;
                 sendBardiAlertToMonitorBot(pesanGerakan);
                 const channelsSatpam = channelsAktif.filter(isSatpam);
                 if(channelsSatpam.length){
                   const labelSatpam = channelsSatpam.map(getNama).join(", ");
-                  sendCctvAlertToGusAsisten(`🎥 Gerakan terdeteksi di CCTV.\n${labelSatpam}`);
+                  sendCctvAlertToGusAsisten(`🚨 Gerakan terdeteksi di CCTV.\n\n${labelSatpam}`);
                 }
               }
             }

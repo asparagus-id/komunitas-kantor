@@ -288,7 +288,7 @@ async function tick(){
             const aktif = claimed.filter(isAktif);
             if(aktif.length){
               const label = aktif.map(getNama).join(", ");
-              const pesan = `🎥 Gerakan terdeteksi di CCTV.\n${label}`;
+              const pesan = `🚨 Gerakan terdeteksi di CCTV.\n\n${label}`;
               await apiPost("/api/bardi-alert", { message: pesan });
               const satpamCh = aktif.filter(isSatpam);
               if(satpamCh.length && connConfig.gusAsistenUrl && connConfig.gusAsistenToken){
@@ -297,7 +297,7 @@ async function tick(){
                   await fetch(`${connConfig.gusAsistenUrl}/cctv-alert`, {
                     method:"POST",
                     headers:{ "Authorization":"Bearer "+connConfig.gusAsistenToken, "Content-Type":"application/json" },
-                    body: JSON.stringify({ message: `🎥 Gerakan terdeteksi di CCTV.\n${labelSatpam}` })
+                    body: JSON.stringify({ message: `🚨 Gerakan terdeteksi di CCTV.\n\n${labelSatpam}` })
                   });
                 }catch(e){ console.log("Gagal kirim ke Gus Asisten:", e); }
               }
