@@ -1,6 +1,6 @@
 {
-  "name": "pengingat-sholat-desktop",
-  "version": "1.50.0",
+  "name": "cctv-backup-agent",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "tauri": "tauri"

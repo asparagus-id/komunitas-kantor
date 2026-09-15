@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>CCTV Backup Agent</title>
+<style>
+  body{font-family:system-ui,sans-serif; background:#0f172a; color:#e2e8f0; margin:0; padding:24px;}
+  h1{font-size:16px; margin:0 0 4px;}
+  .sub{font-size:12px; color:#94a3b8; margin-bottom:20px; line-height:1.5;}
+  .card{background:#1e293b; border-radius:10px; padding:16px; margin-bottom:12px;}
+  .row{display:flex; justify-content:space-between; margin-bottom:8px; font-size:13px; gap:12px;}
+  .row span:first-child{color:#94a3b8; flex-shrink:0;}
+  .row b{color:#f1f5f9; text-align:right;}
+  .ok{color:#4ade80 !important;}
+  .warn{color:#fbbf24 !important;}
+  .err{color:#f87171 !important;}
+  input{width:100%; padding:8px; margin-bottom:8px; border-radius:6px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; box-sizing:border-box; font-size:13px;}
+  button{width:100%; padding:10px; border-radius:6px; border:none; background:#0f7666; color:#fff; font-weight:600; cursor:pointer; font-size:13px;}
+  button:hover{background:#0b5c50;}
+  label{font-size:12px; color:#94a3b8; display:block; margin-bottom:4px;}
+  .hint{font-size:11px; color:#64748b; margin-top:10px; line-height:1.5;}
+</style>
+</head>
+<body>
+  <h1>📹 CCTV Backup Agent</h1>
+  <div class="sub">Agen cadangan pemantau gerakan CCTV — komputer ini cuma numpang jalan, semua pengaturan diambil otomatis dari server Monitor. Tidak ada pengaturan lain yang bisa diubah di sini.</div>
+
+  <div id="setupPane" class="card" style="display:none;">
+    <label>URL Worker Monitor</label>
+    <input type="text" id="setupUrl" placeholder="https://sda-octopus-bot.edw-yoga2.workers.dev">
+    <label>Token Monitor Utama</label>
+    <input type="password" id="setupSecret" placeholder="Token khusus (BARDI_ALERT_SECRET)">
+    <button id="setupBtn">Simpan &amp; Mulai</button>
+    <div class="hint">Ini SATU-SATUNYA pengaturan yang akan pernah ditanyakan. Setelah disimpan, layar ini tidak akan muncul lagi — agen langsung ambil semua konfigurasi lain (IP CCTV, kredensial, nama channel, jadwal) dari server.</div>
+  </div>
+
+  <div id="statusPane" class="card" style="display:none;">
+    <div class="row"><span>Status</span><b id="stStatus">-</b></div>
+    <div class="row"><span>Konfigurasi</span><b id="stConfig">-</b></div>
+    <div class="row"><span>Polling terakhir</span><b id="stLastPoll">-</b></div>
+    <div class="row"><span>Gerakan terakhir</span><b id="stLastMotion">Belum ada</b></div>
+    <div class="row"><span>Notifikasi terkirim (sejak dibuka)</span><b id="stSentCount">0</b></div>
+  </div>
+
+  <div class="hint">Agen ini transparan — muncul di Task Manager &amp; daftar Program terinstal sebagai "CCTV Backup Agent". Tidak ada yang disembunyikan.</div>
+
+<script>
+// ============================================================
+// CCTV Backup Agent -- versi RINGAN dari logic deteksi gerakan CCTV
+// di app Pengingat Sholat utama. SENGAJA TIDAK PUNYA UI pengaturan
+// sama sekali (kecuali 2 field bootstrap di atas, SEKALI SAJA saat
+// pertama kali dijalankan) -- semua config lain (IP/user/pass CCTV,
+// channel, jadwal, nama channel, aktif/satpam) diambil dari server
+// Worker Monitor, di-cache & di-refresh tiap 5 menit (HEMAT KUOTA --
+// bukan tiap tick polling 3 detik).
+// ============================================================
+
+const SETUP_URL_KEY = "agentMonitorUrl";
+const SETUP_SECRET_KEY = "agentMonitorSecret";
+
+// ---- MD5 (RFC 1321) -- SAMA PERSIS dgn app Pengingat Sholat utama
+// (sudah divalidasi cocok dgn 3 test vector resmi di sana), dipakai
+// utk Digest Auth CCTV.
+function md5(input){
+  function rotl(x,c){ return (x<<c)|(x>>>(32-c)); }
+  const s = [7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,
+             5,9,14,20,5,9,14,20,5,9,14,20,5,9,14,20,
+             4,11,16,23,4,11,16,23,4,11,16,23,4,11,16,23,
+             6,10,15,21,6,10,15,21,6,10,15,21,6,10,15,21];
+  const K = new Int32Array(64);
+  for(let i=0;i<64;i++) K[i] = (Math.floor(Math.abs(Math.sin(i+1))*4294967296)) | 0;
+  let a0=0x67452301, b0=0xefcdab89, c0=0x98badcfe, d0=0x10325476;
+  const msg = new TextEncoder().encode(input);
+  const origLenBits = msg.length*8;
+  let totalLen = msg.length+1;
+  while(totalLen % 64 !== 56) totalLen++;
+  const padded = new Uint8Array(totalLen+8);
+  padded.set(msg);
+  padded[msg.length] = 0x80;
+  const dv = new DataView(padded.buffer);
+  const lenLow = origLenBits >>> 0;
+  const lenHigh = Math.floor(origLenBits / 4294967296) >>> 0;
+  dv.setUint32(totalLen, lenLow, true);
+  dv.setUint32(totalLen+4, lenHigh, true);
+  for(let chunkStart=0; chunkStart<padded.length; chunkStart+=64){
+    const M = new Int32Array(16);
+    for(let i=0;i<16;i++) M[i] = dv.getInt32(chunkStart+i*4, true);
+    let A=a0,B=b0,C=c0,D=d0;
+    for(let i=0;i<64;i++){
+      let F,g;
+      if(i<16){ F=(B&C)|(~B&D); g=i; }
+      else if(i<32){ F=(D&B)|(~D&C); g=(5*i+1)%16; }
+      else if(i<48){ F=B^C^D; g=(3*i+5)%16; }
+      else { F=C^(B|~D); g=(7*i)%16; }
+      F = (F + A + K[i] + M[g]) | 0;
+      A=D; D=C; C=B;
+      B = (B + rotl(F, s[i])) | 0;
+    }
+    a0=(a0+A)|0; b0=(b0+B)|0; c0=(c0+C)|0; d0=(d0+D)|0;
+  }
+  function toHexLE(n){
+    n = n>>>0;
+    return [n&0xff,(n>>>8)&0xff,(n>>>16)&0xff,(n>>>24)&0xff].map(b=>b.toString(16).padStart(2,"0")).join("");
+  }
+  return toHexLE(a0)+toHexLE(b0)+toHexLE(c0)+toHexLE(d0);
+}
+function findHeaderCaseInsensitive(headers, name){
+  if(!headers) return null;
+  const key = Object.keys(headers).find((k) => k.toLowerCase() === name.toLowerCase());
+  return key ? headers[key] : null;
+}
+// ---- Akses CCTV lewat Tauri HTTP client (BUKAN fetch() browser --
+// bypass masalah "Mixed Content" http://-dari-https://tauri.localhost,
+// PERSIS pola & alasan yg sama dgn app Pengingat Sholat utama) +
+// Digest Auth manual.
+async function cctvTauriFetch(url, username, password, method){
+  method = method || "GET";
+  const t = window.__TAURI__;
+  if(!t || !t.http || !t.http.fetch) throw new Error("Tauri HTTP API tidak tersedia.");
+  const responseType = (t.http.ResponseType && t.http.ResponseType.Text) || 2;
+  const doFetch = async (headers) => {
+    const res = await t.http.fetch(url, { method, headers: headers||{}, responseType, timeout: 8 });
+    const text = typeof res.data === "string" ? res.data : JSON.stringify(res.data);
+    return { status: res.status, ok: res.status >= 200 && res.status < 300, text, headers: res.headers || {} };
+  };
+  const res1 = await doFetch();
+  if(res1.status !== 401) return res1;
+  const authHeader = findHeaderCaseInsensitive(res1.headers, "WWW-Authenticate");
+  if(!authHeader || !/digest/i.test(authHeader)) throw new Error("Autentikasi CCTV tidak dikenali/kredensial ditolak.");
+  const parts = {};
+  authHeader.replace(/(\w+)=("([^"]*)"|[^,]*)/g, (_m,key,val,quoted)=>{ parts[key] = quoted !== undefined ? quoted : val; });
+  const realm = parts.realm || "", nonce = parts.nonce || "", qop = parts.qop || "", opaque = parts.opaque;
+  const urlObj = new URL(url);
+  const uri = urlObj.pathname + urlObj.search;
+  const ha1 = md5(`${username}:${realm}:${password}`);
+  const ha2 = md5(`${method}:${uri}`);
+  const nc = "00000001";
+  const cnonce = Math.random().toString(16).slice(2,10);
+  let response, authValue;
+  if(qop){
+    response = md5(`${ha1}:${nonce}:${nc}:${cnonce}:${qop}:${ha2}`);
+    authValue = `Digest username="${username}", realm="${realm}", nonce="${nonce}", uri="${uri}", qop=${qop}, nc=${nc}, cnonce="${cnonce}", response="${response}"` + (opaque ? `, opaque="${opaque}"` : "");
+  }else{
+    response = md5(`${ha1}:${nonce}:${ha2}`);
+    authValue = `Digest username="${username}", realm="${realm}", nonce="${nonce}", uri="${uri}", response="${response}"` + (opaque ? `, opaque="${opaque}"` : "");
+  }
+  return doFetch({ "Authorization": authValue });
+}
+// ---- Sama persis parseCctvEventCounts() app utama: "channels[0]=N"
+// (penghitung) DAN "Error: No Events" (kosong, dipetakan ke {}).
+function parseCctvEventCounts(text){
+  if(/error\s*:\s*no\s*events/i.test(text)) return {};
+  const matches = [...text.matchAll(/channels?\[(\d+)\]\s*=\s*(\d+)/gi)];
+  if(!matches.length) return null;
+  const out = {};
+  for(const m of matches){
+    const ch = parseInt(m[1],10);
+    const val = parseInt(m[2],10) || 0;
+    out[ch] = (out[ch]||0) + val;
+  }
+  return out;
+}
+
+// ---- State ----
+let monitorUrl = "", monitorSecret = "";
+let connConfig = null; // {ip,user,pass,channel,cooldownMinutes,scheduleEnabled,scheduleStart,scheduleEnd,gusAsistenUrl,gusAsistenToken}
+let channelsConfig = null; // {index:{name,enabled,satpam}}
+let lastCounts = null;
+let lastAlertAt = 0;
+let sentCount = 0;
+let lastConfigFetchAt = 0;
+const CONFIG_REFRESH_MS = 5*60000; // refresh config dari server tiap 5 menit -- HEMAT KUOTA, BUKAN tiap tick polling 3 detik
+const POLL_INTERVAL_MS = 3000;
+
+function setStatus(text, cls){
+  const el = document.getElementById("stStatus");
+  el.textContent = text;
+  el.className = cls || "";
+}
+// Sama persis isCctvScheduleActiveNow() app utama, versi jadwal
+// "Semua Channel" saja (agen TIDAK dukung override per-channel --
+// itu murni lokal di app utama, sengaja tidak disinkron ke server).
+function isScheduleActiveNow(now, cfg){
+  if(!cfg || !cfg.scheduleEnabled) return true;
+  const [sh,sm] = (cfg.scheduleStart||"00:00").split(":").map(Number);
+  const [eh,em] = (cfg.scheduleEnd||"00:00").split(":").map(Number);
+  const nowMin = now.getHours()*60+now.getMinutes();
+  const startMin = sh*60+sm, endMin = eh*60+em;
+  if(startMin === endMin) return true;
+  if(startMin < endMin) return nowMin >= startMin && nowMin < endMin;
+  return nowMin >= startMin || nowMin < endMin;
+}
+async function apiGet(path){
+  const res = await fetch(`${monitorUrl}${path}`, { headers: { "X-Alert-Secret": monitorSecret } });
+  if(!res.ok) throw new Error("HTTP "+res.status);
+  return res.json();
+}
+async function apiPost(path, body){
+  const res = await fetch(`${monitorUrl}${path}`, {
+    method:"POST",
+    headers: { "X-Alert-Secret": monitorSecret, "Content-Type":"application/json" },
+    body: JSON.stringify(body||{})
+  });
+  if(!res.ok) throw new Error("HTTP "+res.status);
+  return res.json();
+}
+async function refreshConfigIfNeeded(force){
+  const now = Date.now();
+  if(!force && now - lastConfigFetchAt < CONFIG_REFRESH_MS) return;
+  lastConfigFetchAt = now;
+  try{
+    const [connRes, chRes] = await Promise.all([
+      apiGet("/api/cctv-config"),
+      apiGet("/api/cctv-channels"),
+    ]);
+    connConfig = (connRes && connRes.config) || null;
+    channelsConfig = (chRes && chRes.channels) || {};
+    document.getElementById("stConfig").textContent = connConfig ? `IP ${connConfig.ip}` : "belum ada di server";
+    document.getElementById("stConfig").className = connConfig ? "ok" : "warn";
+  }catch(e){
+    console.log("Gagal ambil config dari server:", e);
+    // Fail-open: PAKAI config lama (cache) kalau ada -- jangan berhenti
+    // total cuma krn 1x gagal fetch (jaringan bisa sesekali hiccup).
+  }
+}
+async function sendHeartbeatAgent(){
+  // CATATAN: SENGAJA tidak ikut checkAppHeartbeat() app utama (itu
+  // khusus komputer UTAMA) -- agen kirim ping "log" kecil terpisah
+  // via /api/bardi-alert cuma kalau ada masalah nyata (lihat catch di
+  // tick()), TIDAK ada heartbeat rutin dari agen (utk hemat kuota --
+  // 1 sumber heartbeat sudah cukup, redundansi heartbeat malah
+  // membingungkan mana yg "mati beneran").
+}
+async function tick(){
+  await refreshConfigIfNeeded(false);
+  if(!connConfig || !connConfig.ip || !connConfig.user){
+    setStatus("Menunggu konfigurasi dari server…", "warn");
+    return;
+  }
+  const url = `http://${connConfig.ip}/cgi-bin/eventManager.cgi?action=getEventIndexes&code=VideoMotion` + (connConfig.channel ? `&channel=${encodeURIComponent(connConfig.channel)}` : "");
+  try{
+    const res = await cctvTauriFetch(url, connConfig.user, connConfig.pass);
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const counts = parseCctvEventCounts(res.text);
+    if(counts === null) throw new Error("Format respons tidak dikenali");
+    setStatus("Terhubung, memantau", "ok");
+    document.getElementById("stLastPoll").textContent = new Date().toLocaleTimeString("id-ID");
+    const prev = lastCounts;
+    lastCounts = counts;
+    if(prev !== null){
+      const nowDate = new Date();
+      const naik = Object.keys(counts).map(Number)
+        .filter((ch) => counts[ch] > (prev[ch]||0))
+        .filter((ch) => isScheduleActiveNow(nowDate, connConfig));
+      if(naik.length){
+        const cooldownMs = Math.max(0, connConfig.cooldownMinutes!=null?connConfig.cooldownMinutes:5)*60000;
+        const now = Date.now();
+        if(now - lastAlertAt >= cooldownMs){
+          lastAlertAt = now;
+          // Klaim ATOMIK di server -- inilah yg mencegah DOBEL notifikasi
+          // kalau komputer LAIN (app utama atau agen lain) JUGA
+          // mendeteksi gerakan yg sama nyaris bersamaan. Dipanggil CUMA
+          // di sini (pas benar2 mau kirim, sudah lolos cooldown lokal
+          // dulu) -- hemat kuota, bukan tiap tick.
+          let claimResp = null;
+          try{ claimResp = await apiPost("/api/cctv-claim-alert", { cooldownMinutes: connConfig.cooldownMinutes }); }catch(e){ claimResp = { claimed: true }; } // fail-open
+          if(claimResp && claimResp.claimed){
+            const getNama = (ch) => {
+              const c = channelsConfig && (channelsConfig[ch]||channelsConfig[String(ch)]);
+              return (c && c.name) || `Channel ${ch+1}`;
+            };
+            const isAktif = (ch) => {
+              const c = channelsConfig && (channelsConfig[ch]||channelsConfig[String(ch)]);
+              return !c || c.enabled !== false;
+            };
+            const isSatpam = (ch) => {
+              const c = channelsConfig && (channelsConfig[ch]||channelsConfig[String(ch)]);
+              return !!(c && c.satpam);
+            };
+            const aktif = naik.filter(isAktif);
+            if(aktif.length){
+              const label = aktif.map(getNama).join(", ");
+              const pesan = `🎥 Gerakan terdeteksi di CCTV.\n${label}`;
+              await apiPost("/api/bardi-alert", { message: pesan });
+              const satpamCh = aktif.filter(isSatpam);
+              if(satpamCh.length && connConfig.gusAsistenUrl && connConfig.gusAsistenToken){
+                const labelSatpam = satpamCh.map(getNama).join(", ");
+                try{
+                  await fetch(`${connConfig.gusAsistenUrl}/cctv-alert`, {
+                    method:"POST",
+                    headers:{ "Authorization":"Bearer "+connConfig.gusAsistenToken, "Content-Type":"application/json" },
+                    body: JSON.stringify({ message: `🎥 Gerakan terdeteksi di CCTV.\n${labelSatpam}` })
+                  });
+                }catch(e){ console.log("Gagal kirim ke Gus Asisten:", e); }
+              }
+              sentCount++;
+              document.getElementById("stSentCount").textContent = String(sentCount);
+              document.getElementById("stLastMotion").textContent = new Date().toLocaleTimeString("id-ID") + " — " + label;
+            }
+          }
+        }
+      }
+    }
+  }catch(e){
+    setStatus("Gagal hubungi CCTV: "+e.message, "err");
+  }
+}
+
+// BARU -- WAJIB dipanggil biar plugin autostart yang sudah dipasang
+// di main.rs (Cargo.toml) benar2 AKTIF -- SEBELUM ini, plugin cuma
+// "tersedia", TIDAK otomatis mendaftarkan diri sbg aplikasi startup
+// Windows. Aman dipanggil berkali-kali (idempotent -- kalau sudah
+// aktif, panggil lagi tidak masalah).
+async function ensureAutostartEnabled(){
+  try{
+    const t = window.__TAURI__;
+    if(!t || !t.invoke) return;
+    await t.invoke("plugin:autostart|enable");
+  }catch(e){
+    console.log("Gagal aktifkan autostart:", e);
+  }
+}
+function startSetupPane(){
+  document.getElementById("setupPane").style.display = "block";
+  document.getElementById("statusPane").style.display = "none";
+  document.getElementById("setupBtn").addEventListener("click", ()=>{
+    const u = document.getElementById("setupUrl").value.trim().replace(/\/+$/,"");
+    const s = document.getElementById("setupSecret").value.trim();
+    if(!u || !s){ alert("Isi URL & Token dulu."); return; }
+    localStorage.setItem(SETUP_URL_KEY, u);
+    localStorage.setItem(SETUP_SECRET_KEY, s);
+    ensureAutostartEnabled(); // BARU -- aktifkan autostart TEPAT saat setup pertama kali selesai
+    location.reload();
+  });
+}
+function startAgent(){
+  document.getElementById("setupPane").style.display = "none";
+  document.getElementById("statusPane").style.display = "block";
+  setStatus("Memulai…", "");
+  ensureAutostartEnabled(); // BARU -- pastikan tetap aktif tiap kali app dibuka (jaga2 kalau sempat ke-nonaktifkan Windows/user)
+  refreshConfigIfNeeded(true).then(tick);
+  setInterval(tick, POLL_INTERVAL_MS);
+}
+
+(function init(){
+  monitorUrl = localStorage.getItem(SETUP_URL_KEY) || "";
+  monitorSecret = localStorage.getItem(SETUP_SECRET_KEY) || "";
+  if(!monitorUrl || !monitorSecret){
+    startSetupPane();
+  }else{
+    startAgent();
+  }
+})();
+</script>
+</body>
+</html>

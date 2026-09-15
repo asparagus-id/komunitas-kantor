@@ -1012,10 +1012,10 @@
         </div>
         <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:10px;">
           <span class="switch"><input type="checkbox" id="cctvScheduleEnabled"><span class="switch-track"></span></span>
-          Aktifkan cuma di jam tertentu
+          Aktifkan cuma di jam tertentu (jadwal "Semua Channel" / default)
         </label>
         <div class="hint" style="margin-top:2px; margin-bottom:8px;">
-          Kalau tidak diaktifkan, deteksi jalan 24 jam. Kalau "Sampai jam" lebih kecil dari "Mulai jam" (mis. 16:00 → 08:00), otomatis dianggap sampai jam segitu KEESOKAN harinya (lewat tengah malam) -- cocok utk "di luar jam kerja".
+          Ini jadwal DEFAULT yang dipakai SEMUA channel -- kecuali channel yang dicentang "Jadwal Khusus" di tabel bawah (channel itu pakai jamnya sendiri, TIDAK ikut ini). Kalau tidak diaktifkan, default-nya 24 jam. Kalau "Sampai jam" lebih kecil dari "Mulai jam" (mis. 16:00 → 08:00), otomatis dianggap sampai jam segitu KEESOKAN harinya (lewat tengah malam) -- cocok utk "di luar jam kerja".
         </div>
         <div class="field-row">
           <div class="field"><label>Mulai jam</label><input type="time" id="cctvScheduleStart"></div>
@@ -1026,26 +1026,107 @@
         </div>
         <div class="hint" id="cctvTestStatus" style="margin-top:8px;"></div>
 
-        <div class="section-title">🏷️ Nama Ruangan per Channel</div>
+        <div class="section-title">🏷️ Channel CCTV: Nama, Notifikasi, Satpam &amp; Jadwal</div>
         <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
-          Opsional -- biar tidak perlu hafal nomor channel, kasih nama ruangan sesuai lokasi kameranya (mis. "Gudang", "Ruang Kerja"). Channel yang dibiarkan kosong tetap tampil sbg "Channel N" di notifikasi. Cek dulu channel mana yang mana lewat "Tes Deteksi" di atas (lambaikan tangan di ruangan yang mau dikasih nama, lihat channel mana yang angkanya naik).
+          Tabel ini SUMBER KEBENARAN utama utk channel CCTV kamu, otomatis tersinkron ke bot Monitor (bisa juga diatur lewat Telegram di sana: "daftar channel", "nyalakan channel &lt;nama&gt;", "matikan channel &lt;nama&gt;"). Cek dulu channel mana yang mana lewat "Tes Deteksi" di atas.<br><br>
+          <b>Nama</b>: opsional, biar tidak perlu hafal nomor channel.<br>
+          <b>Aktif</b>: notifikasi gerakan channel ini dikirim (ke Monitor) atau tidak sama sekali.<br>
+          <b>Satpam</b>: channel ini JUGA dikirim ke akun satpam (lewat bot Gus Asisten) -- centang cuma utk channel yang perlu dipantau satpam.<br>
+          <b>Jadwal Khusus</b>: kalau dicentang, channel ini pakai jam sendiri (kolom Mulai/Selesai), TIDAK ikut jadwal "Semua Channel" di atas. Kosongkan Mulai=Selesai (mis. 00:00=00:00) kalau mau channel ini selalu aktif 24 jam.
         </div>
-        <div class="field-row">
-          <div class="field"><label>Channel 1</label><input type="text" id="cctvChannelName0" placeholder="mis. Halaman Depan"></div>
-          <div class="field"><label>Channel 2</label><input type="text" id="cctvChannelName1" placeholder="mis. Trotoar/Jalan"></div>
+        <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:12.5px; min-width:560px;">
+          <thead>
+            <tr style="text-align:left; border-bottom:2px solid #ccc;">
+              <th style="padding:5px 4px;">Ch</th>
+              <th style="padding:5px 4px;">Nama Ruangan</th>
+              <th style="padding:5px 4px; text-align:center;">Aktif</th>
+              <th style="padding:5px 4px; text-align:center;">Satpam</th>
+              <th style="padding:5px 4px; text-align:center;">Jadwal Khusus</th>
+              <th style="padding:5px 4px;">Mulai</th>
+              <th style="padding:5px 4px;">Selesai</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid #e5e5e5;">
+              <td style="padding:5px 4px; text-align:center; font-weight:600;">1</td>
+              <td style="padding:5px 4px;"><input type="text" id="cctvChannelName0" placeholder="(opsional)" style="width:100%;"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelEnabled0"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelSatpam0"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelSchedOverride0"></td>
+              <td style="padding:5px 4px;"><input type="time" id="cctvChannelSchedStart0" style="width:100%;"></td>
+              <td style="padding:5px 4px;"><input type="time" id="cctvChannelSchedEnd0" style="width:100%;"></td>
+            </tr>
+            <tr style="border-bottom:1px solid #e5e5e5;">
+              <td style="padding:5px 4px; text-align:center; font-weight:600;">2</td>
+              <td style="padding:5px 4px;"><input type="text" id="cctvChannelName1" placeholder="(opsional)" style="width:100%;"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelEnabled1"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelSatpam1"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelSchedOverride1"></td>
+              <td style="padding:5px 4px;"><input type="time" id="cctvChannelSchedStart1" style="width:100%;"></td>
+              <td style="padding:5px 4px;"><input type="time" id="cctvChannelSchedEnd1" style="width:100%;"></td>
+            </tr>
+            <tr style="border-bottom:1px solid #e5e5e5;">
+              <td style="padding:5px 4px; text-align:center; font-weight:600;">3</td>
+              <td style="padding:5px 4px;"><input type="text" id="cctvChannelName2" placeholder="(opsional)" style="width:100%;"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelEnabled2"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelSatpam2"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelSchedOverride2"></td>
+              <td style="padding:5px 4px;"><input type="time" id="cctvChannelSchedStart2" style="width:100%;"></td>
+              <td style="padding:5px 4px;"><input type="time" id="cctvChannelSchedEnd2" style="width:100%;"></td>
+            </tr>
+            <tr style="border-bottom:1px solid #e5e5e5;">
+              <td style="padding:5px 4px; text-align:center; font-weight:600;">4</td>
+              <td style="padding:5px 4px;"><input type="text" id="cctvChannelName3" placeholder="(opsional)" style="width:100%;"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelEnabled3"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelSatpam3"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelSchedOverride3"></td>
+              <td style="padding:5px 4px;"><input type="time" id="cctvChannelSchedStart3" style="width:100%;"></td>
+              <td style="padding:5px 4px;"><input type="time" id="cctvChannelSchedEnd3" style="width:100%;"></td>
+            </tr>
+            <tr style="border-bottom:1px solid #e5e5e5;">
+              <td style="padding:5px 4px; text-align:center; font-weight:600;">5</td>
+              <td style="padding:5px 4px;"><input type="text" id="cctvChannelName4" placeholder="(opsional)" style="width:100%;"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelEnabled4"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelSatpam4"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelSchedOverride4"></td>
+              <td style="padding:5px 4px;"><input type="time" id="cctvChannelSchedStart4" style="width:100%;"></td>
+              <td style="padding:5px 4px;"><input type="time" id="cctvChannelSchedEnd4" style="width:100%;"></td>
+            </tr>
+            <tr style="border-bottom:1px solid #e5e5e5;">
+              <td style="padding:5px 4px; text-align:center; font-weight:600;">6</td>
+              <td style="padding:5px 4px;"><input type="text" id="cctvChannelName5" placeholder="(opsional)" style="width:100%;"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelEnabled5"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelSatpam5"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelSchedOverride5"></td>
+              <td style="padding:5px 4px;"><input type="time" id="cctvChannelSchedStart5" style="width:100%;"></td>
+              <td style="padding:5px 4px;"><input type="time" id="cctvChannelSchedEnd5" style="width:100%;"></td>
+            </tr>
+            <tr style="border-bottom:1px solid #e5e5e5;">
+              <td style="padding:5px 4px; text-align:center; font-weight:600;">7</td>
+              <td style="padding:5px 4px;"><input type="text" id="cctvChannelName6" placeholder="(opsional)" style="width:100%;"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelEnabled6"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelSatpam6"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelSchedOverride6"></td>
+              <td style="padding:5px 4px;"><input type="time" id="cctvChannelSchedStart6" style="width:100%;"></td>
+              <td style="padding:5px 4px;"><input type="time" id="cctvChannelSchedEnd6" style="width:100%;"></td>
+            </tr>
+            <tr style="border-bottom:1px solid #e5e5e5;">
+              <td style="padding:5px 4px; text-align:center; font-weight:600;">8</td>
+              <td style="padding:5px 4px;"><input type="text" id="cctvChannelName7" placeholder="(opsional)" style="width:100%;"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelEnabled7"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelSatpam7"></td>
+              <td style="padding:5px 4px; text-align:center;"><input type="checkbox" id="cctvChannelSchedOverride7"></td>
+              <td style="padding:5px 4px;"><input type="time" id="cctvChannelSchedStart7" style="width:100%;"></td>
+              <td style="padding:5px 4px;"><input type="time" id="cctvChannelSchedEnd7" style="width:100%;"></td>
+            </tr>
+          </tbody>
+        </table>
         </div>
-        <div class="field-row">
-          <div class="field"><label>Channel 3</label><input type="text" id="cctvChannelName2" placeholder="mis. Gudang"></div>
-          <div class="field"><label>Channel 4</label><input type="text" id="cctvChannelName3" placeholder="mis. Ruang Kerja"></div>
+        <div class="audio-controls" style="margin-top:8px;">
+          <button class="btn" id="cctvChannelsSyncBtn">🔄 Sinkronkan dari Bot Monitor</button>
         </div>
-        <div class="field-row">
-          <div class="field"><label>Channel 5</label><input type="text" id="cctvChannelName4" placeholder="(kosongkan kalau tidak dipakai)"></div>
-          <div class="field"><label>Channel 6</label><input type="text" id="cctvChannelName5" placeholder="(kosongkan kalau tidak dipakai)"></div>
-        </div>
-        <div class="field-row">
-          <div class="field"><label>Channel 7</label><input type="text" id="cctvChannelName6" placeholder="(kosongkan kalau tidak dipakai)"></div>
-          <div class="field"><label>Channel 8</label><input type="text" id="cctvChannelName7" placeholder="(kosongkan kalau tidak dipakai)"></div>
-        </div>
+        <div class="hint" id="cctvChannelsSyncStatus" style="margin-top:6px;"></div>
 
         <div class="section-title">🔕 Diamkan notifikasi lewat Telegram</div>
         <div class="hint" style="margin-top:-4px;">
@@ -1192,7 +1273,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.47.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.46.0: BARU -- notifikasi gerakan CCTV SEKARANG JUGA diteruskan ke bot Gus Asisten (endpoint POST /cctv-alert, Worker_Gus_Asisten.js v2.29.0) -- TAMBAHAN, bukan pengganti jalur ke bot Monitor. Fungsi baru: sendCctvAlertToGusAsisten() -- numpang Token Akses yang SUDAH ADA (ELEVEN_KEY_STORAGE), TIDAK ada token baru yang perlu diisi di app ini. Siapa yang menerima (mis. satpam) diatur admin lewat env var "SATPAM_CCTV_IDS" di Worker Gus Asisten SENDIRI (di luar kendali app ini, sengaja begitu).
+const APP_VERSION = "1.50.0"; // WAJIB disamakan dgn APP_VERSION di sw.js tiap kali rilis versi baru -- naik dari 1.49.0: BARU BESAR -- dukungan komputer CADANGAN (agen terpisah, tanpa UI pengaturan, lihat proyek cctv-agent/). App ini SEKARANG dorong SELURUH konfigurasi CCTV (IP/user/pass/channel/cooldown/jadwal + kredensial Gus Asisten) ke server (pushCctvConnectionConfig(), endpoint /api/cctv-config) supaya agen bisa ambil dari situ, tidak perlu diketik manual. SEBELUM kirim notifikasi, SEKARANG WAJIB klaim dulu di server (claimCctvAlertOnServer(), /api/cctv-claim-alert) -- anti-dobel ANTAR KOMPUTER (beda dari klaim localStorage yg sudah ada, itu cuma anti-dobel antar 3 jendela DI KOMPUTER YANG SAMA).
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -1319,13 +1400,17 @@ const DEFAULTS = {
     channel: "",          // opsional -- kosong = tanpa filter channel (tes dulu pakai tombol "Tes Deteksi")
     cooldownMinutes: 5,    // jeda MINIMAL antar notifikasi gerakan BARU (bukan antar polling -- lihat rising-edge di tickCctvMotion)
     scheduleEnabled: false, // false = deteksi aktif 24 jam (selama enabled=true) -- default spt semula
-    scheduleStart: "16:00", // jam mulai deteksi aktif (dipakai CUMA kalau scheduleEnabled=true)
+    scheduleStart: "16:00", // jam mulai deteksi aktif (dipakai CUMA kalau scheduleEnabled=true) -- ini jadwal "Semua Channel" (default), channel yg centang "Jadwal Khusus" di tabel TIDAK pakai ini
     scheduleEnd: "08:00",    // jam berhenti -- kalau LEBIH KECIL dari scheduleStart, otomatis dianggap lewat tengah malam (mis. 16:00->08:00 besok)
-    // Nama ruangan per channel (opsional) -- key = index channel Dahua
-    // (0-based, SESUAI mentahan respons CGI), value = nama bebas (mis.
-    // "Gudang"). Channel yang TIDAK diisi tetap tampil sbg "Channel N"
-    // (N = index+1) di notifikasi -- lihat tickCctvMotion.
-    channelNames: {}
+    // BARU -- semua ini per-channel (key = index channel Dahua, 0-based,
+    // SESUAI mentahan respons CGI). SUMBER KEBENARAN UTAMA-nya sebenarnya
+    // di server (D1/KV Worker Monitor, key "cctv-channels") -- field2 di
+    // sini cuma CACHE LOKAL/fallback (dipakai kalau server tdk terjangkau,
+    // & buat isi form pas Pengaturan dibuka sblm sempat fetch server).
+    channelNames: {},      // {index: "Gudang"} -- kosong = fallback "Channel N" (N=index+1)
+    channelEnabled: {},    // {index: true/false} -- default true kalau key tidak ada (lihat resolveChannelEnabled)
+    channelSatpam: {},     // {index: true/false} -- default false (TIDAK ke satpam) kalau key tidak ada
+    channelSchedules: {}   // {index: {enabled:true, start:"00:00", end:"00:00"}} -- kalau enabled=true, channel ini PAKAI start/end SENDIRI (bukan jadwal "Semua Channel" di atas)
   }
 };
 
@@ -3471,6 +3556,34 @@ async function testBardiAlertToMonitorBot(){
     statusEl.style.color = "var(--danger, #d9534f)";
   }
 }
+// BARU -- "detak jantung" ke bot Monitor (lihat checkAppHeartbeat di
+// Worker_Monitor_Utama.js) -- kirim ping tiap beberapa menit SELAMA
+// app ini masih hidup, supaya Monitor bisa tahu kalau komputer/app-nya
+// berhenti (tidak ping lagi > 15 menit) & kabari admin -- SEBELUM fitur
+// ini ada, komputer mati = semua otomasi berhenti TANPA peringatan.
+// TIDAK tergantung fitur CCTV aktif atau tidak (umum, selama URL/Token
+// Monitor sudah diisi di tab Audio) -- 3 jendela app ini (utama/widget/
+// popup) semua jalankan ini, tapi diklaim via localStorage (pola sama
+// spt fitur lain) supaya TIDAK 3x kirim ping tiap kali dicek.
+const HEARTBEAT_INTERVAL_MS = 3*60000; // kirim paling sering tiap 3 menit
+const HEARTBEAT_LAST_SENT_STORAGE = "appLastHeartbeatSentAt";
+async function sendHeartbeat(){
+  const url = localStorage.getItem(BARDI_ALERT_URL_STORAGE);
+  const secret = localStorage.getItem(BARDI_ALERT_SECRET_STORAGE);
+  if(!url || !secret) return; // belum dikonfigurasi -- diam saja
+  const lastSent = parseInt(localStorage.getItem(HEARTBEAT_LAST_SENT_STORAGE)||"0", 10) || 0;
+  const now = Date.now();
+  if(now - lastSent < HEARTBEAT_INTERVAL_MS) return; // msh terlalu baru -- jendela lain mungkin baru saja kirim
+  localStorage.setItem(HEARTBEAT_LAST_SENT_STORAGE, String(now)); // klaim duluan, pola sama spt fitur lain di app ini
+  try{
+    await fetch(`${url}/api/heartbeat`, {
+      method: "POST",
+      headers: { "X-Alert-Secret": secret, "Content-Type": "application/json" }
+    });
+  }catch(e){
+    console.log("Gagal kirim heartbeat ke bot Monitor:", e);
+  }
+}
 // BARU -- cek status "diam" gerakan CCTV ke bot Monitor (lihat endpoint
 // GET /api/bardi-alert-status di Worker_Monitor_Utama.js) -- admin
 // mengaktifkan ini dgn BALAS notifikasi gerakan sebelumnya di Telegram
@@ -3690,10 +3803,178 @@ function isCctvScheduleActiveNow(now, cfg){
     return nowMin >= startMin || nowMin < endMin; // lewat tengah malam (mis. 16:00 -> 08:00 besok)
   }
 }
+// BARU -- versi PER-CHANNEL: kalau channel ini centang "Jadwal Khusus"
+// (cfg.channelSchedules[ch].enabled), pakai jam SENDIRI -- kalau tidak,
+// ikut jadwal "Semua Channel" (cfg.scheduleEnabled/Start/End) spt biasa.
+// Jadwal SENGAJA murni LOKAL (app), TIDAK disinkron ke server -- beda
+// dari nama/aktif/satpam yang disinkron (lihat fetchCctvChannelConfig).
+function isChannelScheduleActiveNow(now, cfg, ch){
+  const override = (cfg.channelSchedules && (cfg.channelSchedules[ch] || cfg.channelSchedules[String(ch)])) || null;
+  if(override && override.enabled){
+    return isCctvScheduleActiveNow(now, { scheduleEnabled:true, scheduleStart: override.start||"00:00", scheduleEnd: override.end||"00:00" });
+  }
+  return isCctvScheduleActiveNow(now, cfg);
+}
+// BARU -- ambil status TERKINI channel (nama/aktif/kirim-ke-satpam) dari
+// server (Worker Monitor, key D1/KV "cctv-channels") -- dipanggil CUMA
+// pas mau kirim alert (bukan tiap tick polling 3 detik) supaya HEMAT,
+// krn ini pemicunya sudah dibatasi cooldown (default 5 menit sekali).
+// FAIL-OPEN kalau gagal/belum dikonfigurasi (balikin null -- pemanggil
+// yg tentuin default amannya, biasanya "anggap semua aktif, satpam
+// kosong").
+async function fetchCctvChannelConfig(){
+  const url = localStorage.getItem(BARDI_ALERT_URL_STORAGE);
+  const secret = localStorage.getItem(BARDI_ALERT_SECRET_STORAGE);
+  if(!url || !secret) return null;
+  try{
+    const res = await fetch(`${url}/api/cctv-channels`, { headers: { "X-Alert-Secret": secret } });
+    if(!res.ok) return null;
+    const data = await res.json();
+    return (data && data.channels) || null;
+  }catch(e){
+    console.log("Gagal ambil daftar channel CCTV dari bot Monitor (fail-open):", e);
+    return null;
+  }
+}
+// BARU -- kirim (timpa) daftar channel ke server -- dipanggil app pas
+// user klik Simpan di tab CCTV. "Last write wins" -- versi app yg
+// dipakai, versi server sebelumnya (mis. hasil "nyalakan channel ..."
+// lewat Telegram SEBELUM app terakhir dibuka) TERTIMPA. Ini trade-off
+// yang disadari: source of truth "editing" ada di app, Telegram itu
+// kontrol CEPAT sehari-hari (nyala/mati doang), bukan tempat ganti nama.
+async function pushCctvChannelConfig(channelsObj){
+  const url = localStorage.getItem(BARDI_ALERT_URL_STORAGE);
+  const secret = localStorage.getItem(BARDI_ALERT_SECRET_STORAGE);
+  if(!url || !secret) return;
+  try{
+    await fetch(`${url}/api/cctv-channels`, {
+      method: "POST",
+      headers: { "X-Alert-Secret": secret, "Content-Type": "application/json" },
+      body: JSON.stringify({ channels: channelsObj })
+    });
+  }catch(e){
+    console.log("Gagal sinkron daftar channel CCTV ke bot Monitor:", e);
+  }
+}
+// BARU -- dorong konfigurasi KONEKSI CCTV (IP/user/password/channel-
+// filter/cooldown/jadwal Semua Channel) + kredensial Gus Asisten (buat
+// jalur satpam) ke server (Worker Monitor, key "cctv-connection") --
+// supaya komputer CADANGAN (agen, TANPA UI pengaturan sama sekali)
+// bisa ambil config yang SAMA dari sini, TIDAK perlu diketik manual di
+// tiap komputer -- agen cukup tahu URL+Token Monitor SAJA (2 field),
+// semua sisanya (termasuk kredensial Gus Asisten) ikut disediakan dari
+// sini. Dipanggil app ini pas user Simpan di tab CCTV.
+async function pushCctvConnectionConfig(){
+  const url = localStorage.getItem(BARDI_ALERT_URL_STORAGE);
+  const secret = localStorage.getItem(BARDI_ALERT_SECRET_STORAGE);
+  if(!url || !secret) return;
+  const cfg = (settings && settings.cctvMotion) || DEFAULTS.cctvMotion;
+  const config = {
+    ip: localStorage.getItem(CCTV_IP_STORAGE) || "",
+    user: localStorage.getItem(CCTV_USER_STORAGE) || "",
+    pass: localStorage.getItem(CCTV_PASS_STORAGE) || "",
+    channel: cfg.channel || "",
+    cooldownMinutes: cfg.cooldownMinutes != null ? cfg.cooldownMinutes : 5,
+    scheduleEnabled: !!cfg.scheduleEnabled,
+    scheduleStart: cfg.scheduleStart || "16:00",
+    scheduleEnd: cfg.scheduleEnd || "08:00",
+    gusAsistenUrl: ELEVEN_WORKER_URL,
+    gusAsistenToken: localStorage.getItem(ELEVEN_KEY_STORAGE) || "",
+  };
+  try{
+    await fetch(`${url}/api/cctv-config`, {
+      method: "POST",
+      headers: { "X-Alert-Secret": secret, "Content-Type": "application/json" },
+      body: JSON.stringify({ config })
+    });
+  }catch(e){
+    console.log("Gagal sinkron konfigurasi koneksi CCTV ke bot Monitor:", e);
+  }
+}
+// BARU -- klaim ATOMIK di server SEBELUM benar2 kirim notifikasi gerakan
+// -- ANTI-DOBEL ANTAR KOMPUTER (beda dari CCTV_LAST_ALERT_AT_STORAGE yg
+// di atas, itu cuma anti-dobel antar 3 JENDELA di 1 KOMPUTER YANG SAMA).
+// Kalau komputer LAIN (agen cadangan atau app utama satunya) SUDAH
+// klaim baru-baru ini, endpoint balikin claimed:false -- diam, jangan
+// kirim. Fail-open (anggap menang klaim) kalau gagal terhubung --
+// drpd notifikasi macet total gara2 masalah jaringan sesaat.
+async function claimCctvAlertOnServer(cooldownMinutes){
+  const url = localStorage.getItem(BARDI_ALERT_URL_STORAGE);
+  const secret = localStorage.getItem(BARDI_ALERT_SECRET_STORAGE);
+  if(!url || !secret) return true; // belum dikonfigurasi -- fail-open, jgn blokir notifikasi krn ini
+  try{
+    const res = await fetch(`${url}/api/cctv-claim-alert`, {
+      method: "POST",
+      headers: { "X-Alert-Secret": secret, "Content-Type": "application/json" },
+      body: JSON.stringify({ cooldownMinutes })
+    });
+    if(!res.ok) return true; // gagal cek -- fail-open
+    const data = await res.json();
+    return data.claimed !== false;
+  }catch(e){
+    console.log("Gagal klaim alert CCTV di server (fail-open, anggap menang klaim):", e);
+    return true;
+  }
+}
+// Isi tabel 8-channel dari CACHE LOKAL (settings.cctvMotion) -- dipanggil
+// pas Pengaturan dibuka, SEBELUM sempat coba sync ke server (instan,
+// tidak nunggu network) -- lihat syncCctvChannelTableFromServer() yg
+// nyusul & TIMPA isian ini kalau server berhasil dihubungi.
+function fillCctvChannelTableFromLocal(cctvCfg){
+  const namesCfg = cctvCfg.channelNames || {};
+  const enabledCfg = cctvCfg.channelEnabled || {};
+  const satpamCfg = cctvCfg.channelSatpam || {};
+  const schedCfg = cctvCfg.channelSchedules || {};
+  for(let i=0;i<8;i++){
+    const elName = document.getElementById("cctvChannelName"+i);
+    if(elName) elName.value = namesCfg[i] || namesCfg[String(i)] || "";
+    const elEnabled = document.getElementById("cctvChannelEnabled"+i);
+    const enabledVal = (i in enabledCfg) ? enabledCfg[i] : enabledCfg[String(i)];
+    if(elEnabled) elEnabled.checked = enabledVal !== false; // default true (aktif) kalau blm pernah diatur
+    const elSatpam = document.getElementById("cctvChannelSatpam"+i);
+    if(elSatpam) elSatpam.checked = !!(satpamCfg[i] || satpamCfg[String(i)]);
+    const sched = schedCfg[i] || schedCfg[String(i)] || {};
+    const elSchedOv = document.getElementById("cctvChannelSchedOverride"+i);
+    if(elSchedOv) elSchedOv.checked = !!sched.enabled;
+    const elSchedStart = document.getElementById("cctvChannelSchedStart"+i);
+    if(elSchedStart) elSchedStart.value = sched.start || "00:00";
+    const elSchedEnd = document.getElementById("cctvChannelSchedEnd"+i);
+    if(elSchedEnd) elSchedEnd.value = sched.end || "00:00";
+  }
+}
+// Tarik versi TERKINI dari server (Worker Monitor) & TIMPA isian tabel
+// nama/aktif/satpam (jadwal TIDAK, itu murni lokal) -- supaya perubahan
+// yang dibuat lewat Telegram ("nyalakan channel ...") ikut kelihatan di
+// app begitu Pengaturan dibuka lagi. Fail-open diam2 kalau gagal (tabel
+// tetap pakai cache lokal yg sudah diisi fillCctvChannelTableFromLocal).
+async function syncCctvChannelTableFromServer(){
+  const statusEl = document.getElementById("cctvChannelsSyncStatus");
+  if(statusEl) statusEl.textContent = "Menyinkronkan…";
+  const remote = await fetchCctvChannelConfig();
+  if(!remote){
+    if(statusEl) statusEl.textContent = "⚠️ Belum berhasil sinkron dari server (cek URL Worker Monitor/Token Monitor Utama, atau memang belum pernah disimpan sebelumnya) -- tabel di bawah masih pakai data tersimpan lokal.";
+    return;
+  }
+  for(let i=0;i<8;i++){
+    const c = remote[i] || remote[String(i)];
+    if(!c) continue; // channel ini belum pernah tersimpan di server -- biarkan nilai lokal apa adanya
+    const elName = document.getElementById("cctvChannelName"+i);
+    if(elName && c.name) elName.value = c.name;
+    const elEnabled = document.getElementById("cctvChannelEnabled"+i);
+    if(elEnabled) elEnabled.checked = c.enabled !== false;
+    const elSatpam = document.getElementById("cctvChannelSatpam"+i);
+    if(elSatpam) elSatpam.checked = !!c.satpam;
+  }
+  if(statusEl) statusEl.textContent = "✅ Berhasil sinkron dari server (termasuk perubahan lewat Telegram, kalau ada).";
+}
 async function tickCctvMotion(){
   const cfg = (settings && settings.cctvMotion) || DEFAULTS.cctvMotion;
   if(!cfg.enabled) return;
-  if(!isCctvScheduleActiveNow(new Date(), cfg)) return; // di luar jendela jadwal -- diam total, tidak polling ke CCTV sama sekali
+  // CATATAN: TIDAK ada gate jadwal GLOBAL di sini lagi (beda dari
+  // sebelumnya) -- jadwal sekarang per-channel (isChannelScheduleActiveNow
+  // di bawah), jadi polling TETAP jalan trus (murah, LAN lokal) supaya
+  // baseline SEMUA channel selalu segar; yang di-gate jadwal itu
+  // KEPUTUSAN KIRIM ALERT per channel, bukan proses polling itu sendiri.
   const user = localStorage.getItem(CCTV_USER_STORAGE);
   const pass = localStorage.getItem(CCTV_PASS_STORAGE);
   if(!cctvMotionUrl() || !user || !pass) return;
@@ -3711,12 +3992,16 @@ async function tickCctvMotion(){
     // diaktifkan) -- cuma catat baseline, JANGAN alert (krn tidak tahu
     // apakah angka itu "lama" atau "baru saja").
     if(prevCounts !== null){
+      const nowDate = new Date();
       // Channel MANA PUN yang angkanya naik dari polling sebelumnya --
       // channel yang turun (device restart, counter reset) diabaikan,
-      // BUKAN dianggap gerakan.
+      // BUKAN dianggap gerakan. LALU disaring lagi: channel yang lagi
+      // DI LUAR jadwal aktifnya SENDIRI dianggap tidak relevan sama
+      // sekali (bukan cuma "tidak dikirim").
       const channelsNaik = Object.keys(status.counts)
         .map(Number)
-        .filter((ch) => status.counts[ch] > (prevCounts[ch] || 0));
+        .filter((ch) => status.counts[ch] > (prevCounts[ch] || 0))
+        .filter((ch) => isChannelScheduleActiveNow(nowDate, cfg, ch));
       if(channelsNaik.length){
         const cooldownMs = Math.max(0, cfg.cooldownMinutes!=null ? cfg.cooldownMinutes : 5) * 60000;
         const now = Date.now();
@@ -3733,18 +4018,46 @@ async function tickCctvMotion(){
           localStorage.setItem(CCTV_LAST_ALERT_AT_STORAGE, String(now));
           const snoozed = await isCctvMotionSnoozed();
           if(!snoozed){
-            // BARU -- pakai nama ruangan kalau sudah diisi (tab CCTV >
-            // "Nama Ruangan per Channel") -- kalau kosong, fallback ke
-            // "Channel N" spt sebelumnya (+1 krn channel Dahua di
-            // respons CGI mulai dari 0, sedangkan penomoran yg biasa
-            // kelihatan di app DMSS/monitor mulai dari 1).
+            // BARU -- klaim ATOMIK di server SEBELUM benar2 kirim --
+            // anti-dobel ANTAR KOMPUTER (beda dari klaim localStorage di
+            // atas, itu cuma anti-dobel antar 3 jendela di komputer YANG
+            // SAMA). Kalau ada komputer lain (agen cadangan/app utama
+            // satunya) yang SUDAH lebih dulu klaim barusan, diam total.
+            const claimed = await claimCctvAlertOnServer(cfg.cooldownMinutes!=null ? cfg.cooldownMinutes : 5);
+            if(!claimed) return;
+            // BARU -- ambil status TERKINI channel (nama/aktif/satpam)
+            // dari server SEKALI (dipanggil di sini, dibatasi cooldown --
+            // hemat kuota). FAIL-OPEN kalau server tidak terjangkau:
+            // anggap SEMUA channel yg naik itu tetap AKTIF (spt perilaku
+            // sblm fitur ini ada), TIDAK ADA yg ke satpam (krn tidak tahu
+            // preferensinya).
+            const remoteChannels = await fetchCctvChannelConfig();
             const namesCfg = cfg.channelNames || {};
-            const labelChannel = channelsNaik
-              .map((ch) => namesCfg[ch] || namesCfg[String(ch)] || `Channel ${ch+1}`)
-              .join(", ");
-            const pesanGerakan = `🎥 Gerakan terdeteksi di CCTV.\n${labelChannel}`;
-            sendBardiAlertToMonitorBot(pesanGerakan);
-            sendCctvAlertToGusAsisten(pesanGerakan); // TAMBAHAN -- ke satpam via Gus Asisten, lihat catatan di fungsinya
+            const getNama = (ch) => {
+              const rc = remoteChannels && (remoteChannels[ch]||remoteChannels[String(ch)]);
+              return (rc && rc.name) || namesCfg[ch] || namesCfg[String(ch)] || `Channel ${ch+1}`;
+            };
+            const isAktif = (ch) => {
+              if(!remoteChannels) return true; // fail-open
+              const c = remoteChannels[ch] || remoteChannels[String(ch)];
+              return !c || c.enabled !== false; // default aktif kalau blm ada datanya di server
+            };
+            const isSatpam = (ch) => {
+              if(!remoteChannels) return false;
+              const c = remoteChannels[ch] || remoteChannels[String(ch)];
+              return !!(c && c.satpam);
+            };
+            const channelsAktif = channelsNaik.filter(isAktif);
+            if(channelsAktif.length){
+              const labelChannel = channelsAktif.map(getNama).join(", ");
+              const pesanGerakan = `🎥 Gerakan terdeteksi di CCTV.\n${labelChannel}`;
+              sendBardiAlertToMonitorBot(pesanGerakan);
+              const channelsSatpam = channelsAktif.filter(isSatpam);
+              if(channelsSatpam.length){
+                const labelSatpam = channelsSatpam.map(getNama).join(", ");
+                sendCctvAlertToGusAsisten(`🎥 Gerakan terdeteksi di CCTV.\n${labelSatpam}`);
+              }
+            }
           }
         }
       }
@@ -3767,7 +4080,7 @@ async function tickCctvMotion(){
     const lastFailAlertAt = parseInt(localStorage.getItem(CCTV_LAST_FAILURE_ALERT_AT_STORAGE)||"0", 10) || 0;
     if(nowFail - firstFailAt >= 60000 && nowFail - lastFailAlertAt >= 3600000){
       localStorage.setItem(CCTV_LAST_FAILURE_ALERT_AT_STORAGE, String(nowFail));
-      sendBardiAlertToMonitorBot(`⚠️ CCTV tidak bisa diakses selama lebih dari 1 menit. Cek koneksi/kredensialnya.`);
+      sendBardiAlertToMonitorBot(`⚠️ CCTV tidak bisa diakses (kemungkinan mati/offline) selama lebih dari 1 menit. Cek koneksi/kredensialnya.`);
     }
   }
 }
@@ -4199,13 +4512,9 @@ function setupElevenLabsTab(){
     document.getElementById("cctvScheduleEnabled").checked = !!cctvCfg.scheduleEnabled;
     document.getElementById("cctvScheduleStart").value = cctvCfg.scheduleStart || "16:00";
     document.getElementById("cctvScheduleEnd").value = cctvCfg.scheduleEnd || "08:00";
-    {
-      const namesCfg = cctvCfg.channelNames || {};
-      for(let i=0;i<8;i++){
-        const el = document.getElementById("cctvChannelName"+i);
-        if(el) el.value = namesCfg[i] || namesCfg[String(i)] || "";
-      }
-    }
+    fillCctvChannelTableFromLocal(cctvCfg); // isi tabel dari cache lokal dulu (instan) -- lihat fungsinya, nanti ditimpa hasil sync server kalau berhasil
+    document.getElementById("cctvChannelsSyncStatus").textContent = "";
+    syncCctvChannelTableFromServer(); // fire-and-forget -- kalau berhasil, TIMPA isian tabel dgn versi server (lebih terkini, mis. ada yg diubah lewat Telegram)
   }
   document.getElementById("cctvTestStatus").textContent = "";
   const liburCfg = (settings && settings.liburOtomatis) || DEFAULTS.liburOtomatis;
@@ -4253,6 +4562,7 @@ document.getElementById("cctvPass").addEventListener("change", (e)=>{
   localStorage.setItem(CCTV_PASS_STORAGE, e.target.value);
 });
 document.getElementById("cctvTestBtn").addEventListener("click", testCctvMotionConnection);
+document.getElementById("cctvChannelsSyncBtn").addEventListener("click", syncCctvChannelTableFromServer);
 // Baca pesan error dari Worker (format {"error":"..."}); null kalau body bukan JSON.
 async function elevenWorkerErrorMessage(res){
   try{
@@ -4986,13 +5296,34 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
     settings.cctvMotion.scheduleStart = document.getElementById("cctvScheduleStart").value || "16:00";
     settings.cctvMotion.scheduleEnd = document.getElementById("cctvScheduleEnd").value || "08:00";
     {
-      const namesOut = {};
+      // BARU -- kumpulkan tabel 8-channel lengkap (nama/aktif/satpam/
+      // jadwal) -- nama/aktif/satpam disimpan lokal DAN didorong ke
+      // server (Worker Monitor); jadwal CUMA lokal (lihat catatan di
+      // isChannelScheduleActiveNow).
+      const namesOut = {}, enabledOut = {}, satpamOut = {}, schedOut = {};
+      const channelsForServer = {};
       for(let i=0;i<8;i++){
-        const el = document.getElementById("cctvChannelName"+i);
-        const v = el ? el.value.trim() : "";
-        if(v) namesOut[i] = v;
+        const nama = (document.getElementById("cctvChannelName"+i)||{}).value?.trim() || "";
+        const aktif = !!(document.getElementById("cctvChannelEnabled"+i)||{}).checked;
+        const satpam = !!(document.getElementById("cctvChannelSatpam"+i)||{}).checked;
+        const schedOv = !!(document.getElementById("cctvChannelSchedOverride"+i)||{}).checked;
+        const schedStart = (document.getElementById("cctvChannelSchedStart"+i)||{}).value || "00:00";
+        const schedEnd = (document.getElementById("cctvChannelSchedEnd"+i)||{}).value || "00:00";
+        if(nama) namesOut[i] = nama;
+        enabledOut[i] = aktif;
+        if(satpam) satpamOut[i] = true;
+        if(schedOv) schedOut[i] = { enabled: true, start: schedStart, end: schedEnd };
+        // Server CUMA perlu nama/aktif/satpam (bukan jadwal, itu lokal) --
+        // tetap kirim SEMUA 8 channel (bukan cuma yg keisi) supaya command
+        // "daftar channel" di Telegram konsisten nunjukin 8 slot.
+        channelsForServer[i] = { name: nama || `Channel ${i+1}`, enabled: aktif, satpam };
       }
       settings.cctvMotion.channelNames = namesOut;
+      settings.cctvMotion.channelEnabled = enabledOut;
+      settings.cctvMotion.channelSatpam = satpamOut;
+      settings.cctvMotion.channelSchedules = schedOut;
+      pushCctvChannelConfig(channelsForServer); // fire-and-forget -- TIDAK menunda "Simpan & tutup", diam kalau gagal (spt fungsi kirim lain di app ini)
+      pushCctvConnectionConfig(); // BARU -- dorong IP/user/pass/cooldown/jadwal Semua Channel ke server juga, supaya komputer cadangan bisa ambil
     }
     saveSettings();
     closeSettings();
@@ -5068,6 +5399,8 @@ function registerServiceWorker(){
   // segera kelihatan di layar kantor.
   setInterval(fetchWorkerScheduleData, 5*60000);
   setInterval(tickCctvMotion, CCTV_POLL_INTERVAL_MS); // deteksi gerakan CCTV lokal -- diam total kalau belum dikonfigurasi/diaktifkan
+  sendHeartbeat(); // kirim segera sekali pas app dibuka (jangan nunggu 3 menit pertama)
+  setInterval(sendHeartbeat, 60000); // dicek tiap 1 menit, tapi beneran kirim cuma tiap 3 menit (throttle di dalam fungsinya)
   setInterval(()=> ensureCalendarBuffer(true), 6*3600000);
   setInterval(maybeAutoSync, 15*60000);
   maybeAutoSync();
