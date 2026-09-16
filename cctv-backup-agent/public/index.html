@@ -254,7 +254,7 @@ async function tick(){
     setStatus("Menunggu konfigurasi dari server…", "warn");
     return;
   }
-  const url = `http://${connConfig.ip}/cgi-bin/eventManager.cgi?action=getEventIndexes&code=VideoMotion` + (connConfig.channel ? `&channel=${encodeURIComponent(connConfig.channel)}` : "");
+  const url = `http://${connConfig.ip}/cgi-bin/eventManager.cgi?action=getEventIndexes&code=VideoMotion`; // PERBAIKAN -- filter channel DIHAPUS, merusak pemetaan per-channel (device selalu balas di channels[0] kalau difilter)
   try{
     const res = await cctvTauriFetch(url, connConfig.user, connConfig.pass);
     if(!res.ok) throw new Error("HTTP "+res.status);

@@ -1007,7 +1007,6 @@
         </label>
         <div class="field-row">
           <div class="field"><label>IP CCTV/XVR</label><input type="text" id="cctvIp" placeholder="192.168.18.128"></div>
-          <div class="field"><label>Channel (opsional)</label><input type="text" id="cctvChannel" placeholder="kosongkan kalau tidak yakin"></div>
         </div>
         <div class="field-row">
           <div class="field"><label>Username</label><input type="text" id="cctvUser" placeholder="admin"></div>
@@ -1097,6 +1096,10 @@
         </div>
         <div class="hint" id="cctvChannelsSyncStatus" style="margin-top:6px;"></div>
         <div class="hint" id="satpamTestStatus" style="margin-top:6px;"></div>
+        <div class="audio-controls" style="margin-top:8px;">
+          <button class="btn" id="cctvDiagnoseBtn">🔍 Cek Status Semua Channel Sekarang</button>
+        </div>
+        <div class="hint" id="cctvDiagnoseStatus" style="margin-top:6px; white-space:pre-line;"></div>
 
         <div class="hint" style="margin-top:10px; margin-bottom:4px;">Jadwal per-channel (opsional) -- klik salah satu channel utk atur jamnya sendiri, beda dari jadwal default di bawah:</div>
           <details style="margin-top:8px; border:1px solid var(--muted-dim); border-radius:8px; padding:8px 12px;">
@@ -1394,7 +1397,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.56.1"; // naik dari 1.56.0: kosmetik -- emoji notifikasi gerakan CCTV diganti 🚨 -> 📽 (permintaan user). Worker Monitor TIDAK perlu diubah (pengecekan isCctvMotion sudah berbasis teks, bukan emoji, sejak v17.1.0). cctv-backup-agent/index.html disamakan.
+const APP_VERSION = "1.58.0"; // naik dari 1.57.0: PERBAIKAN BUG PENTING -- field "Channel (opsional)" (dulu dipakai filter permintaan ke CCTV) DIHAPUS TOTAL -- ternyata kalau diisi, device Dahua SELALU balas hasilnya di channels[0] APA PUN channel yang diminta, merusak TOTAL pemetaan per-channel (semua gerakan, dari channel manapun, salah dilaporkan sbg Channel 1). Ini penyebab dilaporkan "nomor channel di Monitor beda dari yang saya buat". SEKARANG SELALU minta SEMUA channel tanpa filter (device balikin index yg benar per channel kalau tanpa filter, sudah terbukti dari tes2 sebelumnya). cctv-backup-agent/index.html disamakan.
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -1518,7 +1521,6 @@ const DEFAULTS = {
   // CCTV_IP_STORAGE dkk.
   cctvMotion: {
     enabled: false,
-    channel: "",          // opsional -- kosong = tanpa filter channel (tes dulu pakai tombol "Tes Deteksi")
     cooldownMinutes: 5,    // jeda MINIMAL antar notifikasi gerakan BARU (bukan antar polling -- lihat rising-edge di tickCctvMotion)
     // BARU -- 2 jadwal MINGGUAN TERPISAH (pola SAMA PERSIS dgn tabel Jam
     // Kerja: per HARI py jam sendiri, bukan "pilih beberapa hari pakai 1
@@ -3925,9 +3927,13 @@ async function cctvTauriFetch(url, username, password, method){
 function cctvMotionUrl(){
   const ip = localStorage.getItem(CCTV_IP_STORAGE);
   if(!ip) return null;
-  const cfg = (settings && settings.cctvMotion) || DEFAULTS.cctvMotion;
-  const chan = (cfg.channel||"").trim();
-  return `http://${ip}/cgi-bin/eventManager.cgi?action=getEventIndexes&code=VideoMotion` + (chan ? `&channel=${encodeURIComponent(chan)}` : "");
+  // PERBAIKAN PENTING -- SEBELUMNYA ada filter "channel" opsional di
+  // sini -- TERNYATA kalau diisi, device SELALU balas hasilnya di
+  // channels[0] APA PUN channel yang diminta -- itu MERUSAK TOTAL
+  // pemetaan per-channel (semua gerakan salah dilaporkan sbg Channel 1).
+  // Field itu SUDAH DIHAPUS -- SELALU minta SEMUA channel sekaligus
+  // (device balikin index yg benar utk tiap channel kalau TANPA filter).
+  return `http://${ip}/cgi-bin/eventManager.cgi?action=getEventIndexes&code=VideoMotion`;
 }
 // BARU -- respons Dahua "channels[0]=3" itu PENGHITUNG (sudah berapa
 // kali event tercatat sejak device nyala) PER CHANNEL, BUKAN status
@@ -4018,6 +4024,78 @@ function resolveSatpamScheduleFor(cfg, ch){
   const ov = cfg.channelSatpamSchedule && (cfg.channelSatpamSchedule[ch] || cfg.channelSatpamSchedule[String(ch)]);
   if(ov && ov.enabled) return { enabled: true, schedule: ov.schedule };
   return { enabled: cfg.satpamScheduleEnabled, schedule: cfg.satpamSchedule };
+}
+// BARU -- diagnostik "kenapa channel X (tidak) dapat notif SEKARANG" --
+// menjawab langsung tanpa nunggu gerakan asli/tebak-tebakan chat.
+// PENTING: baca dari FORM YANG SEDANG DIBUKA (belum tentu sudah
+// disimpan) DIGABUNG status SERVER (yang sebenarnya dipakai saat
+// keputusan kirim beneran terjadi di tickCctvMotion) -- kalau 2 sumber
+// ini BEDA, itu sendiri sudah jadi petunjuk (berarti belum di-Simpan).
+function describeWeeklyScheduleNow(now, scheduleEnabled, weeklySchedule, label){
+  if(!scheduleEnabled) return `${label}: AKTIF (jadwal dimatikan = 24 jam nonstop)`;
+  const aktif = isWeeklyScheduleActiveNow(now, scheduleEnabled, weeklySchedule);
+  const hariNama = CCTV_WEEK_DAY_LABEL[now.getDay()];
+  const dc = weeklySchedule && weeklySchedule[now.getDay()];
+  if(!dc || !dc.enabled) return `${label}: TIDAK aktif (hari ${hariNama} dimatikan di jadwal ini)`;
+  return `${label}: ${aktif ? "AKTIF" : "TIDAK aktif"} (jadwal hari ${hariNama}: ${dc.start||"00:00"}–${dc.end||"00:00"})`;
+}
+async function diagnoseAllChannelsNow(){
+  const statusEl = document.getElementById("cctvDiagnoseStatus");
+  statusEl.textContent = "Mengecek…";
+  const now = new Date();
+  // Baca form SAAT INI (belum tentu tersimpan)
+  const cfgForm = {
+    monitorScheduleEnabled: document.getElementById("cctvMonitorScheduleEnabled").checked,
+    monitorSchedule: readCctvWeekTable("cctvMonitorScheduleRows"),
+    satpamScheduleEnabled: document.getElementById("cctvSatpamScheduleEnabled").checked,
+    satpamSchedule: readCctvWeekTable("cctvSatpamScheduleRows"),
+    channelMonitorSchedule: {}, channelSatpamSchedule: {},
+  };
+  for(let i=0;i<8;i++){
+    const monOv = !!(document.getElementById("cctvChMonitorSchedOv"+i)||{}).checked;
+    if(monOv) cfgForm.channelMonitorSchedule[i] = { enabled:true, schedule: readCctvWeekTable("cctvChMonitorScheduleRows"+i) };
+    const satOv = !!(document.getElementById("cctvChSatpamSchedOv"+i)||{}).checked;
+    if(satOv) cfgForm.channelSatpamSchedule[i] = { enabled:true, schedule: readCctvWeekTable("cctvChSatpamScheduleRows"+i) };
+  }
+  // Ambil status TERSIMPAN di server (ini yang beneran dipakai app pas
+  // ada gerakan asli, BUKAN form yg sedang dibuka)
+  const remoteChannels = await fetchCctvChannelConfig();
+  let lastAlertMap = {};
+  try{ const raw = localStorage.getItem(CCTV_LAST_ALERT_AT_STORAGE); lastAlertMap = raw ? JSON.parse(raw) : {}; }catch(e){}
+  const cooldownMs = Math.max(0, parseInt(document.getElementById("cctvCooldownMinutes").value,10) || 5) * 60000;
+
+  const lines = [];
+  for(let i=0;i<8;i++){
+    const nama = (document.getElementById("cctvChannelName"+i)||{}).value?.trim() || `Channel ${i+1}`;
+    const monitorFormChecked = !!(document.getElementById("cctvChannelEnabled"+i)||{}).checked;
+    const satpamFormChecked = !!(document.getElementById("cctvChannelSatpam"+i)||{}).checked;
+    const serverData = remoteChannels && (remoteChannels[i] || remoteChannels[String(i)]);
+    const monitorServer = !serverData || serverData.enabled !== false;
+    const satpamServer = !!(serverData && serverData.satpam);
+    const bedaSync = (monitorFormChecked !== monitorServer) || (satpamFormChecked !== satpamServer);
+
+    lines.push(`━━ ${nama} (Channel ${i+1}) ━━`);
+    lines.push(`Monitor: form=${monitorFormChecked?"✅":"❌"}, TERSIMPAN di server=${monitorServer?"✅":"❌"}${bedaSync?" ⚠️ BEDA! Klik \"Simpan & tutup\" dulu.":""}`);
+    if(monitorServer){
+      const rMon = resolveMonitorScheduleFor(cfgForm, i);
+      lines.push("  " + describeWeeklyScheduleNow(now, rMon.enabled, rMon.schedule, "Jadwal Monitor"));
+    }
+    lines.push(`Satpam: form=${satpamFormChecked?"✅":"❌"}, TERSIMPAN di server=${satpamServer?"✅":"❌"}`);
+    if(satpamServer){
+      const rSat = resolveSatpamScheduleFor(cfgForm, i);
+      lines.push("  " + describeWeeklyScheduleNow(now, rSat.enabled, rSat.schedule, "Jadwal Satpam"));
+    }
+    const lastAlert = lastAlertMap[i] || 0;
+    const sisaMs = cooldownMs - (Date.now() - lastAlert);
+    if(lastAlert && sisaMs > 0){
+      lines.push(`⏳ Cooldown: masih ${Math.ceil(sisaMs/60000)} menit lagi sebelum bisa kirim notif baru utk channel ini (di KOMPUTER INI)`);
+    }
+    lines.push("");
+  }
+  if(!remoteChannels){
+    lines.unshift("⚠️ Gagal ambil status server (cek URL Worker Monitor/Token) -- kolom \"TERSIMPAN di server\" di bawah mungkin tidak akurat.\n");
+  }
+  statusEl.textContent = lines.join("\n");
 }
 // ---- UI tabel mingguan CCTV (Jadwal Monitor & Jadwal Satpam) -- POLA
 // VISUAL SAMA PERSIS dgn tabel Jam Kerja yg sudah ada (week-table/chip/
@@ -4186,7 +4264,6 @@ async function pushCctvConnectionConfig(){
     ip: localStorage.getItem(CCTV_IP_STORAGE) || "",
     user: localStorage.getItem(CCTV_USER_STORAGE) || "",
     pass: localStorage.getItem(CCTV_PASS_STORAGE) || "",
-    channel: cfg.channel || "",
     cooldownMinutes: cfg.cooldownMinutes != null ? cfg.cooldownMinutes : 5,
     monitorScheduleEnabled: !!cfg.monitorScheduleEnabled,
     monitorSchedule: cfg.monitorSchedule || DEFAULTS.cctvMotion.monitorSchedule,
@@ -4442,11 +4519,10 @@ async function testCctvMotionConnection(){
   const ip = document.getElementById("cctvIp").value.trim();
   const user = document.getElementById("cctvUser").value.trim();
   const pass = document.getElementById("cctvPass").value;
-  const chan = document.getElementById("cctvChannel").value.trim();
   if(!ip || !user || !pass){ statusEl.textContent = "❌ Isi IP, username, & password dulu."; return; }
   statusEl.textContent = "Menghubungi CCTV…";
   try{
-    const url = `http://${ip}/cgi-bin/eventManager.cgi?action=getEventIndexes&code=VideoMotion` + (chan ? `&channel=${encodeURIComponent(chan)}` : "");
+    const url = `http://${ip}/cgi-bin/eventManager.cgi?action=getEventIndexes&code=VideoMotion`;
     const res = await cctvTauriFetch(url, user, pass);
     if(!res.ok){
       statusEl.textContent = `❌ HTTP ${res.status}: ${res.text.slice(0,200)}`;
@@ -4860,7 +4936,6 @@ function setupElevenLabsTab(){
   {
     const cctvCfg = (settings && settings.cctvMotion) || DEFAULTS.cctvMotion;
     document.getElementById("cctvMotionEnabled").checked = !!cctvCfg.enabled;
-    document.getElementById("cctvChannel").value = cctvCfg.channel || "";
     document.getElementById("cctvCooldownMinutes").value = cctvCfg.cooldownMinutes != null ? cctvCfg.cooldownMinutes : 5;
     document.getElementById("cctvMonitorScheduleEnabled").checked = !!cctvCfg.monitorScheduleEnabled;
     renderCctvWeekTable("cctvMonitorScheduleRows", cctvCfg.monitorSchedule || DEFAULTS.cctvMotion.monitorSchedule);
@@ -4919,6 +4994,7 @@ document.getElementById("cctvPass").addEventListener("change", (e)=>{
 document.getElementById("cctvTestBtn").addEventListener("click", testCctvMotionConnection);
 document.getElementById("cctvChannelsSyncBtn").addEventListener("click", syncCctvChannelTableFromServer);
 document.getElementById("satpamTestBtn").addEventListener("click", testCctvAlertToSatpam);
+document.getElementById("cctvDiagnoseBtn").addEventListener("click", diagnoseAllChannelsNow);
 // Baca pesan error dari Worker (format {"error":"..."}); null kalau body bukan JSON.
 async function elevenWorkerErrorMessage(res){
   try{
@@ -5646,7 +5722,6 @@ document.getElementById("saveBtn").addEventListener("click", async ()=>{
     settings.liburOtomatis.enabled = document.getElementById("liburOtomatisEnabled").checked;
     settings.cctvMotion = settings.cctvMotion || structuredClone(DEFAULTS.cctvMotion);
     settings.cctvMotion.enabled = document.getElementById("cctvMotionEnabled").checked;
-    settings.cctvMotion.channel = document.getElementById("cctvChannel").value.trim();
     settings.cctvMotion.cooldownMinutes = Math.max(0, parseInt(document.getElementById("cctvCooldownMinutes").value,10) || 0);
     settings.cctvMotion.monitorScheduleEnabled = document.getElementById("cctvMonitorScheduleEnabled").checked;
     settings.cctvMotion.monitorSchedule = readCctvWeekTable("cctvMonitorScheduleRows");
