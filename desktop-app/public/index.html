@@ -316,6 +316,22 @@
   .slider-row{display:flex; align-items:center; gap:12px;}
   .slider-row input[type=range]{flex:1;}
   .hint{font-size:11px; color:var(--muted-dim); margin-top:6px; line-height:1.5;}
+  /* ---- Hasil "Tes Deteksi" CCTV: kartu per-channel, BUKAN 1 kalimat panjang ---- */
+  .cctv-test-result{margin-top:10px; border:1px solid var(--line); border-radius:14px; overflow:hidden;}
+  .cctv-test-result .ctr-head{padding:10px 14px; font-size:12.5px; font-weight:700; color:var(--text); background:var(--surface-2); border-bottom:1px solid var(--line);}
+  .cctv-test-row{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px 12px;
+    padding:10px 14px; border-bottom:1px solid var(--line); background:var(--surface); font-size:13px;}
+  .cctv-test-row:last-child{border-bottom:none;}
+  .cctv-test-row.is-new{background:color-mix(in srgb, var(--success) 12%, var(--surface));}
+  .cctv-test-name{font-weight:600; color:var(--text); min-width:0; word-break:break-word;}
+  .cctv-test-count{color:var(--muted); font-size:12px; white-space:nowrap;}
+  .cctv-test-flag{display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:700; color:var(--success); white-space:nowrap;}
+  .cctv-test-tip{padding:10px 14px; font-size:11.5px; color:var(--muted-dim); line-height:1.5; background:var(--surface-2);}
+  .cctv-test-result details{padding:8px 14px; border-top:1px solid var(--line); background:var(--surface-2);}
+  .cctv-test-result summary{cursor:pointer; font-size:11px; color:var(--muted); user-select:none;}
+  .cctv-test-result summary:hover{color:var(--primary);}
+  .cctv-test-result .ctr-raw{display:block; margin-top:6px; font-size:11px; color:var(--muted-dim);
+    white-space:pre-wrap; word-break:break-all; font-family:ui-monospace,Consolas,monospace;}
   .city-results{display:flex; flex-direction:column; gap:6px; margin-bottom:10px;}
   .city-result-item{text-align:left; background:var(--surface-2); border:1px solid var(--line); border-radius:9px;
     padding:9px 12px; font-size:12.5px; color:var(--text); cursor:pointer; transition:.15s; width:100%;}
@@ -1016,9 +1032,10 @@
           <div class="field"><label>Jeda minimal antar notifikasi (menit)</label><input type="number" id="cctvCooldownMinutes" min="0" max="120" style="width:100%;"></div>
         </div>
         <div class="audio-controls" style="margin-top:6px;">
-          <button class="btn" id="cctvTestBtn">🔎 Tes Deteksi (lihat respons mentah)</button>
+          <button class="btn" id="cctvTestBtn">🔎 Tes Deteksi Gerakan</button>
         </div>
         <div class="hint" id="cctvTestStatus" style="margin-top:8px;"></div>
+        <div id="cctvTestResult" class="cctv-test-result" style="display:none;"></div>
 
         <div class="section-title">🏷️ Channel CCTV: Nama, Notifikasi, Satpam &amp; Jadwal</div>
         <div class="hint" style="margin-top:-4px; margin-bottom:10px;">
@@ -1397,7 +1414,7 @@ document.getElementById("panelCloseX").addEventListener("click", ()=> closeSetti
    ke mana pun).
    ============================================================ */
 
-const APP_VERSION = "1.58.0"; // naik dari 1.57.0: PERBAIKAN BUG PENTING -- field "Channel (opsional)" (dulu dipakai filter permintaan ke CCTV) DIHAPUS TOTAL -- ternyata kalau diisi, device Dahua SELALU balas hasilnya di channels[0] APA PUN channel yang diminta, merusak TOTAL pemetaan per-channel (semua gerakan, dari channel manapun, salah dilaporkan sbg Channel 1). Ini penyebab dilaporkan "nomor channel di Monitor beda dari yang saya buat". SEKARANG SELALU minta SEMUA channel tanpa filter (device balikin index yg benar per channel kalau tanpa filter, sudah terbukti dari tes2 sebelumnya). cctv-backup-agent/index.html disamakan.
+const APP_VERSION = "1.59.0"; // naik dari 1.58.0: UI "Tes Deteksi" CCTV dirombak -- SEBELUMNYA hasil ditulis jadi 1 kalimat panjang (memanjang ke samping, susah dibaca orang awam & ambigu). SEKARANG jadi kartu per-channel (baris terpisah, nama + jumlah + badge hijau kalau baru terdeteksi gerakan), DENGAN pembanding OTOMATIS thd klik sebelumnya (tidak perlu hitung manual naik/turun lagi) -- lihat testCctvMotionConnection() & cctvTestPrevCounts. Respons mentah disembunyikan di <details> collapsible, bukan dipampang di kalimat utama.
 
 const DEFAULTS = {
   city: "",  // KOSONG -- wajib diisi manual di Pengaturan sebelum jadwal bisa diambil
@@ -4514,34 +4531,72 @@ async function tickCctvMotion(){
     }
   }
 }
+// Ganti karakter berbahaya jadi entitas HTML -- dipakai sebelum menaruh
+// teks bebas (mis. respons mentah device) ke dalam innerHTML.
+function escHtml(s){
+  return String(s).replace(/[&<>"']/g, (c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+// Simpan hasil klik "Tes Deteksi" SEBELUMNYA (di sesi ini saja, cukup
+// variabel biasa) -- dipakai buat OTOMATIS menandai channel yang baru
+// saja bertambah, jadi pengguna tidak perlu bandingkan angka manual lagi.
+let cctvTestPrevCounts = null;
 async function testCctvMotionConnection(){
   const statusEl = document.getElementById("cctvTestStatus");
+  const resultEl = document.getElementById("cctvTestResult");
   const ip = document.getElementById("cctvIp").value.trim();
   const user = document.getElementById("cctvUser").value.trim();
   const pass = document.getElementById("cctvPass").value;
+  resultEl.style.display = "none";
+  resultEl.innerHTML = "";
   if(!ip || !user || !pass){ statusEl.textContent = "❌ Isi IP, username, & password dulu."; return; }
   statusEl.textContent = "Menghubungi CCTV…";
   try{
     const url = `http://${ip}/cgi-bin/eventManager.cgi?action=getEventIndexes&code=VideoMotion`;
     const res = await cctvTauriFetch(url, user, pass);
     if(!res.ok){
-      statusEl.textContent = `❌ HTTP ${res.status}: ${res.text.slice(0,200)}`;
-    }else{
-      const counts = parseCctvEventCounts(res.text);
-      if(counts === null){
-        statusEl.textContent = `⚠️ Berhasil konek, tapi format responsnya tidak saya kenali: "${res.text.trim().slice(0,200)}"`;
-      }else{
-        const namesCfg = (settings && settings.cctvMotion && settings.cctvMotion.channelNames) || {};
-        const rincian = Object.keys(counts).length
-          ? Object.keys(counts).map((ch)=>{
-              const nama = namesCfg[ch] || namesCfg[Number(ch)];
-              const label = nama ? `${nama} (Channel ${Number(ch)+1})` : `Channel ${Number(ch)+1}`;
-              return `${label}: ${counts[ch]}`;
-            }).join(", ")
-          : "(tidak ada channel dgn event, semua 0)";
-        statusEl.textContent = `✅ Berhasil konek. Respons mentah: "${res.text.trim().slice(0,200)}" → ${rincian}. Ini PENGHITUNG (bukan nyala/mati) -- lambaikan tangan di depan kamera, TUNGGU 3-5 detik, lalu klik tombol ini LAGI. Kalau salah satu channel angkanya BERTAMBAH, berarti terbaca dgn benar (& itu channel yang akan disebut di notifikasi). Kalau tetap sama persis walau sudah bergerak, kemungkinan sensitivitas motion detection di menu CCTV terlalu rendah, atau salah channel.`;
-      }
+      statusEl.textContent = `❌ Gagal konek (HTTP ${res.status}). Cek lagi IP/username/password.`;
+      return;
     }
+    const counts = parseCctvEventCounts(res.text);
+    if(counts === null){
+      statusEl.textContent = `⚠️ Berhasil konek, tapi respons device tidak dikenali.`;
+      resultEl.style.display = "block";
+      resultEl.innerHTML = `<details open><summary>Lihat respons mentah</summary><code class="ctr-raw">${escHtml(res.text.trim().slice(0,500))}</code></details>`;
+      return;
+    }
+    statusEl.textContent = "";
+    const namesCfg = (settings && settings.cctvMotion && settings.cctvMotion.channelNames) || {};
+    const chIndexes = Object.keys(counts).map(Number).sort((a,b)=>a-b);
+    const prev = cctvTestPrevCounts;
+    let baris = "";
+    let adaYangBaru = false;
+    if(!chIndexes.length){
+      baris = `<div class="cctv-test-row"><span class="cctv-test-name">Tidak ada channel dengan catatan gerakan (semua 0)</span></div>`;
+    }else{
+      baris = chIndexes.map((ch)=>{
+        const nama = namesCfg[ch] || namesCfg[String(ch)];
+        const label = nama ? `${nama} (Channel ${ch+1})` : `Channel ${ch+1}`;
+        const nilai = counts[ch];
+        const naik = prev && Object.prototype.hasOwnProperty.call(prev, ch) && nilai > prev[ch];
+        if(naik) adaYangBaru = true;
+        return `<div class="cctv-test-row${naik?" is-new":""}">`
+          + `<span class="cctv-test-name">${escHtml(label)}</span>`
+          + `<span class="cctv-test-count">${nilai}x tercatat</span>`
+          + (naik ? `<span class="cctv-test-flag">🟢 Baru terdeteksi gerakan!</span>` : "")
+          + `</div>`;
+      }).join("");
+    }
+    const tip = !prev
+      ? "Ini baru bacaan pertama (belum ada pembanding). Lambaikan tangan di depan SATU kamera, tunggu 3–5 detik, lalu klik tombol di atas lagi — kamera yang baru saja bergerak akan otomatis ditandai hijau di sini."
+      : (adaYangBaru
+          ? "Kamera yang ditandai hijau di atas adalah kamera yang baru saja mendeteksi gerakan kamu."
+          : "Belum ada channel yang bertambah. Kalau kamu memang baru bergerak di depan kamera, coba turunkan sensitivitas di menu setting CCTV, atau pastikan menghadap kamera yang benar.");
+    resultEl.style.display = "block";
+    resultEl.innerHTML = `<div class="ctr-head">✅ Terhubung ke CCTV</div>`
+      + baris
+      + `<div class="cctv-test-tip">${tip}</div>`
+      + `<details><summary>Lihat respons mentah</summary><code class="ctr-raw">${escHtml(res.text.trim().slice(0,500))}</code></details>`;
+    cctvTestPrevCounts = counts;
   }catch(e){
     statusEl.textContent = `❌ Gagal: ${e.message}`;
   }
@@ -4947,6 +5002,9 @@ function setupElevenLabsTab(){
     syncCctvChannelTableFromServer(); // fire-and-forget -- kalau berhasil, TIMPA isian tabel dgn versi server (lebih terkini, mis. ada yg diubah lewat Telegram)
   }
   document.getElementById("cctvTestStatus").textContent = "";
+  document.getElementById("cctvTestResult").style.display = "none";
+  document.getElementById("cctvTestResult").innerHTML = "";
+  cctvTestPrevCounts = null; // reset pembanding -- jangan bandingkan dgn tes sesi/kunjungan tab sebelumnya
   const liburCfg = (settings && settings.liburOtomatis) || DEFAULTS.liburOtomatis;
   document.getElementById("liburOtomatisEnabled").checked = !!liburCfg.enabled;
   {
